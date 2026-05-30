@@ -1,0 +1,10 @@
+[project]
+name = "jinbocho-catalog-v1"
+version = "0.1.0"
+description = "Jinbocho Catalog Service — catalog, locations, ingestion, search, and export"
+requires-python = ">=3.12"
+license = { text = "AGPL-3.0-or-later" }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
