@@ -1,25 +1,25 @@
-from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import get_current_user_payload, get_room_repository, require_role
+from app.application.use_cases import CreateRoomInput, CreateRoomUseCase, DeleteRoomUseCase, GetRoomUseCase, ListRoomsUseCase, UpdateRoomInput, UpdateRoomUseCase
+from app.domain.repositories import RoomRepository
 from app.infrastructure.database.session import get_db
-from app.infrastructure.models import RoomModel
 
 router = APIRouter()
 
 
 class RoomCreate(BaseModel):
-    family_id: UUID
     name: str = Field(min_length=1, max_length=255)
     description: str | None = None
 
 
 class RoomUpdate(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
 
 
@@ -33,48 +33,79 @@ class RoomResponse(BaseModel):
 
 
 @router.get("/", response_model=list[RoomResponse])
-async def list_rooms(family_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(RoomModel).where(RoomModel.family_id == family_id).order_by(RoomModel.name))
-    return result.scalars().all()
+async def list_rooms(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    payload: dict = Depends(get_current_user_payload),
+    room_repo: RoomRepository = Depends(get_room_repository),
+):
+    return await ListRoomsUseCase(room_repo).execute(UUID(payload["family_id"]), limit, offset)
 
 
 @router.post("/", response_model=RoomResponse, status_code=status.HTTP_201_CREATED)
-async def create_room(request: RoomCreate, db: AsyncSession = Depends(get_db)):
-    room = RoomModel(**request.model_dump())
-    db.add(room)
+async def create_room(
+    request: RoomCreate,
+    payload: dict = Depends(require_role("admin", "editor")),
+    db: AsyncSession = Depends(get_db),
+    room_repo: RoomRepository = Depends(get_room_repository),
+):
+    room = await CreateRoomUseCase(room_repo).execute(CreateRoomInput(UUID(payload["family_id"]), request.name, request.description))
     await db.commit()
-    await db.refresh(room)
     return room
 
 
 @router.get("/{room_id}", response_model=RoomResponse)
-async def get_room(room_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(RoomModel).where(RoomModel.id == room_id))
-    room = result.scalar_one_or_none()
-    if not room:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
-    return room
+async def get_room(
+    room_id: UUID,
+    payload: dict = Depends(get_current_user_payload),
+    room_repo: RoomRepository = Depends(get_room_repository),
+):
+    try:
+        return await GetRoomUseCase(room_repo).execute(room_id, UUID(payload["family_id"]))
+    except LookupError:
+        raise HTTPException(status_code=404, detail="Room not found")
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
 
 
 @router.patch("/{room_id}", response_model=RoomResponse)
-async def update_room(room_id: UUID, request: RoomUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(RoomModel).where(RoomModel.id == room_id))
-    room = result.scalar_one_or_none()
-    if not room:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
-    for field, value in request.model_dump(exclude_unset=True).items():
-        setattr(room, field, value)
-    room.updated_at = datetime.utcnow()
-    await db.commit()
-    await db.refresh(room)
-    return room
+async def update_room(
+    room_id: UUID,
+    request: RoomUpdate,
+    payload: dict = Depends(require_role("admin", "editor")),
+    db: AsyncSession = Depends(get_db),
+    room_repo: RoomRepository = Depends(get_room_repository),
+):
+    try:
+        updated = await UpdateRoomUseCase(room_repo).execute(
+            UpdateRoomInput(room_id=room_id, family_id=UUID(payload["family_id"]), **request.model_dump(exclude_unset=True))
+        )
+        await db.commit()
+        return updated
+    except LookupError:
+        await db.rollback()
+        raise HTTPException(status_code=404, detail="Room not found")
+    except PermissionError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(exc))
 
 
 @router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_room(room_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(RoomModel).where(RoomModel.id == room_id))
-    room = result.scalar_one_or_none()
-    if not room:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Room not found")
-    await db.delete(room)
-    await db.commit()
+async def delete_room(
+    room_id: UUID,
+    payload: dict = Depends(require_role("admin", "editor")),
+    db: AsyncSession = Depends(get_db),
+    room_repo: RoomRepository = Depends(get_room_repository),
+):
+    try:
+        await DeleteRoomUseCase(room_repo).execute(room_id, UUID(payload["family_id"]))
+        await db.commit()
+    except LookupError:
+        await db.rollback()
+        raise HTTPException(status_code=404, detail="Room not found")
+    except PermissionError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(exc))
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Room cannot be deleted because it has bookcases. Remove them first.")

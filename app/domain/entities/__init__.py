@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
 
@@ -11,8 +11,8 @@ class Room:
     name: str
     description: Optional[str] = None
     id: UUID = field(default_factory=uuid4)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -25,8 +25,8 @@ class Bookcase:
     notes: Optional[str] = None
     image_url: Optional[str] = None
     id: UUID = field(default_factory=uuid4)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -35,8 +35,8 @@ class Section:
     section_index: int
     label: Optional[str] = None
     id: UUID = field(default_factory=uuid4)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -45,8 +45,8 @@ class Shelf:
     shelf_index: int
     notes: Optional[str] = None
     id: UUID = field(default_factory=uuid4)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -63,8 +63,8 @@ class BibliographicRecord:
     cover_url: Optional[str] = None
     notes: Optional[str] = None
     id: UUID = field(default_factory=uuid4)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -87,8 +87,8 @@ class OwnedBook:
     is_intentional_duplicate: bool = False
     duplicate_notes: Optional[str] = None
     id: UUID = field(default_factory=uuid4)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -96,7 +96,17 @@ class BookHistory:
     owned_book_id: UUID
     event_type: str
     changed_by: UUID
-    old_data: Optional[dict] = None
-    new_data: Optional[dict] = None
+    old_data: Optional[dict[str, Any]] = None
+    new_data: Optional[dict[str, Any]] = None
     id: UUID = field(default_factory=uuid4)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+@dataclass
+class IsbnLookupCache:
+    isbn: str
+    metadata: dict[str, Any]
+    source: str
+    fetched_at: datetime
+    id: UUID = field(default_factory=uuid4)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

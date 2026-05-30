@@ -1,19 +1,26 @@
-from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import get_bibliographic_record_repository, get_current_user_payload, get_owned_book_repository, require_role
+from app.application.use_cases import (
+    CreateBibliographicRecordInput,
+    CreateBibliographicRecordUseCase,
+    DeleteBibliographicRecordUseCase,
+    ListBibliographicRecordsUseCase,
+    UpdateBibliographicRecordInput,
+    UpdateBibliographicRecordUseCase,
+)
+from app.domain.repositories import BibliographicRecordRepository, OwnedBookRepository
 from app.infrastructure.database.session import get_db
-from app.infrastructure.models import BibliographicRecordModel
 
 router = APIRouter()
 
 
 class BibliographicRecordCreate(BaseModel):
-    family_id: UUID
     title: str = Field(min_length=1, max_length=500)
     main_author: str | None = None
     other_authors: list[str] = []
@@ -27,7 +34,7 @@ class BibliographicRecordCreate(BaseModel):
 
 
 class BibliographicRecordUpdate(BaseModel):
-    title: str | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=500)
     main_author: str | None = None
     other_authors: list[str] | None = None
     isbn: str | None = None
@@ -56,76 +63,106 @@ class BibliographicRecordResponse(BaseModel):
     notes: str | None = None
 
 
-@router.get("/search", response_model=list[BibliographicRecordResponse])
-async def search_records(q: str = Query(min_length=1), db: AsyncSession = Depends(get_db)):
-    pattern = f"%{q}%"
-    result = await db.execute(
-        select(BibliographicRecordModel).where(
-            or_(
-                BibliographicRecordModel.title.ilike(pattern),
-                BibliographicRecordModel.main_author.ilike(pattern),
-                BibliographicRecordModel.isbn.ilike(pattern),
-            )
-        )
-    )
-    return result.scalars().all()
-
-
 @router.get("/", response_model=list[BibliographicRecordResponse])
 async def list_records(
-    family_id: UUID | None = None,
-    isbn: str | None = None,
-    db: AsyncSession = Depends(get_db),
+    q: str | None = Query(default=None, description="Full-text search across title, author, isbn"),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    payload: dict = Depends(get_current_user_payload),
+    record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 ):
-    query = select(BibliographicRecordModel)
-    if family_id is not None:
-        query = query.where(BibliographicRecordModel.family_id == family_id)
-    if isbn is not None:
-        query = query.where(BibliographicRecordModel.isbn == isbn)
-    result = await db.execute(query.order_by(BibliographicRecordModel.created_at.desc()))
-    return result.scalars().all()
+    return await ListBibliographicRecordsUseCase(record_repo).execute(UUID(payload["family_id"]), q, limit, offset)
 
 
 @router.post("/", response_model=BibliographicRecordResponse, status_code=status.HTTP_201_CREATED)
-async def create_record(request: BibliographicRecordCreate, db: AsyncSession = Depends(get_db)):
-    record = BibliographicRecordModel(
-        **request.model_dump(exclude={"other_authors"}),
-        other_authors=request.other_authors or None,
-    )
-    db.add(record)
-    await db.commit()
-    await db.refresh(record)
-    return record
+async def create_record(
+    request: BibliographicRecordCreate,
+    payload: dict = Depends(require_role("admin", "editor")),
+    db: AsyncSession = Depends(get_db),
+    record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+):
+    try:
+        created = await CreateBibliographicRecordUseCase(record_repo).execute(
+            CreateBibliographicRecordInput(
+                family_id=UUID(payload["family_id"]),
+                title=request.title,
+                main_author=request.main_author,
+                other_authors=request.other_authors,
+                isbn=request.isbn.replace("-", "").strip() if request.isbn else None,
+                publisher=request.publisher,
+                publication_year=request.publication_year,
+                language=request.language,
+                genre=request.genre,
+                cover_url=request.cover_url,
+                notes=request.notes,
+            )
+        )
+        await db.commit()
+        return created
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Duplicate entry or constraint violation")
 
 
 @router.get("/{record_id}", response_model=BibliographicRecordResponse)
-async def get_record(record_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(BibliographicRecordModel).where(BibliographicRecordModel.id == record_id))
-    record = result.scalar_one_or_none()
-    if not record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found")
+async def get_record(
+    record_id: UUID,
+    payload: dict = Depends(get_current_user_payload),
+    record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+):
+    record = await record_repo.find_by_id(record_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Bibliographic record not found")
+    if record.family_id != UUID(payload["family_id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
     return record
 
 
 @router.patch("/{record_id}", response_model=BibliographicRecordResponse)
-async def update_record(record_id: UUID, request: BibliographicRecordUpdate, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(BibliographicRecordModel).where(BibliographicRecordModel.id == record_id))
-    record = result.scalar_one_or_none()
-    if not record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found")
-    for field, value in request.model_dump(exclude_unset=True).items():
-        setattr(record, field, value)
-    record.updated_at = datetime.utcnow()
-    await db.commit()
-    await db.refresh(record)
-    return record
+async def update_record(
+    record_id: UUID,
+    request: BibliographicRecordUpdate,
+    payload: dict = Depends(require_role("admin", "editor")),
+    db: AsyncSession = Depends(get_db),
+    record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+):
+    update_data = request.model_dump(exclude_unset=True)
+    if "isbn" in update_data and update_data["isbn"]:
+        update_data["isbn"] = update_data["isbn"].replace("-", "").strip()
+    try:
+        updated = await UpdateBibliographicRecordUseCase(record_repo).execute(
+            UpdateBibliographicRecordInput(record_id=record_id, family_id=UUID(payload["family_id"]), **update_data)
+        )
+        await db.commit()
+        return updated
+    except LookupError:
+        await db.rollback()
+        raise HTTPException(status_code=404, detail="Bibliographic record not found")
+    except PermissionError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(exc))
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Duplicate entry or constraint violation")
 
 
 @router.delete("/{record_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_record(record_id: UUID, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(BibliographicRecordModel).where(BibliographicRecordModel.id == record_id))
-    record = result.scalar_one_or_none()
-    if not record:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found")
-    await db.delete(record)
-    await db.commit()
+async def delete_record(
+    record_id: UUID,
+    payload: dict = Depends(require_role("admin", "editor")),
+    db: AsyncSession = Depends(get_db),
+    record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+    book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+):
+    try:
+        await DeleteBibliographicRecordUseCase(record_repo, book_repo).execute(record_id, UUID(payload["family_id"]))
+        await db.commit()
+    except LookupError:
+        await db.rollback()
+        raise HTTPException(status_code=404, detail="Bibliographic record not found")
+    except PermissionError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=403, detail=str(exc))
+    except ValueError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc))

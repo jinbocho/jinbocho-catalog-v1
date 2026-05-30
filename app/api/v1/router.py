@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import bookcases, books, export, ingestion, records, rooms, sections, shelves
+from app.api.v1.endpoints import bookcases, books, export, ingestion, map, records, rooms, sections, shelves
 
 router = APIRouter()
 router.include_router(rooms.router, prefix="/rooms", tags=["rooms"])
@@ -11,3 +11,5 @@ router.include_router(records.router, prefix="/bibliographic-records", tags=["bi
 router.include_router(books.router, prefix="/books", tags=["owned-books"])
 router.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
 router.include_router(export.router, prefix="/export", tags=["export"])
+router.include_router(map.router, prefix="/map", tags=["map"])
+
