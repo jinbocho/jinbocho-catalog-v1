@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -27,8 +28,8 @@ class RoomResponse(BaseModel):
 	family_id: UUID = Field(..., description="Family ID")
 	name: str = Field(..., description="Name of the room")
 	description: Optional[str] = Field(None, description="Room description")
-	created_at: str = Field(..., description="Creation timestamp")
-	updated_at: str = Field(..., description="Last update timestamp")
+	created_at: datetime = Field(..., description="Creation timestamp")
+	updated_at: datetime = Field(..., description="Last update timestamp")
 
 	class Config:
 		from_attributes = True

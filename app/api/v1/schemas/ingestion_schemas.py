@@ -10,4 +10,9 @@ class IsbnLookupResponse(BaseModel):
 
 
 class BulkLookupRequest(BaseModel):
-	isbns: list[str] = Field(..., description="List of ISBN codes to lookup")
+	isbns: list[str] = Field(
+		...,
+		min_length=1,
+		max_length=100,
+		description="List of ISBN codes to lookup",
+	)

@@ -40,6 +40,9 @@ async def get_current_user_payload(
             credentials.credentials,
             settings.jwt_secret_key,
             algorithms=[settings.jwt_algorithm],
+            audience=settings.jwt_audience,
+            issuer=settings.jwt_issuer,
+            options={"require": ["exp", "sub", "family_id", "aud", "iss"]},
         )
     except jwt.PyJWTError:
         raise HTTPException(

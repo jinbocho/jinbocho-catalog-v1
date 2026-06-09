@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_current_user_payload, get_http_client, get_isbn_lookup_cache_repository, require_role
-from app.api.v1.schemas.ingestion_schemas import IsbnLookupResponse
+from app.api.v1.schemas.ingestion_schemas import BulkLookupRequest, IsbnLookupResponse
 from app.application.use_cases import LookupIsbnUseCase
 from app.infrastructure.database.session import get_db
 
@@ -25,13 +25,13 @@ async def lookup_isbn(
 
 @router.post("/bulk-lookup", summary="Bulk ISBN lookup")
 async def bulk_lookup(
-	isbns: list[str],
+	request: BulkLookupRequest,
 	payload: dict = Depends(require_role("admin", "editor")),
 	cache_repo = Depends(get_isbn_lookup_cache_repository),
 	http_client: httpx.AsyncClient = Depends(get_http_client),
 ):
 	results = []
-	for isbn in isbns:
+	for isbn in request.isbns:
 		try:
 			result = await LookupIsbnUseCase(cache_repo, http_client).execute(isbn)
 			results.append({
@@ -40,11 +40,11 @@ async def bulk_lookup(
 				"data": result.metadata,
 				"error": None
 			})
-		except Exception as e:
+		except LookupError:
 			results.append({
 				"isbn": isbn,
 				"ok": False,
 				"data": None,
-				"error": str(e)
+				"error": "No metadata found"
 			})
 	return {"results": results}

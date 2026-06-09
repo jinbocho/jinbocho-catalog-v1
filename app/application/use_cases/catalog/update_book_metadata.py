@@ -3,7 +3,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from app.domain.entities import OwnedBook
+from app.domain.entities import BookHistory, OwnedBook
 from app.domain.repositories import BookHistoryRepository, OwnedBookRepository
 from app.utils import utcnow
 

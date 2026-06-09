@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -21,8 +22,8 @@ class SectionResponse(BaseModel):
 	bookcase_id: UUID = Field(..., description="Bookcase ID")
 	section_index: int = Field(..., description="Section index")
 	label: Optional[str] = Field(None, description="Section label")
-	created_at: str = Field(..., description="Creation timestamp")
-	updated_at: str = Field(..., description="Last update timestamp")
+	created_at: datetime = Field(..., description="Creation timestamp")
+	updated_at: datetime = Field(..., description="Last update timestamp")
 
 	class Config:
 		from_attributes = True

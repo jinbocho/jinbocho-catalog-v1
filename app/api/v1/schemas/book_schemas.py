@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal, Optional
 from uuid import UUID
@@ -16,11 +16,11 @@ class OwnedBookCreate(BaseModel):
 	section_id: Optional[UUID] = Field(None, description="Section ID")
 	shelf_id: Optional[UUID] = Field(None, description="Shelf ID")
 	shelf_position: Optional[int] = Field(None, description="Position on shelf")
-	condition: Optional[Literal["new", "like_new", "fine", "very_good", "good", "fair", "poor"]] = Field(None, description="Book condition")
+	condition: Optional[Literal["new", "good", "fair", "poor"]] = Field(None, description="Book condition")
 	purchase_date: Optional[date] = Field(None, description="Purchase date")
 	purchase_price: Optional[Decimal] = Field(None, description="Purchase price")
-	source: Optional[Literal["amazon", "bookstore", "library", "gift", "other"]] = Field(None, description="Source of book")
-	reading_status: Literal["to_read", "reading", "completed"] = Field("to_read", description="Reading status")
+	source: Optional[Literal["purchased", "gift", "borrowed", "other"]] = Field(None, description="Source of book")
+	reading_status: Literal["to_read", "reading", "read"] = Field("to_read", description="Reading status")
 	notes: Optional[str] = Field(None, description="Notes")
 	tags: Optional[list[str]] = Field(None, description="Tags")
 
@@ -31,10 +31,12 @@ class OwnedBookUpdate(BaseModel):
 	section_id: Optional[UUID] = Field(None, description="Section ID")
 	shelf_id: Optional[UUID] = Field(None, description="Shelf ID")
 	shelf_position: Optional[int] = Field(None, description="Position on shelf")
-	condition: Optional[Literal["new", "like_new", "fine", "very_good", "good", "fair", "poor"]] = Field(None, description="Book condition")
+	condition: Optional[Literal["new", "good", "fair", "poor"]] = Field(None, description="Book condition")
 	purchase_date: Optional[date] = Field(None, description="Purchase date")
 	purchase_price: Optional[Decimal] = Field(None, description="Purchase price")
-	reading_status: Optional[Literal["to_read", "reading", "completed"]] = Field(None, description="Reading status")
+	source: Optional[Literal["purchased", "gift", "borrowed", "other"]] = Field(None, description="Source of book")
+	reading_status: Optional[Literal["to_read", "reading", "read"]] = Field(None, description="Reading status")
+	tags: Optional[list[str]] = Field(None, description="Tags")
 	notes: Optional[str] = Field(None, description="Notes")
 
 
@@ -52,10 +54,11 @@ class OwnedBookResponse(BaseModel):
 	purchase_price: Optional[Decimal] = Field(None, description="Purchase price")
 	source: Optional[str] = Field(None, description="Source of book")
 	reading_status: str = Field(..., description="Reading status")
+	current_reader_id: Optional[UUID] = Field(None, description="User currently reading the copy")
 	notes: Optional[str] = Field(None, description="Notes")
 	tags: list[str] = Field(..., description="Tags")
-	created_at: str = Field(..., description="Creation timestamp")
-	updated_at: str = Field(..., description="Last update timestamp")
+	created_at: datetime = Field(..., description="Creation timestamp")
+	updated_at: datetime = Field(..., description="Last update timestamp")
 
 	class Config:
 		from_attributes = True

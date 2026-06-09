@@ -9,4 +9,6 @@ COPY . .
 
 EXPOSE 8002
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8002"]
+# Shell form: ${PORT} is injected by Render (falls back to 8002 locally).
+# Migrations run on start so the DB schema is current before serving requests.
+CMD alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8002}

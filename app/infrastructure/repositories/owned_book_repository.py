@@ -30,6 +30,7 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 			purchase_price=Decimal(model.purchase_price) if model.purchase_price is not None else None,
 			source=model.source,
 			reading_status=model.reading_status,
+			current_reader_id=model.current_reader_id,
 			tags=list(model.tags) if model.tags else [],
 			notes=model.notes,
 			is_intentional_duplicate=model.is_intentional_duplicate,
@@ -95,6 +96,7 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 				purchase_price=owned_book.purchase_price,
 				source=owned_book.source,
 				reading_status=owned_book.reading_status,
+				current_reader_id=owned_book.current_reader_id,
 				tags=owned_book.tags or None,
 				notes=owned_book.notes,
 				is_intentional_duplicate=owned_book.is_intentional_duplicate,
@@ -116,6 +118,7 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 			model.purchase_price = owned_book.purchase_price
 			model.source = owned_book.source
 			model.reading_status = owned_book.reading_status
+			model.current_reader_id = owned_book.current_reader_id
 			model.tags = owned_book.tags or None
 			model.notes = owned_book.notes
 			model.is_intentional_duplicate = owned_book.is_intentional_duplicate

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -31,8 +32,8 @@ class BookcaseResponse(BaseModel):
 	type: Optional[str] = Field(None, description="Bookcase type")
 	notes: Optional[str] = Field(None, description="Additional notes")
 	image_url: Optional[str] = Field(None, description="Image URL")
-	created_at: str = Field(..., description="Creation timestamp")
-	updated_at: str = Field(..., description="Last update timestamp")
+	created_at: datetime = Field(..., description="Creation timestamp")
+	updated_at: datetime = Field(..., description="Last update timestamp")
 
 	class Config:
 		from_attributes = True

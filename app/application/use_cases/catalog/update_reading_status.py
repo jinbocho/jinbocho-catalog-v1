@@ -28,6 +28,8 @@ class UpdateReadingStatusUseCase:
 
 		old_status = book.reading_status
 		book.reading_status = inp.reading_status
+		# Track who holds the copy: set on "reading", clear otherwise.
+		book.current_reader_id = inp.changed_by if inp.reading_status == "reading" else None
 		book.updated_at = utcnow()
 		saved = await self._book_repo.save(book)
 		await self._history_repo.save(

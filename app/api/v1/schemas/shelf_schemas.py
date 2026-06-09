@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
@@ -21,8 +22,8 @@ class ShelfResponse(BaseModel):
 	section_id: UUID = Field(..., description="Section ID")
 	shelf_index: int = Field(..., description="Shelf index")
 	notes: Optional[str] = Field(None, description="Notes")
-	created_at: str = Field(..., description="Creation timestamp")
-	updated_at: str = Field(..., description="Last update timestamp")
+	created_at: datetime = Field(..., description="Creation timestamp")
+	updated_at: datetime = Field(..., description="Last update timestamp")
 
 	class Config:
 		from_attributes = True

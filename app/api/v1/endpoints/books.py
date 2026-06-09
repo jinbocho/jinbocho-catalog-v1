@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 import httpx
@@ -45,7 +46,7 @@ async def list_books(
 	payload: dict = Depends(get_current_user_payload),
 	book_repo = Depends(get_owned_book_repository),
 ):
-	return await ListOwnedBooksUseCase(book_repo).execute(UUID(payload["family_id"]), limit, offset)
+	return await ListOwnedBooksUseCase(book_repo).execute(UUID(payload["family_id"]), limit=limit, offset=offset)
 
 
 @router.post("/", response_model=OwnedBookResponse, status_code=status.HTTP_201_CREATED, summary="Add book")
@@ -63,8 +64,8 @@ async def add_book(
 	shelf_repo = Depends(get_shelf_repository),
 	http_client: httpx.AsyncClient = Depends(get_http_client),
 ):
-	book = await AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, room_repo, bookcase_repo, section_repo, shelf_repo, http_client).execute(
-		AddBookInput(family_id=UUID(payload["family_id"]), changed_by=UUID(payload["user_id"]), **request.model_dump())
+	book = await AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, http_client).execute(
+		AddBookInput(family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]), **request.model_dump())
 	)
 	await db.commit()
 	return book
@@ -75,8 +76,10 @@ async def get_book(
 	book_id: UUID,
 	payload: dict = Depends(get_current_user_payload),
 	book_repo = Depends(get_owned_book_repository),
+	record_repo = Depends(get_bibliographic_record_repository),
 ):
-	return await GetOwnedBookUseCase(book_repo).execute(book_id, UUID(payload["family_id"]))
+	result = await GetOwnedBookUseCase(book_repo, record_repo).execute(book_id, UUID(payload["family_id"]))
+	return result.book
 
 
 @router.patch("/{book_id}", response_model=OwnedBookResponse, summary="Update book metadata")
@@ -86,9 +89,10 @@ async def update_book(
 	payload: dict = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
 	book_repo = Depends(get_owned_book_repository),
+	history_repo = Depends(get_book_history_repository),
 ):
-	updated = await UpdateBookMetadataUseCase(book_repo).execute(
-		UpdateBookMetadataInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["user_id"]), **request.model_dump(exclude_unset=True))
+	updated = await UpdateBookMetadataUseCase(book_repo, history_repo).execute(
+		UpdateBookMetadataInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]), **request.model_dump(exclude_unset=True))
 	)
 	await db.commit()
 	return updated
@@ -106,13 +110,9 @@ async def update_book_position(
 	db: AsyncSession = Depends(get_db),
 	book_repo = Depends(get_owned_book_repository),
 	history_repo = Depends(get_book_history_repository),
-	room_repo = Depends(get_room_repository),
-	bookcase_repo = Depends(get_bookcase_repository),
-	section_repo = Depends(get_section_repository),
-	shelf_repo = Depends(get_shelf_repository),
 ):
-	updated = await UpdateBookPositionUseCase(book_repo, history_repo, room_repo, bookcase_repo, section_repo, shelf_repo).execute(
-		UpdateBookPositionInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["user_id"]),
+	updated = await UpdateBookPositionUseCase(book_repo, history_repo).execute(
+		UpdateBookPositionInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]),
 			room_id=room_id, bookcase_id=bookcase_id, section_id=section_id, shelf_id=shelf_id, shelf_position=shelf_position,
 			position_description=None)
 	)
@@ -123,14 +123,14 @@ async def update_book_position(
 @router.post("/{book_id}/reading-status", response_model=OwnedBookResponse, summary="Update reading status")
 async def update_reading_status(
 	book_id: UUID,
-	reading_status: str,
+	reading_status: Literal["to_read", "reading", "read"],
 	payload: dict = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
 	book_repo = Depends(get_owned_book_repository),
 	history_repo = Depends(get_book_history_repository),
 ):
 	updated = await UpdateReadingStatusUseCase(book_repo, history_repo).execute(
-		UpdateReadingStatusInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["user_id"]), reading_status=reading_status)
+		UpdateReadingStatusInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]), reading_status=reading_status)
 	)
 	await db.commit()
 	return updated
@@ -145,7 +145,7 @@ async def delete_book(
 	history_repo = Depends(get_book_history_repository),
 ):
 	await DeleteBookUseCase(book_repo, history_repo).execute(
-		DeleteBookInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["user_id"]))
+		DeleteBookInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]))
 	)
 	await db.commit()
 

@@ -60,17 +60,32 @@ class LookupIsbnUseCase:
 			)
 			return LookupIsbnOutput(source="open_library", metadata=open_library, cached=False)
 
+		open_library_search = await self._fetch_open_library_search(isbn)
+		if open_library_search:
+			await self._cache_repo.save(
+				IsbnLookupCache(isbn=isbn, metadata=open_library_search, source="open_library_search", fetched_at=utcnow())
+			)
+			return LookupIsbnOutput(source="open_library_search", metadata=open_library_search, cached=False)
+
 		raise LookupError(f"No metadata found for ISBN {isbn}")
 
 	async def _fetch_google_books(self, isbn: str) -> Optional[dict[str, Any]]:
-		response = await self._http_client.get(
-			f"{settings.google_books_url}/volumes",
-			params={"q": f"isbn:{isbn}", "maxResults": 1},
-		)
-		if response.status_code in (429, 503):
+		# Network/HTTP failures here must not abort the lookup — fall through to
+		# the Open Library fallback instead of surfacing a 500.
+		try:
+			params: dict[str, str | int] = {"q": f"isbn:{isbn}", "maxResults": 1}
+			if settings.google_books_api_key:
+				params["key"] = settings.google_books_api_key
+			response = await self._http_client.get(
+				f"{settings.google_books_url}/volumes",
+				params=params,
+			)
+			if response.status_code in (429, 503):
+				return None
+			response.raise_for_status()
+			data = response.json()
+		except httpx.HTTPError:
 			return None
-		response.raise_for_status()
-		data = response.json()
 		if not data.get("items"):
 			return None
 		volume = data["items"][0].get("volumeInfo", {})
@@ -88,12 +103,15 @@ class LookupIsbnUseCase:
 		}
 
 	async def _fetch_open_library(self, isbn: str) -> Optional[dict[str, Any]]:
-		response = await self._http_client.get(
-			f"{settings.open_library_url}/api/books",
-			params={"bibkeys": f"ISBN:{isbn}", "format": "json", "jscmd": "data"},
-		)
-		response.raise_for_status()
-		data = response.json()
+		try:
+			response = await self._http_client.get(
+				f"{settings.open_library_url}/api/books",
+				params={"bibkeys": f"ISBN:{isbn}", "format": "json", "jscmd": "data"},
+			)
+			response.raise_for_status()
+			data = response.json()
+		except httpx.HTTPError:
+			return None
 		book = data.get(f"ISBN:{isbn}")
 		if not book:
 			return None
@@ -108,6 +126,39 @@ class LookupIsbnUseCase:
 			"language": None,
 			"genre": None,
 			"cover_url": (book.get("cover") or {}).get("medium") or (book.get("cover") or {}).get("large"),
+			"notes": None,
+			"isbn": isbn,
+		}
+
+	async def _fetch_open_library_search(self, isbn: str) -> Optional[dict[str, Any]]:
+		"""Fallback using Open Library /search.json — broader index than /api/books."""
+		try:
+			response = await self._http_client.get(
+				f"{settings.open_library_url}/search.json",
+				params={"isbn": isbn, "fields": "title,author_name,publisher,first_publish_year,language,cover_i"},
+			)
+			response.raise_for_status()
+			data = response.json()
+		except httpx.HTTPError:
+			return None
+		docs = data.get("docs")
+		if not docs:
+			return None
+		doc = docs[0]
+		authors = doc.get("author_name") or []
+		publishers = doc.get("publisher") or []
+		cover_i = doc.get("cover_i")
+		cover_url = f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg" if cover_i else None
+		languages = doc.get("language") or []
+		return {
+			"title": doc.get("title"),
+			"main_author": authors[0] if authors else None,
+			"other_authors": authors[1:] if len(authors) > 1 else [],
+			"publisher": publishers[0] if publishers else None,
+			"publication_year": doc.get("first_publish_year"),
+			"language": languages[0] if languages else None,
+			"genre": None,
+			"cover_url": cover_url,
 			"notes": None,
 			"isbn": isbn,
 		}
