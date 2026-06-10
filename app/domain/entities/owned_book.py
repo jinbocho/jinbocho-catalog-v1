@@ -43,6 +43,9 @@ class OwnedBook:
 	# Who is currently reading the (single physical) copy; None when nobody is.
 	# Users live in the auth service → bare UUID, no FK.
 	current_reader_id: UUID | None = None
+	# Family member who owns this copy; all members can read it.
+	# Users live in the auth service → bare UUID, no FK.
+	owner_id: UUID | None = None
 	tags: list[str] = field(default_factory=list)
 	notes: str | None = None
 	is_intentional_duplicate: bool = False

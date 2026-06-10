@@ -10,6 +10,8 @@ from app.config import settings
 from app.domain.repositories import (
     BibliographicRecordRepository,
     BookHistoryRepository,
+    BookLoanRepository,
+    BookReadRepository,
     BookcaseRepository,
     IsbnLookupCacheRepository,
     OwnedBookRepository,
@@ -21,6 +23,8 @@ from app.infrastructure.database.session import get_db
 from app.infrastructure.repositories import (
     SQLAlchemyBibliographicRecordRepository,
     SQLAlchemyBookHistoryRepository,
+    SQLAlchemyBookLoanRepository,
+    SQLAlchemyBookReadRepository,
     SQLAlchemyBookcaseRepository,
     SQLAlchemyIsbnLookupCacheRepository,
     SQLAlchemyOwnedBookRepository,
@@ -110,3 +114,11 @@ async def get_isbn_lookup_cache_repository(
     db: AsyncSession = Depends(get_db),
 ) -> IsbnLookupCacheRepository:
     return SQLAlchemyIsbnLookupCacheRepository(db)
+
+
+async def get_book_read_repository(db: AsyncSession = Depends(get_db)) -> BookReadRepository:
+    return SQLAlchemyBookReadRepository(db)
+
+
+async def get_book_loan_repository(db: AsyncSession = Depends(get_db)) -> BookLoanRepository:
+    return SQLAlchemyBookLoanRepository(db)

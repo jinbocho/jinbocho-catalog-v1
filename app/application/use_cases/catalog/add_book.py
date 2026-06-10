@@ -49,6 +49,7 @@ class AddBookInput:
 	purchase_price: Optional[Decimal] = None
 	source: Optional[str] = None
 	reading_status: str = "to_read"
+	owner_id: Optional[UUID] = None
 	tags: list[str] | None = None
 	is_intentional_duplicate: bool = False
 	duplicate_notes: Optional[str] = None
@@ -86,6 +87,7 @@ class AddBookUseCase:
 				purchase_price=inp.purchase_price,
 				source=inp.source,
 				reading_status=inp.reading_status,
+				owner_id=inp.owner_id,
 				tags=inp.tags or [],
 				notes=inp.notes,
 				is_intentional_duplicate=inp.is_intentional_duplicate,

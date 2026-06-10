@@ -33,6 +33,8 @@ class OwnedBookModel(Base):
 	reading_status: Mapped[str] = mapped_column(reading_status_enum, nullable=False, server_default="to_read", index=True)
 	# No ForeignKey: users live in the auth service's database.
 	current_reader_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
+	# No ForeignKey: users live in the auth service's database.
+	owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
 	tags: Mapped[list[str] | None] = mapped_column(ARRAY(String))
 	notes: Mapped[str | None] = mapped_column(Text)
 	is_intentional_duplicate: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")

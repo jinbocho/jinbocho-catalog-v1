@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import (
 	get_bibliographic_record_repository,
 	get_book_history_repository,
+	get_book_loan_repository,
+	get_book_read_repository,
 	get_bookcase_repository,
 	get_current_user_payload,
 	get_http_client,
@@ -18,7 +20,15 @@ from app.api.dependencies import (
 	get_shelf_repository,
 	require_role,
 )
-from app.api.v1.schemas.book_schemas import OwnedBookCreate, OwnedBookResponse, OwnedBookUpdate
+from app.api.v1.schemas.book_schemas import (
+	BookLoanCreate,
+	BookLoanResponse,
+	BookReadCreate,
+	BookReadResponse,
+	OwnedBookCreate,
+	OwnedBookResponse,
+	OwnedBookUpdate,
+)
 from app.application.use_cases import (
 	AddBookInput,
 	AddBookUseCase,
@@ -26,7 +36,15 @@ from app.application.use_cases import (
 	DeleteBookUseCase,
 	GetBookHistoryUseCase,
 	GetOwnedBookUseCase,
+	LendBookUseCase,
+	ListActiveFamilyLoansUseCase,
+	ListBookLoansUseCase,
+	ListBookReadsUseCase,
+	ListFamilyReadsUseCase,
 	ListOwnedBooksUseCase,
+	MarkBookReadUseCase,
+	ReturnBookUseCase,
+	UnmarkBookReadUseCase,
 	UpdateBookMetadataInput,
 	UpdateBookMetadataUseCase,
 	UpdateBookPositionInput,
@@ -47,6 +65,24 @@ async def list_books(
 	book_repo = Depends(get_owned_book_repository),
 ):
 	return await ListOwnedBooksUseCase(book_repo).execute(UUID(payload["family_id"]), limit=limit, offset=offset)
+
+
+# Static literal routes must be declared before /{book_id} so FastAPI does not consume
+# them as UUID path parameters.
+@router.get("/reads", response_model=list[BookReadResponse], summary="List all reads for the family")
+async def list_family_reads(
+	payload: dict = Depends(get_current_user_payload),
+	read_repo = Depends(get_book_read_repository),
+):
+	return await ListFamilyReadsUseCase(read_repo).execute(UUID(payload["family_id"]))
+
+
+@router.get("/loans/active", response_model=list[BookLoanResponse], summary="List all active loans for the family")
+async def list_active_loans(
+	payload: dict = Depends(get_current_user_payload),
+	loan_repo = Depends(get_book_loan_repository),
+):
+	return await ListActiveFamilyLoansUseCase(loan_repo).execute(UUID(payload["family_id"]))
 
 
 @router.post("/", response_model=OwnedBookResponse, status_code=status.HTTP_201_CREATED, summary="Add book")
@@ -158,3 +194,79 @@ async def get_book_history(
 	book_repo = Depends(get_owned_book_repository),
 ):
 	return await GetBookHistoryUseCase(history_repo, book_repo).execute(book_id, UUID(payload["family_id"]))
+
+
+@router.get("/{book_id}/reads", response_model=list[BookReadResponse], summary="List readers of a book")
+async def list_book_reads(
+	book_id: UUID,
+	payload: dict = Depends(get_current_user_payload),
+	book_repo = Depends(get_owned_book_repository),
+	read_repo = Depends(get_book_read_repository),
+):
+	return await ListBookReadsUseCase(book_repo, read_repo).execute(book_id, UUID(payload["family_id"]))
+
+
+@router.post("/{book_id}/reads", response_model=BookReadResponse, status_code=status.HTTP_201_CREATED, summary="Mark book as read by a member")
+async def mark_book_read(
+	book_id: UUID,
+	request: BookReadCreate,
+	payload: dict = Depends(require_role("admin", "editor")),
+	db: AsyncSession = Depends(get_db),
+	book_repo = Depends(get_owned_book_repository),
+	read_repo = Depends(get_book_read_repository),
+):
+	result = await MarkBookReadUseCase(book_repo, read_repo).execute(book_id, UUID(payload["family_id"]), request.user_id)
+	await db.commit()
+	return result
+
+
+@router.delete("/{book_id}/reads/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Remove read mark for a member")
+async def unmark_book_read(
+	book_id: UUID,
+	user_id: UUID,
+	payload: dict = Depends(require_role("admin", "editor")),
+	db: AsyncSession = Depends(get_db),
+	book_repo = Depends(get_owned_book_repository),
+	read_repo = Depends(get_book_read_repository),
+):
+	await UnmarkBookReadUseCase(book_repo, read_repo).execute(book_id, UUID(payload["family_id"]), user_id)
+	await db.commit()
+
+
+@router.get("/{book_id}/loans", response_model=list[BookLoanResponse], summary="List loan history for a book")
+async def list_book_loans(
+	book_id: UUID,
+	payload: dict = Depends(get_current_user_payload),
+	book_repo = Depends(get_owned_book_repository),
+	loan_repo = Depends(get_book_loan_repository),
+):
+	return await ListBookLoansUseCase(book_repo, loan_repo).execute(book_id, UUID(payload["family_id"]))
+
+
+@router.post("/{book_id}/loans", response_model=BookLoanResponse, status_code=status.HTTP_201_CREATED, summary="Lend a book to someone outside the family")
+async def lend_book(
+	book_id: UUID,
+	request: BookLoanCreate,
+	payload: dict = Depends(require_role("admin", "editor")),
+	db: AsyncSession = Depends(get_db),
+	book_repo = Depends(get_owned_book_repository),
+	loan_repo = Depends(get_book_loan_repository),
+):
+	result = await LendBookUseCase(book_repo, loan_repo).execute(
+		book_id, UUID(payload["family_id"]), request.borrower_name, request.due_date
+	)
+	await db.commit()
+	return result
+
+
+@router.post("/{book_id}/loans/return", response_model=BookLoanResponse, summary="Mark the active loan as returned")
+async def return_book(
+	book_id: UUID,
+	payload: dict = Depends(require_role("admin", "editor")),
+	db: AsyncSession = Depends(get_db),
+	book_repo = Depends(get_owned_book_repository),
+	loan_repo = Depends(get_book_loan_repository),
+):
+	returned_loan = await ReturnBookUseCase(book_repo, loan_repo).execute(book_id, UUID(payload["family_id"]))
+	await db.commit()
+	return returned_loan

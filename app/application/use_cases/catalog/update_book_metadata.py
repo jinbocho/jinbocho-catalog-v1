@@ -18,6 +18,7 @@ class UpdateBookMetadataInput:
 	purchase_price: Decimal | None = None
 	source: str | None = None
 	reading_status: str | None = None
+	owner_id: UUID | None = None
 	tags: list[str] | None = None
 	notes: str | None = None
 
@@ -41,6 +42,8 @@ class UpdateBookMetadataUseCase:
 			book.source = inp.source
 		if inp.reading_status is not None:
 			book.reading_status = inp.reading_status
+		if inp.owner_id is not None:
+			book.owner_id = inp.owner_id
 		if inp.tags is not None:
 			book.tags = inp.tags
 		if inp.notes is not None:
