@@ -35,6 +35,7 @@ async def get_bookcase_map(
 		SectionMapResponse(
 			section_id=section.section.id,
 			section_index=section.section.section_index,
+			label=section.section.label,
 			shelves=[
 				ShelfMapResponse(
 					shelf_id=shelf_books.shelf.id,

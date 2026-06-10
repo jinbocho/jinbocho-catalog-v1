@@ -20,6 +20,7 @@ class ShelfMapResponse(BaseModel):
 class SectionMapResponse(BaseModel):
 	section_id: UUID = Field(..., description="Section ID")
 	section_index: int = Field(..., description="Section index")
+	label: Optional[str] = Field(None, description="Custom section label")
 	shelves: list[ShelfMapResponse] = Field(..., description="Shelves in this section")
 
 
