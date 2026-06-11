@@ -77,7 +77,7 @@ async def test_list_bibliographic_records(record_repo, test_family_id):
 		await create_use_case.execute(inp)
 
 	list_use_case = ListBibliographicRecordsUseCase(record_repo)
-	records = await list_use_case.execute(test_family_id, q=None, limit=50, offset=0)
+	records = await list_use_case.execute(test_family_id, q=None, genre=None, limit=50, offset=0)
 
 	assert len(records) == 3
 
@@ -98,7 +98,7 @@ async def test_list_bibliographic_records_search(record_repo, test_family_id):
 		await create_use_case.execute(inp)
 
 	list_use_case = ListBibliographicRecordsUseCase(record_repo)
-	records = await list_use_case.execute(test_family_id, q="Python", limit=50, offset=0)
+	records = await list_use_case.execute(test_family_id, q="Python", genre=None, limit=50, offset=0)
 
 	assert len(records) == 2
 

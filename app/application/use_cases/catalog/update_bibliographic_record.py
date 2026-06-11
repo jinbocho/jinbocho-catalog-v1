@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 from uuid import UUID
 
-from app.domain.entities import BibliographicRecord
+from app.domain.entities import BibliographicRecord, map_to_genre
 from app.domain.repositories import BibliographicRecordRepository
 from app.utils import utcnow
 
@@ -49,7 +49,9 @@ class UpdateBibliographicRecordUseCase:
 		if inp.language is not None:
 			record.language = inp.language
 		if inp.genre is not None:
-			record.genre = inp.genre
+			genre = map_to_genre(inp.genre)
+			record.genre = genre.value if genre else None
+			record.genre_raw = inp.genre
 		if inp.cover_url is not None:
 			record.cover_url = inp.cover_url
 		if inp.notes is not None:

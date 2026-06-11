@@ -71,11 +71,20 @@ class MockBibliographicRecordRepository(BibliographicRecordRepository):
 				return r
 		return None
 
-	async def find_all_by_family(self, family_id: UUID, q: str | None = None, limit: int = 50, offset: int = 0) -> list[BibliographicRecord]:
+	async def find_all_by_family(self, family_id: UUID, q: str | None = None, genre: str | None = None, limit: int = 50, offset: int = 0) -> list[BibliographicRecord]:
 		items = [r for r in self.records.values() if r.family_id == family_id]
+		if genre:
+			items = [r for r in items if r.genre == genre]
 		if q:
 			items = [r for r in items if q.lower() in r.title.lower()]
 		return items[offset:offset+limit]
+
+	async def count_genres(self, family_id: UUID) -> list[tuple[str, int]]:
+		counts: dict[str, int] = {}
+		for r in self.records.values():
+			if r.family_id == family_id and r.genre:
+				counts[r.genre] = counts.get(r.genre, 0) + 1
+		return sorted(counts.items(), key=lambda kv: kv[1], reverse=True)
 
 	async def find_all_by_ids(self, ids: list[UUID]) -> list[BibliographicRecord]:
 		return [self.records[id] for id in ids if id in self.records]

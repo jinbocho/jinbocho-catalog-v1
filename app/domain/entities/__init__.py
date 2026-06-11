@@ -1,4 +1,5 @@
 from .bibliographic_record import BibliographicRecord
+from .genre import Genre, map_to_genre
 from .book_history import BookHistory
 from .book_loan import BookLoan
 from .book_read import BookRead
@@ -15,6 +16,8 @@ __all__ = [
 	"Section",
 	"Shelf",
 	"BibliographicRecord",
+	"Genre",
+	"map_to_genre",
 	"OwnedBook",
 	"ReadingStatus",
 	"BookCondition",

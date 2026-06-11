@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 from uuid import UUID
 
-from app.domain.entities import BibliographicRecord
+from app.domain.entities import BibliographicRecord, map_to_genre
 from app.domain.repositories import BibliographicRecordRepository
 from app.utils import utcnow
 
@@ -27,6 +27,7 @@ class CreateBibliographicRecordUseCase:
 		self._record_repo = record_repo
 
 	async def execute(self, inp: CreateBibliographicRecordInput) -> BibliographicRecord:
+		genre = map_to_genre(inp.genre)
 		return await self._record_repo.save(
 			BibliographicRecord(
 				family_id=inp.family_id,
@@ -37,7 +38,8 @@ class CreateBibliographicRecordUseCase:
 				publisher=inp.publisher,
 				publication_year=inp.publication_year,
 				language=inp.language,
-				genre=inp.genre,
+				genre=genre.value if genre else None,
+				genre_raw=inp.genre,
 				cover_url=inp.cover_url,
 				notes=inp.notes,
 				created_at=utcnow(),

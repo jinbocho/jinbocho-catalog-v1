@@ -3,17 +3,34 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.dependencies import get_bibliographic_record_repository, get_current_user_payload, get_owned_book_repository, require_role
-from app.api.v1.schemas.record_schemas import BibliographicRecordCreate, BibliographicRecordResponse, BibliographicRecordUpdate
+from app.api.dependencies import (
+	get_bibliographic_record_repository,
+	get_current_user_payload,
+	get_isbn_lookup_cache_repository,
+	get_owned_book_repository,
+	require_role,
+)
+from app.api.v1.schemas.record_schemas import (
+	BibliographicRecordCreate,
+	BibliographicRecordResponse,
+	BibliographicRecordUpdate,
+	GenreCountResponse,
+	IncipitResponse,
+	IncipitSetRequest,
+)
 from app.application.use_cases import (
 	CreateBibliographicRecordInput,
 	CreateBibliographicRecordUseCase,
 	DeleteBibliographicRecordUseCase,
 	GetBibliographicRecordUseCase,
+	GetOrFetchIncipitUseCase,
 	ListBibliographicRecordsUseCase,
+	ListGenresUseCase,
+	SetIncipitUseCase,
 	UpdateBibliographicRecordInput,
 	UpdateBibliographicRecordUseCase,
 )
+from app.domain.entities import Genre
 from app.infrastructure.database.session import get_db
 
 router = APIRouter(tags=["records"])
@@ -22,12 +39,23 @@ router = APIRouter(tags=["records"])
 @router.get("/", response_model=list[BibliographicRecordResponse], summary="Search bibliographic records")
 async def list_records(
 	q: str | None = Query(None, description="Search query"),
+	genre: Genre | None = Query(None, description="Filter by normalized genre code"),
 	limit: int = Query(default=50, ge=1, le=200),
 	offset: int = Query(default=0, ge=0),
 	payload: dict = Depends(get_current_user_payload),
 	record_repo = Depends(get_bibliographic_record_repository),
 ):
-	return await ListBibliographicRecordsUseCase(record_repo).execute(UUID(payload["family_id"]), q, limit, offset)
+	return await ListBibliographicRecordsUseCase(record_repo).execute(
+		UUID(payload["family_id"]), q, genre.value if genre else None, limit, offset
+	)
+
+
+@router.get("/genres", response_model=list[GenreCountResponse], summary="List genres present in the family library")
+async def list_genres(
+	payload: dict = Depends(get_current_user_payload),
+	record_repo = Depends(get_bibliographic_record_repository),
+):
+	return await ListGenresUseCase(record_repo).execute(UUID(payload["family_id"]))
 
 
 @router.post("/", response_model=BibliographicRecordResponse, status_code=status.HTTP_201_CREATED, summary="Create bibliographic record")
@@ -51,6 +79,34 @@ async def get_record(
 	record_repo = Depends(get_bibliographic_record_repository),
 ):
 	return await GetBibliographicRecordUseCase(record_repo).execute(record_id, UUID(payload["family_id"]))
+
+
+@router.get("/{record_id}/incipit", response_model=IncipitResponse, summary="Get or lazily derive the book presentation")
+async def get_incipit(
+	record_id: UUID,
+	payload: dict = Depends(get_current_user_payload),
+	db: AsyncSession = Depends(get_db),
+	record_repo = Depends(get_bibliographic_record_repository),
+	cache_repo = Depends(get_isbn_lookup_cache_repository),
+):
+	result = await GetOrFetchIncipitUseCase(record_repo, cache_repo).execute(record_id, UUID(payload["family_id"]))
+	await db.commit()
+	return IncipitResponse(text=result.text, source=result.source, generated_at=result.generated_at)
+
+
+@router.put("/{record_id}/incipit", response_model=IncipitResponse, summary="Set the book presentation (manual or AI)")
+async def set_incipit(
+	record_id: UUID,
+	request: IncipitSetRequest,
+	payload: dict = Depends(require_role("admin", "editor")),
+	db: AsyncSession = Depends(get_db),
+	record_repo = Depends(get_bibliographic_record_repository),
+):
+	result = await SetIncipitUseCase(record_repo).execute(
+		record_id, UUID(payload["family_id"]), request.text, request.source
+	)
+	await db.commit()
+	return IncipitResponse(text=result.text, source=result.source, generated_at=result.generated_at)
 
 
 @router.patch("/{record_id}", response_model=BibliographicRecordResponse, summary="Update bibliographic record")

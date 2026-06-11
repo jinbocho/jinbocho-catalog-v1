@@ -25,8 +25,12 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 			publication_year=model.publication_year,
 			language=model.language,
 			genre=model.genre,
+			genre_raw=model.genre_raw,
 			cover_url=model.cover_url,
 			notes=model.notes,
+			incipit=model.incipit,
+			incipit_source=model.incipit_source,
+			incipit_generated_at=model.incipit_generated_at,
 			created_at=model.created_at,
 			updated_at=model.updated_at,
 		)
@@ -49,10 +53,13 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 		self,
 		family_id: UUID,
 		q: str | None = None,
+		genre: str | None = None,
 		limit: int = 50,
 		offset: int = 0,
 	) -> list[BibliographicRecord]:
 		query = select(BibliographicRecordModel).where(BibliographicRecordModel.family_id == family_id)
+		if genre:
+			query = query.where(BibliographicRecordModel.genre == genre)
 		if q:
 			ts_vector = func.to_tsvector(
 				"simple",
@@ -67,6 +74,18 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 			query = query.where(ts_vector.op("@@")(func.plainto_tsquery("simple", q)))
 		result = await self._session.execute(query.order_by(BibliographicRecordModel.created_at.desc()).limit(limit).offset(offset))
 		return [self._to_entity(model) for model in result.scalars().all()]
+
+	async def count_genres(self, family_id: UUID) -> list[tuple[str, int]]:
+		result = await self._session.execute(
+			select(BibliographicRecordModel.genre, func.count())
+			.where(
+				BibliographicRecordModel.family_id == family_id,
+				BibliographicRecordModel.genre.is_not(None),
+			)
+			.group_by(BibliographicRecordModel.genre)
+			.order_by(func.count().desc())
+		)
+		return [(genre, count) for genre, count in result.all() if genre]
 
 	async def find_all_by_ids(self, record_ids: list[UUID]) -> list[BibliographicRecord]:
 		if not record_ids:
@@ -90,8 +109,12 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 				publication_year=record.publication_year,
 				language=record.language,
 				genre=record.genre,
+				genre_raw=record.genre_raw,
 				cover_url=record.cover_url,
 				notes=record.notes,
+				incipit=record.incipit,
+				incipit_source=record.incipit_source,
+				incipit_generated_at=record.incipit_generated_at,
 				created_at=record.created_at,
 				updated_at=record.updated_at,
 			)
@@ -105,8 +128,12 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 			model.publication_year = record.publication_year
 			model.language = record.language
 			model.genre = record.genre
+			model.genre_raw = record.genre_raw
 			model.cover_url = record.cover_url
 			model.notes = record.notes
+			model.incipit = record.incipit
+			model.incipit_source = record.incipit_source
+			model.incipit_generated_at = record.incipit_generated_at
 			model.updated_at = record.updated_at
 		await self._session.flush()
 		await self._session.refresh(model)

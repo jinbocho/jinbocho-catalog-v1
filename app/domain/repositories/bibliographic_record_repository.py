@@ -16,9 +16,13 @@ class BibliographicRecordRepository(ABC):
 		self,
 		family_id: UUID,
 		q: str | None = None,
+		genre: str | None = None,
 		limit: int = 50,
 		offset: int = 0,
 	) -> list[BibliographicRecord]: ...
+
+	@abstractmethod
+	async def count_genres(self, family_id: UUID) -> list[tuple[str, int]]: ...
 
 	@abstractmethod
 	async def find_all_by_ids(self, record_ids: list[UUID]) -> list[BibliographicRecord]: ...

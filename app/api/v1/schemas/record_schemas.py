@@ -41,11 +41,31 @@ class BibliographicRecordResponse(BaseModel):
 	publisher: Optional[str] = Field(None, description="Publisher name")
 	publication_year: Optional[int] = Field(None, description="Year of publication")
 	language: Optional[str] = Field(None, description="Language code")
-	genre: Optional[str] = Field(None, description="Genre")
+	genre: Optional[str] = Field(None, description="Normalized genre code")
+	genre_raw: Optional[str] = Field(None, description="Original genre text as provided/fetched")
 	cover_url: Optional[str] = Field(None, description="Cover image URL")
 	notes: Optional[str] = Field(None, description="Notes")
+	incipit: Optional[str] = Field(None, description="Presentation/incipit text")
+	incipit_source: Optional[str] = Field(None, description="Where the incipit came from")
+	incipit_generated_at: Optional[datetime] = Field(None, description="When the incipit was last set")
 	created_at: datetime = Field(..., description="Creation timestamp")
 	updated_at: datetime = Field(..., description="Last update timestamp")
 
 	class Config:
 		from_attributes = True
+
+
+class GenreCountResponse(BaseModel):
+	genre: str = Field(..., description="Normalized genre code")
+	count: int = Field(..., description="Number of records with this genre")
+
+
+class IncipitResponse(BaseModel):
+	text: Optional[str] = Field(None, description="Presentation/incipit text, if available")
+	source: Optional[str] = Field(None, description="Source: google_books, open_library, manual, ai…")
+	generated_at: Optional[datetime] = Field(None, description="When the incipit was set")
+
+
+class IncipitSetRequest(BaseModel):
+	text: str = Field(..., min_length=1, description="Presentation/incipit text")
+	source: str = Field("manual", description="Source: 'manual' or 'ai'")
