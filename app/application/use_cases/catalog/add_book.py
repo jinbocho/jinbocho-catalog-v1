@@ -87,6 +87,7 @@ class AddBookUseCase:
 				purchase_price=inp.purchase_price,
 				source=inp.source,
 				reading_status=inp.reading_status,
+				current_reader_id=inp.changed_by if inp.reading_status == "reading" else None,
 				owner_id=inp.owner_id,
 				tags=inp.tags or [],
 				notes=inp.notes,

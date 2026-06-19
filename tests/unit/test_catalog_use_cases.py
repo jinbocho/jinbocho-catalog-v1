@@ -2,12 +2,18 @@ import pytest
 from uuid import uuid4
 
 from app.application.use_cases import (
+	AddBookInput,
+	AddBookUseCase,
 	CreateBibliographicRecordInput,
 	CreateBibliographicRecordUseCase,
 	GetBibliographicRecordUseCase,
 	ListBibliographicRecordsUseCase,
 	UpdateBibliographicRecordInput,
 	UpdateBibliographicRecordUseCase,
+	UpdateBookMetadataInput,
+	UpdateBookMetadataUseCase,
+	UpdateReadingStatusInput,
+	UpdateReadingStatusUseCase,
 	DeleteBibliographicRecordUseCase,
 	ListOwnedBooksUseCase,
 )
@@ -145,3 +151,93 @@ async def test_delete_bibliographic_record(record_repo, book_repo, test_family_i
 	get_use_case = GetBibliographicRecordUseCase(record_repo)
 	with pytest.raises(LookupError):
 		await get_use_case.execute(record.id, test_family_id)
+
+
+@pytest.mark.asyncio
+async def test_add_book_with_reading_status_sets_current_reader(
+	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+):
+	"""Adding a book already marked as 'reading' must set current_reader_id
+	(regression: this used to be silently left null, hiding who's reading it)."""
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	inp = AddBookInput(
+		family_id=test_family_id,
+		changed_by=test_user_id,
+		title="The Hobbit",
+		reading_status="reading",
+	)
+
+	book = await use_case.execute(inp)
+
+	assert book.reading_status == "reading"
+	assert book.current_reader_id == test_user_id
+
+
+@pytest.mark.asyncio
+async def test_add_book_to_read_has_no_current_reader(
+	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+):
+	"""Default 'to_read' status must not assign a reader."""
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	inp = AddBookInput(
+		family_id=test_family_id,
+		changed_by=test_user_id,
+		title="The Hobbit",
+	)
+
+	book = await use_case.execute(inp)
+
+	assert book.current_reader_id is None
+
+
+@pytest.mark.asyncio
+async def test_update_reading_status_sets_and_clears_current_reader(book_repo, history_repo, test_family_id, test_user_id):
+	"""Switching to 'reading' assigns the current reader; switching away clears it."""
+	from app.domain.entities import OwnedBook
+	from app.utils import utcnow
+
+	book = await book_repo.save(
+		OwnedBook(
+			family_id=test_family_id,
+			bibliographic_record_id=uuid4(),
+			reading_status="to_read",
+			created_at=utcnow(),
+			updated_at=utcnow(),
+		)
+	)
+
+	use_case = UpdateReadingStatusUseCase(book_repo, history_repo)
+	updated = await use_case.execute(
+		UpdateReadingStatusInput(book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status="reading")
+	)
+	assert updated.current_reader_id == test_user_id
+
+	updated = await use_case.execute(
+		UpdateReadingStatusInput(book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status="read")
+	)
+	assert updated.current_reader_id is None
+
+
+@pytest.mark.asyncio
+async def test_update_book_metadata_reading_status_sets_current_reader(book_repo, history_repo, test_family_id, test_user_id):
+	"""The generic metadata-update path must mirror the same current_reader_id rule
+	as the dedicated reading-status endpoint (regression: it didn't)."""
+	from app.domain.entities import OwnedBook
+	from app.utils import utcnow
+
+	book = await book_repo.save(
+		OwnedBook(
+			family_id=test_family_id,
+			bibliographic_record_id=uuid4(),
+			reading_status="to_read",
+			created_at=utcnow(),
+			updated_at=utcnow(),
+		)
+	)
+
+	use_case = UpdateBookMetadataUseCase(book_repo, history_repo)
+	updated = await use_case.execute(
+		UpdateBookMetadataInput(book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status="reading")
+	)
+
+	assert updated.current_reader_id == test_user_id

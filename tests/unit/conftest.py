@@ -175,7 +175,7 @@ class MockBookHistoryRepository(BookHistoryRepository):
 	async def save(self, entry) -> None:
 		self.history[uuid4()] = entry
 
-	async def find_by_book_id(self, book_id: UUID, limit: int = 50, offset: int = 0) -> list:
+	async def find_by_book(self, book_id: UUID, limit: int = 50, offset: int = 0) -> list:
 		items = [e for e in self.history.values() if e.owned_book_id == book_id]
 		return items[offset:offset+limit]
 

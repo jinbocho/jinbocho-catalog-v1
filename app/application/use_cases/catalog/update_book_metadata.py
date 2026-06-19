@@ -42,6 +42,8 @@ class UpdateBookMetadataUseCase:
 			book.source = inp.source
 		if inp.reading_status is not None:
 			book.reading_status = inp.reading_status
+			# Mirror the same rule as UpdateReadingStatusUseCase: only "reading" holds a reader.
+			book.current_reader_id = inp.changed_by if inp.reading_status == "reading" else None
 		if inp.owner_id is not None:
 			book.owner_id = inp.owner_id
 		if inp.tags is not None:
