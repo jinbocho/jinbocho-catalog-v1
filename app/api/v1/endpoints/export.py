@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 
 from app.api.dependencies import (
 	get_bibliographic_record_repository,
+	get_book_history_repository,
 	get_book_loan_repository,
 	get_book_read_repository,
 	get_bookcase_repository,
@@ -17,8 +18,21 @@ from app.api.dependencies import (
 	get_room_repository,
 	get_section_repository,
 	get_shelf_repository,
+	require_role,
 )
-from app.application.use_cases import ExportBooksUseCase
+from app.api.v1.schemas.export_schemas import (
+	BibliographicRecordExportItem,
+	BookcaseExportItem,
+	BookHistoryExportItem,
+	BookLoanExportItem,
+	BookReadExportItem,
+	FullLibraryExportResponse,
+	OwnedBookExportItem,
+	RoomExportItem,
+	SectionExportItem,
+	ShelfExportItem,
+)
+from app.application.use_cases import ExportBooksUseCase, ExportFullLibraryUseCase
 from app.application.use_cases.export.export_books import ExportBookItem
 
 router = APIRouter(tags=["export"])
@@ -242,3 +256,102 @@ async def export_books_json(
 		"total": len(items),
 		"books": [_json_book(item) for item in items],
 	}
+
+
+@router.get(
+	"/full",
+	response_model=FullLibraryExportResponse,
+	summary="Export the full family library for backup",
+	description="Everything needed to restore the library elsewhere: the full location "
+	"hierarchy (including empty rooms/bookcases), every bibliographic record, every owned "
+	"book, every loan (not just active ones), every read, and the audit history. Pair with "
+	"GET /v1/users/export (auth-service) for a complete family backup. Requires admin role.",
+)
+async def export_full_library(
+	payload: dict = Depends(require_role("admin")),  # type: ignore[type-arg]
+	room_repo=Depends(get_room_repository),
+	bookcase_repo=Depends(get_bookcase_repository),
+	section_repo=Depends(get_section_repository),
+	shelf_repo=Depends(get_shelf_repository),
+	record_repo=Depends(get_bibliographic_record_repository),
+	book_repo=Depends(get_owned_book_repository),
+	book_read_repo=Depends(get_book_read_repository),
+	book_loan_repo=Depends(get_book_loan_repository),
+	book_history_repo=Depends(get_book_history_repository),
+):  # type: ignore[no-untyped-def]
+	use_case = ExportFullLibraryUseCase(
+		room_repo=room_repo,
+		bookcase_repo=bookcase_repo,
+		section_repo=section_repo,
+		shelf_repo=shelf_repo,
+		record_repo=record_repo,
+		book_repo=book_repo,
+		book_read_repo=book_read_repo,
+		book_loan_repo=book_loan_repo,
+		book_history_repo=book_history_repo,
+	)
+	data = await use_case.execute(UUID(payload["family_id"]))
+
+	return FullLibraryExportResponse(
+		exported_at=datetime.now(timezone.utc),
+		rooms=[RoomExportItem(id=r.id, name=r.name, description=r.description) for r in data.rooms],
+		bookcases=[
+			BookcaseExportItem(
+				id=b.id, room_id=b.room_id, name=b.name, description=b.description,
+				type=b.type, notes=b.notes, image_url=b.image_url,
+			)
+			for b in data.bookcases
+		],
+		sections=[
+			SectionExportItem(id=s.id, bookcase_id=s.bookcase_id, section_index=s.section_index, label=s.label)
+			for s in data.sections
+		],
+		shelves=[
+			ShelfExportItem(id=sh.id, section_id=sh.section_id, shelf_index=sh.shelf_index, notes=sh.notes)
+			for sh in data.shelves
+		],
+		bibliographic_records=[
+			BibliographicRecordExportItem(
+				id=r.id, title=r.title, main_author=r.main_author, other_authors=r.other_authors,
+				isbn=r.isbn, publisher=r.publisher, publication_year=r.publication_year,
+				language=r.language, genre=r.genre, genre_raw=r.genre_raw, cover_url=r.cover_url,
+				notes=r.notes, incipit=r.incipit, incipit_source=r.incipit_source,
+				incipit_generated_at=r.incipit_generated_at,
+			)
+			for r in data.bibliographic_records
+		],
+		owned_books=[
+			OwnedBookExportItem(
+				id=b.id, bibliographic_record_id=b.bibliographic_record_id,
+				room_id=b.room_id, bookcase_id=b.bookcase_id, section_id=b.section_id, shelf_id=b.shelf_id,
+				shelf_position=b.shelf_position, position_description=b.position_description,
+				condition=_ev(b.condition) if b.condition else None,
+				purchase_date=b.purchase_date, purchase_price=b.purchase_price,
+				source=_ev(b.source) if b.source else None,
+				reading_status=_ev(b.reading_status),
+				current_reader_id=b.current_reader_id, owner_id=b.owner_id,
+				tags=b.tags, notes=b.notes,
+				is_intentional_duplicate=b.is_intentional_duplicate, duplicate_notes=b.duplicate_notes,
+				created_at=b.created_at, updated_at=b.updated_at,
+			)
+			for b in data.owned_books
+		],
+		book_reads=[
+			BookReadExportItem(id=r.id, owned_book_id=r.owned_book_id, user_id=r.user_id, read_at=r.read_at)
+			for r in data.book_reads
+		],
+		book_loans=[
+			BookLoanExportItem(
+				id=loan.id, owned_book_id=loan.owned_book_id, borrower_name=loan.borrower_name,
+				loaned_at=loan.loaned_at, due_date=loan.due_date, returned_at=loan.returned_at,
+			)
+			for loan in data.book_loans
+		],
+		book_history=[
+			BookHistoryExportItem(
+				id=h.id, owned_book_id=h.owned_book_id, event_type=_ev(h.event_type),
+				changed_by=h.changed_by, old_data=h.old_data, new_data=h.new_data, created_at=h.created_at,
+			)
+			for h in data.book_history
+		],
+	)

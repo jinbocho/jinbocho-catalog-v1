@@ -21,6 +21,12 @@ class SectionRepository(ABC):
 	) -> list[Section]: ...
 
 	@abstractmethod
+	async def find_by_index(self, bookcase_id: UUID, section_index: int) -> Section | None:
+		"""Lookup by the (bookcase_id, section_index) the DB already enforces as
+		unique — used to dedupe on library import."""
+		...
+
+	@abstractmethod
 	async def save(self, section: Section) -> Section: ...
 
 	@abstractmethod

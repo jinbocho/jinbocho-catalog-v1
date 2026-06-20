@@ -63,3 +63,28 @@ class SQLAlchemyBookReadRepository(BookReadRepository):
             .where(OwnedBookModel.family_id == family_id)
         )
         return [self._to_entity(m) for m in result.scalars().all()]
+
+    async def restore(self, book_read: BookRead) -> BookRead:
+        model = await self._session.get(BookReadModel, book_read.id)
+        if model is None:
+            # Natural key (owned_book_id, user_id) is unique — on merge, a
+            # different id might already satisfy it; reuse that row as-is
+            # rather than colliding on the unique constraint.
+            existing = await self._session.execute(
+                select(BookReadModel).where(
+                    BookReadModel.owned_book_id == book_read.owned_book_id,
+                    BookReadModel.user_id == book_read.user_id,
+                )
+            )
+            model = existing.scalar_one_or_none()
+        if model is None:
+            model = BookReadModel(
+                id=book_read.id,
+                owned_book_id=book_read.owned_book_id,
+                user_id=book_read.user_id,
+                read_at=book_read.read_at,
+            )
+            self._session.add(model)
+        await self._session.flush()
+        await self._session.refresh(model)
+        return self._to_entity(model)

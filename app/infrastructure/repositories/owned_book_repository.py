@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -78,6 +79,33 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 			select(func.count()).select_from(OwnedBookModel).where(OwnedBookModel.bibliographic_record_id == record_id)
 		)
 		return bool(result.scalar_one())
+
+	async def find_duplicate(
+		self,
+		family_id: UUID,
+		bibliographic_record_id: UUID,
+		room_id: UUID | None,
+		bookcase_id: UUID | None,
+		section_id: UUID | None,
+		shelf_id: UUID | None,
+		shelf_position: int | None,
+	) -> OwnedBook | None:
+		def _eq(column: Any, value: Any) -> Any:
+			return column.is_(None) if value is None else column == value
+
+		result = await self._session.execute(
+			select(OwnedBookModel).where(
+				OwnedBookModel.family_id == family_id,
+				OwnedBookModel.bibliographic_record_id == bibliographic_record_id,
+				_eq(OwnedBookModel.room_id, room_id),
+				_eq(OwnedBookModel.bookcase_id, bookcase_id),
+				_eq(OwnedBookModel.section_id, section_id),
+				_eq(OwnedBookModel.shelf_id, shelf_id),
+				_eq(OwnedBookModel.shelf_position, shelf_position),
+			)
+		)
+		model = result.scalars().first()
+		return self._to_entity(model) if model else None
 
 	async def save(self, owned_book: OwnedBook) -> OwnedBook:
 		model = await self._session.get(OwnedBookModel, owned_book.id)

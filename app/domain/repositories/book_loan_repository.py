@@ -20,3 +20,16 @@ class BookLoanRepository(ABC):
 
     @abstractmethod
     async def list_active_by_family(self, family_id: UUID) -> list["BookLoan"]: ...
+
+    @abstractmethod
+    async def find_all_by_family(self, family_id: UUID) -> list["BookLoan"]:
+        """All loans (active and returned) — for a full library export, unlike
+        list_active_by_family which only covers what's currently lent out."""
+        ...
+
+    @abstractmethod
+    async def restore(self, loan: "BookLoan") -> "BookLoan":
+        """Upsert preserving id/loaned_at/returned_at verbatim — for library
+        import, unlike add() which always stamps loaned_at as now and never
+        sets returned_at."""
+        ...

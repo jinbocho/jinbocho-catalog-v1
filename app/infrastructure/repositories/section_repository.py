@@ -50,6 +50,13 @@ class SQLAlchemySectionRepository(SectionRepository):
 		result = await self._session.execute(query.order_by(SectionModel.section_index).limit(limit).offset(offset))
 		return [self._to_entity(model) for model in result.scalars().all()]
 
+	async def find_by_index(self, bookcase_id: UUID, section_index: int) -> Section | None:
+		result = await self._session.execute(
+			select(SectionModel).where(SectionModel.bookcase_id == bookcase_id, SectionModel.section_index == section_index)
+		)
+		model = result.scalars().first()
+		return self._to_entity(model) if model else None
+
 	async def save(self, section: Section) -> Section:
 		model = await self._session.get(SectionModel, section.id)
 		if model is None:

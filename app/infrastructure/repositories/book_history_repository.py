@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.entities import BookHistory
 from app.domain.repositories import BookHistoryRepository
 from app.infrastructure.models import BookHistoryModel
+from app.infrastructure.models.owned_book_model import OwnedBookModel
 
 
 class SQLAlchemyBookHistoryRepository(BookHistoryRepository):
@@ -45,6 +46,45 @@ class SQLAlchemyBookHistoryRepository(BookHistoryRepository):
 			created_at=history.created_at,
 		)
 		self._session.add(model)
+		await self._session.flush()
+		await self._session.refresh(model)
+		return self._to_entity(model)
+
+	async def find_all_by_family(self, family_id: UUID) -> list[BookHistory]:
+		result = await self._session.execute(
+			select(BookHistoryModel)
+			.join(OwnedBookModel, BookHistoryModel.owned_book_id == OwnedBookModel.id)
+			.where(OwnedBookModel.family_id == family_id)
+			.order_by(BookHistoryModel.created_at.desc())
+		)
+		return [self._to_entity(model) for model in result.scalars().all()]
+
+	async def restore(self, history: BookHistory) -> BookHistory:
+		model = await self._session.get(BookHistoryModel, history.id)
+		if model is None:
+			# No id collision is possible (import always mints a fresh one) —
+			# but the same audit entry might already have been restored by a
+			# previous import of this same backup.
+			existing = await self._session.execute(
+				select(BookHistoryModel).where(
+					BookHistoryModel.owned_book_id == history.owned_book_id,
+					BookHistoryModel.event_type == history.event_type,
+					BookHistoryModel.changed_by == history.changed_by,
+					BookHistoryModel.created_at == history.created_at,
+				)
+			)
+			model = existing.scalars().first()
+		if model is None:
+			model = BookHistoryModel(
+				id=history.id,
+				owned_book_id=history.owned_book_id,
+				event_type=history.event_type,
+				changed_by=history.changed_by,
+				old_data=history.old_data,
+				new_data=history.new_data,
+				created_at=history.created_at,
+			)
+			self._session.add(model)
 		await self._session.flush()
 		await self._session.refresh(model)
 		return self._to_entity(model)

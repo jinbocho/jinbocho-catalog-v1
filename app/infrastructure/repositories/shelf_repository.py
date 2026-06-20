@@ -51,6 +51,13 @@ class SQLAlchemyShelfRepository(ShelfRepository):
 		result = await self._session.execute(query.order_by(ShelfModel.shelf_index).limit(limit).offset(offset))
 		return [self._to_entity(model) for model in result.scalars().all()]
 
+	async def find_by_index(self, section_id: UUID, shelf_index: int) -> Shelf | None:
+		result = await self._session.execute(
+			select(ShelfModel).where(ShelfModel.section_id == section_id, ShelfModel.shelf_index == shelf_index)
+		)
+		model = result.scalars().first()
+		return self._to_entity(model) if model else None
+
 	async def save(self, shelf: Shelf) -> Shelf:
 		model = await self._session.get(ShelfModel, shelf.id)
 		if model is None:

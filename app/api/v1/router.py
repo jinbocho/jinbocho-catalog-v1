@@ -1,6 +1,17 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import bookcases, books, export, ingestion, map, records, rooms, sections, shelves
+from app.api.v1.endpoints import (
+	bookcases,
+	books,
+	export,
+	ingestion,
+	library_import,
+	map,
+	records,
+	rooms,
+	sections,
+	shelves,
+)
 
 router = APIRouter()
 router.include_router(rooms.router, prefix="/rooms")
@@ -11,5 +22,6 @@ router.include_router(records.router, prefix="/bibliographic-records")
 router.include_router(books.router, prefix="/books")
 router.include_router(ingestion.router, prefix="/ingestion")
 router.include_router(export.router, prefix="/export")
+router.include_router(library_import.router, prefix="/import")
 router.include_router(map.router, prefix="/map")
 

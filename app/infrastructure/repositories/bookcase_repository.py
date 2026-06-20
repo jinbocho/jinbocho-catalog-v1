@@ -44,6 +44,13 @@ class SQLAlchemyBookcaseRepository(BookcaseRepository):
 		result = await self._session.execute(query.order_by(BookcaseModel.name).limit(limit).offset(offset))
 		return [self._to_entity(model) for model in result.scalars().all()]
 
+	async def find_by_name(self, room_id: UUID, name: str) -> Bookcase | None:
+		result = await self._session.execute(
+			select(BookcaseModel).where(BookcaseModel.room_id == room_id, BookcaseModel.name == name)
+		)
+		model = result.scalars().first()
+		return self._to_entity(model) if model else None
+
 	async def save(self, bookcase: Bookcase) -> Bookcase:
 		model = await self._session.get(BookcaseModel, bookcase.id)
 		if model is None:

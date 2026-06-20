@@ -12,6 +12,11 @@ class RoomRepository(ABC):
 	async def find_all_by_family(self, family_id: UUID, limit: int = 50, offset: int = 0) -> list[Room]: ...
 
 	@abstractmethod
+	async def find_by_name(self, family_id: UUID, name: str) -> Room | None:
+		"""Exact-name lookup within the family — used to dedupe on library import."""
+		...
+
+	@abstractmethod
 	async def save(self, room: Room) -> Room: ...
 
 	@abstractmethod

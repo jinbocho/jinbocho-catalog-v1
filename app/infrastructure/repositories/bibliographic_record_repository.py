@@ -49,6 +49,22 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 		model = result.scalar_one_or_none()
 		return self._to_entity(model) if model else None
 
+	async def find_by_title_author(self, family_id: UUID, title: str, main_author: str | None) -> BibliographicRecord | None:
+		author_clause = (
+			BibliographicRecordModel.main_author.is_(None)
+			if main_author is None
+			else BibliographicRecordModel.main_author == main_author
+		)
+		result = await self._session.execute(
+			select(BibliographicRecordModel).where(
+				BibliographicRecordModel.family_id == family_id,
+				BibliographicRecordModel.title == title,
+				author_clause,
+			)
+		)
+		model = result.scalars().first()
+		return self._to_entity(model) if model else None
+
 	async def find_all_by_family(
 		self,
 		family_id: UUID,

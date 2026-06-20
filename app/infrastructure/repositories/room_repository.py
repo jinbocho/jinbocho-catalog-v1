@@ -33,6 +33,13 @@ class SQLAlchemyRoomRepository(RoomRepository):
 		)
 		return [self._to_entity(model) for model in result.scalars().all()]
 
+	async def find_by_name(self, family_id: UUID, name: str) -> Room | None:
+		result = await self._session.execute(
+			select(RoomModel).where(RoomModel.family_id == family_id, RoomModel.name == name)
+		)
+		model = result.scalars().first()
+		return self._to_entity(model) if model else None
+
 	async def save(self, room: Room) -> Room:
 		model = await self._session.get(RoomModel, room.id)
 		if model is None:

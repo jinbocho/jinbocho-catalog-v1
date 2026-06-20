@@ -2,7 +2,7 @@ import pytest
 from uuid import uuid4, UUID
 from datetime import datetime
 
-from app.domain.entities import Room, Bookcase, Section, Shelf, BibliographicRecord, OwnedBook
+from app.domain.entities import Room, Bookcase, Section, Shelf, BibliographicRecord, OwnedBook, BookRead, BookLoan
 from app.domain.repositories import (
 	RoomRepository,
 	BookcaseRepository,
@@ -11,6 +11,8 @@ from app.domain.repositories import (
 	BibliographicRecordRepository,
 	OwnedBookRepository,
 	BookHistoryRepository,
+	BookReadRepository,
+	BookLoanRepository,
 	IsbnLookupCacheRepository,
 )
 
@@ -28,6 +30,9 @@ class MockRoomRepository(RoomRepository):
 
 	async def find_all_by_family(self, family_id: UUID, limit: int = 50, offset: int = 0) -> list[Room]:
 		return [r for r in self.rooms.values() if r.family_id == family_id][offset:offset+limit]
+
+	async def find_by_name(self, family_id: UUID, name: str) -> Room | None:
+		return next((r for r in self.rooms.values() if r.family_id == family_id and r.name == name), None)
 
 	async def delete(self, room_id: UUID) -> None:
 		self.rooms.pop(room_id, None)
@@ -50,6 +55,9 @@ class MockBookcaseRepository(BookcaseRepository):
 			items = [b for b in items if b.room_id == room_id]
 		return items[offset:offset+limit]
 
+	async def find_by_name(self, room_id: UUID, name: str) -> Bookcase | None:
+		return next((b for b in self.bookcases.values() if b.room_id == room_id and b.name == name), None)
+
 	async def delete(self, bookcase_id: UUID) -> None:
 		self.bookcases.pop(bookcase_id, None)
 
@@ -68,6 +76,12 @@ class MockBibliographicRecordRepository(BibliographicRecordRepository):
 	async def find_by_isbn(self, family_id: UUID, isbn: str) -> BibliographicRecord | None:
 		for r in self.records.values():
 			if r.family_id == family_id and r.isbn == isbn:
+				return r
+		return None
+
+	async def find_by_title_author(self, family_id: UUID, title: str, main_author: str | None) -> BibliographicRecord | None:
+		for r in self.records.values():
+			if r.family_id == family_id and r.title == title and r.main_author == main_author:
 				return r
 		return None
 
@@ -114,6 +128,23 @@ class MockOwnedBookRepository(OwnedBookRepository):
 	async def exists_by_bibliographic_record_id(self, record_id: UUID) -> bool:
 		return any(b.bibliographic_record_id == record_id for b in self.books.values())
 
+	async def find_duplicate(
+		self, family_id: UUID, bibliographic_record_id: UUID, room_id, bookcase_id, section_id, shelf_id, shelf_position
+	) -> OwnedBook | None:
+		return next(
+			(
+				b for b in self.books.values()
+				if b.family_id == family_id
+				and b.bibliographic_record_id == bibliographic_record_id
+				and b.room_id == room_id
+				and b.bookcase_id == bookcase_id
+				and b.section_id == section_id
+				and b.shelf_id == shelf_id
+				and b.shelf_position == shelf_position
+			),
+			None,
+		)
+
 	async def delete(self, book_id: UUID) -> None:
 		self.books.pop(book_id, None)
 
@@ -138,6 +169,11 @@ class MockSectionRepository(SectionRepository):
 	async def find_all_by_bookcase(self, bookcase_id: UUID, limit: int = 50, offset: int = 0) -> list[Section]:
 		items = [s for s in self.sections.values() if s.bookcase_id == bookcase_id]
 		return items[offset:offset+limit]
+
+	async def find_by_index(self, bookcase_id: UUID, section_index: int) -> Section | None:
+		return next(
+			(s for s in self.sections.values() if s.bookcase_id == bookcase_id and s.section_index == section_index), None
+		)
 
 	async def delete(self, section_id: UUID) -> None:
 		self.sections.pop(section_id, None)
@@ -164,6 +200,11 @@ class MockShelfRepository(ShelfRepository):
 		items = [s for s in self.shelves.values() if s.section_id == section_id]
 		return items[offset:offset+limit]
 
+	async def find_by_index(self, section_id: UUID, shelf_index: int) -> Shelf | None:
+		return next(
+			(s for s in self.shelves.values() if s.section_id == section_id and s.shelf_index == shelf_index), None
+		)
+
 	async def delete(self, shelf_id: UUID) -> None:
 		self.shelves.pop(shelf_id, None)
 
@@ -178,6 +219,114 @@ class MockBookHistoryRepository(BookHistoryRepository):
 	async def find_by_book(self, book_id: UUID, limit: int = 50, offset: int = 0) -> list:
 		items = [e for e in self.history.values() if e.owned_book_id == book_id]
 		return items[offset:offset+limit]
+
+	async def find_all_by_family(self, family_id: UUID) -> list:
+		# This mock doesn't model the owned_book -> family join the real
+		# repository does; it just returns everything stored. Tests that need
+		# real family-boundary behavior should filter the input fixtures instead.
+		return list(self.history.values())
+
+	async def restore(self, history):
+		existing = next(
+			(
+				h for h in self.history.values()
+				if h.owned_book_id == history.owned_book_id
+				and h.event_type == history.event_type
+				and h.changed_by == history.changed_by
+				and h.created_at == history.created_at
+			),
+			None,
+		)
+		if existing:
+			return existing
+		self.history[history.id] = history
+		return history
+
+
+class MockBookReadRepository(BookReadRepository):
+	def __init__(self):
+		self.reads = {}
+
+	async def add(self, owned_book_id: UUID, user_id: UUID) -> BookRead:
+		for r in self.reads.values():
+			if r.owned_book_id == owned_book_id and r.user_id == user_id:
+				return r
+		read = BookRead(owned_book_id=owned_book_id, user_id=user_id)
+		self.reads[read.id] = read
+		return read
+
+	async def remove(self, owned_book_id: UUID, user_id: UUID) -> None:
+		match = next(
+			(r for r in self.reads.values() if r.owned_book_id == owned_book_id and r.user_id == user_id), None
+		)
+		if match:
+			self.reads.pop(match.id, None)
+
+	async def list_by_book(self, owned_book_id: UUID) -> list[BookRead]:
+		return [r for r in self.reads.values() if r.owned_book_id == owned_book_id]
+
+	async def list_by_family(self, family_id: UUID) -> list[BookRead]:
+		# Like MockBookHistoryRepository, this mock doesn't model the
+		# owned_book -> family join; it returns everything stored.
+		return list(self.reads.values())
+
+	async def restore(self, book_read: BookRead) -> BookRead:
+		existing = next(
+			(
+				r for r in self.reads.values()
+				if r.id == book_read.id or (r.owned_book_id == book_read.owned_book_id and r.user_id == book_read.user_id)
+			),
+			None,
+		)
+		if existing:
+			return existing
+		self.reads[book_read.id] = book_read
+		return book_read
+
+
+class MockBookLoanRepository(BookLoanRepository):
+	def __init__(self):
+		self.loans = {}
+
+	async def add(self, loan: BookLoan) -> BookLoan:
+		self.loans[loan.id] = loan
+		return loan
+
+	async def mark_returned(self, loan_id: UUID, returned_at) -> None:
+		if loan_id in self.loans:
+			self.loans[loan_id].returned_at = returned_at
+
+	async def get_active_for_book(self, owned_book_id: UUID):
+		return next(
+			(loan for loan in self.loans.values() if loan.owned_book_id == owned_book_id and loan.returned_at is None),
+			None,
+		)
+
+	async def list_by_book(self, owned_book_id: UUID) -> list[BookLoan]:
+		return [loan for loan in self.loans.values() if loan.owned_book_id == owned_book_id]
+
+	async def list_active_by_family(self, family_id: UUID) -> list[BookLoan]:
+		return [loan for loan in self.loans.values() if loan.returned_at is None]
+
+	async def find_all_by_family(self, family_id: UUID) -> list[BookLoan]:
+		# Like MockBookHistoryRepository, this mock doesn't model the
+		# owned_book -> family join; it returns everything stored.
+		return list(self.loans.values())
+
+	async def restore(self, loan: BookLoan) -> BookLoan:
+		existing = next(
+			(
+				lo for lo in self.loans.values()
+				if lo.owned_book_id == loan.owned_book_id
+				and lo.borrower_name == loan.borrower_name
+				and lo.loaned_at == loan.loaned_at
+			),
+			None,
+		)
+		if existing:
+			return existing
+		self.loans[loan.id] = loan
+		return loan
 
 
 class MockIsbnLookupCacheRepository(IsbnLookupCacheRepository):
@@ -234,6 +383,16 @@ def book_repo() -> OwnedBookRepository:
 @pytest.fixture
 def history_repo() -> BookHistoryRepository:
 	return MockBookHistoryRepository()
+
+
+@pytest.fixture
+def book_read_repo() -> BookReadRepository:
+	return MockBookReadRepository()
+
+
+@pytest.fixture
+def book_loan_repo() -> BookLoanRepository:
+	return MockBookLoanRepository()
 
 
 @pytest.fixture

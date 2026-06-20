@@ -16,3 +16,9 @@ class BookReadRepository(ABC):
 
     @abstractmethod
     async def list_by_family(self, family_id: UUID) -> list[BookRead]: ...
+
+    @abstractmethod
+    async def restore(self, book_read: BookRead) -> BookRead:
+        """Upsert preserving id/read_at verbatim — for library import, unlike
+        add() which always stamps read_at as now and generates a fresh id."""
+        ...

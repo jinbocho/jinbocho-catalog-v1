@@ -34,6 +34,22 @@ from app.application.use_cases.catalog import (
 	UpdateReadingStatusInput,
 	UpdateReadingStatusUseCase,
 )
+from app.application.use_cases.backup import (
+	ExportFullLibraryUseCase,
+	FullLibraryExport,
+	ImportBookcaseItem,
+	ImportBookHistoryItem,
+	ImportBookLoanItem,
+	ImportBookReadItem,
+	ImportFullLibraryInput,
+	ImportFullLibraryOutput,
+	ImportFullLibraryUseCase,
+	ImportOwnedBookItem,
+	ImportRecordItem,
+	ImportRoomItem,
+	ImportSectionItem,
+	ImportShelfItem,
+)
 from app.application.use_cases.export import ExportBookItem, ExportBooksUseCase
 from app.application.use_cases.ingestion import LookupIsbnOutput, LookupIsbnUseCase
 from app.application.use_cases.location import (
@@ -108,6 +124,21 @@ __all__ = [
 	# Export
 	"ExportBookItem",
 	"ExportBooksUseCase",
+	# Backup (full library export/import)
+	"ExportFullLibraryUseCase",
+	"FullLibraryExport",
+	"ImportFullLibraryUseCase",
+	"ImportFullLibraryInput",
+	"ImportFullLibraryOutput",
+	"ImportRoomItem",
+	"ImportBookcaseItem",
+	"ImportSectionItem",
+	"ImportShelfItem",
+	"ImportRecordItem",
+	"ImportOwnedBookItem",
+	"ImportBookReadItem",
+	"ImportBookLoanItem",
+	"ImportBookHistoryItem",
 	# Ingestion
 	"LookupIsbnOutput",
 	"LookupIsbnUseCase",

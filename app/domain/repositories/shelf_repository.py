@@ -21,6 +21,12 @@ class ShelfRepository(ABC):
 	) -> list[Shelf]: ...
 
 	@abstractmethod
+	async def find_by_index(self, section_id: UUID, shelf_index: int) -> Shelf | None:
+		"""Lookup by the (section_id, shelf_index) the DB already enforces as
+		unique — used to dedupe on library import."""
+		...
+
+	@abstractmethod
 	async def save(self, shelf: Shelf) -> Shelf: ...
 
 	@abstractmethod
