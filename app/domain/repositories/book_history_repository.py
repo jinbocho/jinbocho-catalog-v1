@@ -25,3 +25,11 @@ class BookHistoryRepository(ABC):
 		blind insert (fine for its normal callers, which only ever use fresh
 		ids, but would collide on a primary key re-importing the same backup)."""
 		...
+
+	@abstractmethod
+	async def delete_by_owned_book_ids(self, owned_book_ids: list[UUID]) -> None:
+		"""Used by full account deletion — there's no FK/family_id on this
+		table, so the caller resolves the family's book ids first (e.g. via
+		OwnedBookRepository.find_all_by_family) and must do so before deleting
+		those books."""
+		...

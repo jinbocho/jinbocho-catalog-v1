@@ -237,3 +237,14 @@ class ImportFullLibraryResponse(BaseModel):
 	book_reads_imported: int
 	book_loans_imported: int
 	book_history_imported: int
+
+
+class DeleteFamilyDataResponse(BaseModel):
+	"""Counts of what was permanently wiped — for the admin's own confirmation
+	toast. This is the catalog-service half of full account deletion; the
+	frontend must also call auth-service's DELETE /v1/families/{family_id}."""
+	rooms_deleted: int
+	bookcases_deleted: int
+	records_deleted: int
+	owned_books_deleted: int
+	removed_members_deleted: int

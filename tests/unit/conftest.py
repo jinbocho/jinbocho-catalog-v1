@@ -38,6 +38,9 @@ class MockRoomRepository(RoomRepository):
 	async def delete(self, room_id: UUID) -> None:
 		self.rooms.pop(room_id, None)
 
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		self.rooms = {k: v for k, v in self.rooms.items() if v.family_id != family_id}
+
 
 class MockBookcaseRepository(BookcaseRepository):
 	def __init__(self):
@@ -61,6 +64,9 @@ class MockBookcaseRepository(BookcaseRepository):
 
 	async def delete(self, bookcase_id: UUID) -> None:
 		self.bookcases.pop(bookcase_id, None)
+
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		self.bookcases = {k: v for k, v in self.bookcases.items() if v.family_id != family_id}
 
 
 class MockBibliographicRecordRepository(BibliographicRecordRepository):
@@ -106,6 +112,9 @@ class MockBibliographicRecordRepository(BibliographicRecordRepository):
 
 	async def delete(self, record_id: UUID) -> None:
 		self.records.pop(record_id, None)
+
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		self.records = {k: v for k, v in self.records.items() if v.family_id != family_id}
 
 
 class MockOwnedBookRepository(OwnedBookRepository):
@@ -154,6 +163,9 @@ class MockOwnedBookRepository(OwnedBookRepository):
 
 	async def delete(self, book_id: UUID) -> None:
 		self.books.pop(book_id, None)
+
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		self.books = {k: v for k, v in self.books.items() if v.family_id != family_id}
 
 
 class MockSectionRepository(SectionRepository):
@@ -248,6 +260,10 @@ class MockBookHistoryRepository(BookHistoryRepository):
 			return existing
 		self.history[history.id] = history
 		return history
+
+	async def delete_by_owned_book_ids(self, owned_book_ids: list[UUID]) -> None:
+		ids = set(owned_book_ids)
+		self.history = {k: v for k, v in self.history.items() if v.owned_book_id not in ids}
 
 
 class MockBookReadRepository(BookReadRepository):
@@ -357,6 +373,9 @@ class MockRemovedMemberRepository(RemovedMemberRepository):
 
 	async def find_all_by_family(self, family_id: UUID) -> list[RemovedMember]:
 		return [m for m in self.members.values() if m.family_id == family_id]
+
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		self.members = {k: v for k, v in self.members.items() if v.family_id != family_id}
 
 
 @pytest.fixture

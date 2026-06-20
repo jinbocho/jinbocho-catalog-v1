@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,3 +66,7 @@ class SQLAlchemyRoomRepository(RoomRepository):
 		if model is not None:
 			await self._session.delete(model)
 			await self._session.flush()
+
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		await self._session.execute(sa_delete(RoomModel).where(RoomModel.family_id == family_id))
+		await self._session.flush()

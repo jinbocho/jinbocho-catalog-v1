@@ -27,3 +27,10 @@ class BookcaseRepository(ABC):
 
 	@abstractmethod
 	async def delete(self, bookcase_id: UUID) -> None: ...
+
+	@abstractmethod
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		"""Bulk-deletes every bookcase for the family (sections/shelves cascade
+		at the DB level) — used by full account deletion. Caller must do this
+		before deleting rooms (RESTRICT on bookcases.room_id)."""
+		...

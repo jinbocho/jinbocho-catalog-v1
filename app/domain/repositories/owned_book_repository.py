@@ -55,3 +55,10 @@ class OwnedBookRepository(ABC):
 
 	@abstractmethod
 	async def delete(self, book_id: UUID) -> None: ...
+
+	@abstractmethod
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		"""Bulk-deletes every owned book for the family (reads/loans cascade at
+		the DB level) — used by full account deletion. Caller must do this
+		before deleting bibliographic records (RESTRICT)."""
+		...

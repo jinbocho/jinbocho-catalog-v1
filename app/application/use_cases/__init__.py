@@ -37,6 +37,8 @@ from app.application.use_cases.catalog import (
 	UpdateReadingStatusUseCase,
 )
 from app.application.use_cases.backup import (
+	DeleteFamilyDataOutput,
+	DeleteFamilyDataUseCase,
 	ExportFullLibraryUseCase,
 	FullLibraryExport,
 	ImportBookcaseItem,
@@ -147,6 +149,8 @@ __all__ = [
 	"ImportBookHistoryItem",
 	"RecordRemovedMemberUseCase",
 	"RecordRemovedMemberInput",
+	"DeleteFamilyDataUseCase",
+	"DeleteFamilyDataOutput",
 	# Ingestion
 	"LookupIsbnOutput",
 	"LookupIsbnUseCase",

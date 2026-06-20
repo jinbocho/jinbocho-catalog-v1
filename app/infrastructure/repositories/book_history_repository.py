@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -88,3 +89,9 @@ class SQLAlchemyBookHistoryRepository(BookHistoryRepository):
 		await self._session.flush()
 		await self._session.refresh(model)
 		return self._to_entity(model)
+
+	async def delete_by_owned_book_ids(self, owned_book_ids: list[UUID]) -> None:
+		if not owned_book_ids:
+			return
+		await self._session.execute(sa_delete(BookHistoryModel).where(BookHistoryModel.owned_book_id.in_(owned_book_ids)))
+		await self._session.flush()

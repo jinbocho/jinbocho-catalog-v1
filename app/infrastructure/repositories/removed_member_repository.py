@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -50,3 +51,7 @@ class SQLAlchemyRemovedMemberRepository(RemovedMemberRepository):
 			select(RemovedMemberModel).where(RemovedMemberModel.family_id == family_id)
 		)
 		return [self._to_entity(model) for model in result.scalars().all()]
+
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		await self._session.execute(sa_delete(RemovedMemberModel).where(RemovedMemberModel.family_id == family_id))
+		await self._session.flush()

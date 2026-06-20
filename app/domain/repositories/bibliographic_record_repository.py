@@ -38,3 +38,9 @@ class BibliographicRecordRepository(ABC):
 
 	@abstractmethod
 	async def delete(self, record_id: UUID) -> None: ...
+
+	@abstractmethod
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		"""Bulk-deletes every record for the family — used by full account
+		deletion. Caller must delete dependent owned_books first (RESTRICT)."""
+		...

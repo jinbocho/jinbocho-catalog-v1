@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -171,3 +172,7 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 		if model is not None:
 			await self._session.delete(model)
 			await self._session.flush()
+
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		await self._session.execute(sa_delete(OwnedBookModel).where(OwnedBookModel.family_id == family_id))
+		await self._session.flush()

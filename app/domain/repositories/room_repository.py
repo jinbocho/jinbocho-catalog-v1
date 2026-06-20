@@ -21,3 +21,9 @@ class RoomRepository(ABC):
 
 	@abstractmethod
 	async def delete(self, room_id: UUID) -> None: ...
+
+	@abstractmethod
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		"""Bulk-deletes every room for the family — used by full account
+		deletion. Caller must delete dependent bookcases first (RESTRICT)."""
+		...

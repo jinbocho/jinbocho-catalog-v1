@@ -13,3 +13,8 @@ class RemovedMemberRepository(ABC):
 
 	@abstractmethod
 	async def find_all_by_family(self, family_id: UUID) -> list[RemovedMember]: ...
+
+	@abstractmethod
+	async def delete_all_by_family(self, family_id: UUID) -> None:
+		"""Used by full account deletion."""
+		...
