@@ -1,6 +1,8 @@
 from app.application.use_cases.catalog import (
 	AddBookInput,
 	AddBookUseCase,
+	DuplicateBookConflict,
+	DuplicateBookError,
 	LendBookUseCase,
 	ListActiveFamilyLoansUseCase,
 	ListBookLoansUseCase,
@@ -49,6 +51,8 @@ from app.application.use_cases.backup import (
 	ImportRoomItem,
 	ImportSectionItem,
 	ImportShelfItem,
+	RecordRemovedMemberInput,
+	RecordRemovedMemberUseCase,
 )
 from app.application.use_cases.export import ExportBookItem, ExportBooksUseCase
 from app.application.use_cases.ingestion import LookupIsbnOutput, LookupIsbnUseCase
@@ -88,6 +92,8 @@ __all__ = [
 	# Catalog - Books
 	"AddBookInput",
 	"AddBookUseCase",
+	"DuplicateBookConflict",
+	"DuplicateBookError",
 	"LendBookUseCase",
 	"ReturnBookUseCase",
 	"ListBookLoansUseCase",
@@ -139,6 +145,8 @@ __all__ = [
 	"ImportBookReadItem",
 	"ImportBookLoanItem",
 	"ImportBookHistoryItem",
+	"RecordRemovedMemberUseCase",
+	"RecordRemovedMemberInput",
 	# Ingestion
 	"LookupIsbnOutput",
 	"LookupIsbnUseCase",

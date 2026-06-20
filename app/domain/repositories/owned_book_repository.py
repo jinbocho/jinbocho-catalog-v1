@@ -42,6 +42,15 @@ class OwnedBookRepository(ABC):
 		...
 
 	@abstractmethod
+	async def find_one_by_record(self, bibliographic_record_id: UUID) -> OwnedBook | None:
+		"""Any existing copy of this record, regardless of owner or location —
+		used to warn about a likely duplicate when adding a new book. Family-
+		wide on purpose: two members can legitimately each own a copy, so the
+		check doesn't block that, it just surfaces who already has it (the
+		caller decides whether to add a separate copy anyway)."""
+		...
+
+	@abstractmethod
 	async def save(self, owned_book: OwnedBook) -> OwnedBook: ...
 
 	@abstractmethod

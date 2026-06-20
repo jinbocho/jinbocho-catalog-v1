@@ -1,4 +1,5 @@
 from .export_full_library import ExportFullLibraryUseCase, FullLibraryExport
+from .record_removed_member import RecordRemovedMemberInput, RecordRemovedMemberUseCase
 from .import_full_library import (
 	ImportBookcaseItem,
 	ImportBookHistoryItem,
@@ -29,4 +30,6 @@ __all__ = [
 	"ImportBookReadItem",
 	"ImportBookLoanItem",
 	"ImportBookHistoryItem",
+	"RecordRemovedMemberUseCase",
+	"RecordRemovedMemberInput",
 ]

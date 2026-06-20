@@ -15,6 +15,7 @@ from app.domain.repositories import (
     BookcaseRepository,
     IsbnLookupCacheRepository,
     OwnedBookRepository,
+    RemovedMemberRepository,
     RoomRepository,
     SectionRepository,
     ShelfRepository,
@@ -28,6 +29,7 @@ from app.infrastructure.repositories import (
     SQLAlchemyBookcaseRepository,
     SQLAlchemyIsbnLookupCacheRepository,
     SQLAlchemyOwnedBookRepository,
+    SQLAlchemyRemovedMemberRepository,
     SQLAlchemyRoomRepository,
     SQLAlchemySectionRepository,
     SQLAlchemyShelfRepository,
@@ -114,6 +116,10 @@ async def get_isbn_lookup_cache_repository(
     db: AsyncSession = Depends(get_db),
 ) -> IsbnLookupCacheRepository:
     return SQLAlchemyIsbnLookupCacheRepository(db)
+
+
+async def get_removed_member_repository(db: AsyncSession = Depends(get_db)) -> RemovedMemberRepository:
+    return SQLAlchemyRemovedMemberRepository(db)
 
 
 async def get_book_read_repository(db: AsyncSession = Depends(get_db)) -> BookReadRepository:

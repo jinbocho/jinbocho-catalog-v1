@@ -6,6 +6,26 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+class DuplicateBookConflictResponse(BaseModel):
+	"""409 body for POST /v1/books/ when the family already owns this book.
+	The check is family-wide, not scoped to an owner (two members can each
+	legitimately have a copy) — existing_owner_id/location say who already
+	has it and where. Resubmit with is_intentional_duplicate=true to add it
+	anyway."""
+	error: Literal["duplicate_book"] = "duplicate_book"
+	conflict_type: Literal["isbn_match", "title_author_match"]
+	existing_book_id: UUID
+	existing_record_id: UUID
+	title: str
+	main_author: Optional[str] = None
+	isbn: Optional[str] = None
+	existing_owner_id: Optional[UUID] = None
+	existing_room_id: Optional[UUID] = None
+	existing_bookcase_id: Optional[UUID] = None
+	existing_section_id: Optional[UUID] = None
+	existing_shelf_id: Optional[UUID] = None
+
+
 class OwnedBookCreate(BaseModel):
 	bibliographic_record_id: Optional[UUID] = Field(None, description="Bibliographic record ID")
 	title: Optional[str] = Field(None, description="Book title (if no record ID)")
@@ -24,6 +44,11 @@ class OwnedBookCreate(BaseModel):
 	owner_id: Optional[UUID] = Field(None, description="Family member who owns this copy")
 	notes: Optional[str] = Field(None, description="Notes")
 	tags: Optional[list[str]] = Field(None, description="Tags")
+	is_intentional_duplicate: bool = Field(
+		False,
+		description="Set to true to confirm adding this book despite a duplicate warning "
+		"(409 DUPLICATE_BOOK) from a previous call with the same data.",
+	)
 
 
 class OwnedBookUpdate(BaseModel):
@@ -60,6 +85,7 @@ class OwnedBookResponse(BaseModel):
 	owner_id: Optional[UUID] = Field(None, description="Family member who owns this copy")
 	notes: Optional[str] = Field(None, description="Notes")
 	tags: list[str] = Field(..., description="Tags")
+	is_intentional_duplicate: bool = Field(False, description="True if added despite a duplicate warning")
 	created_at: datetime = Field(..., description="Creation timestamp")
 	updated_at: datetime = Field(..., description="Last update timestamp")
 

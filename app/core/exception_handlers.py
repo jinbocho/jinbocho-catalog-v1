@@ -2,6 +2,8 @@ from fastapi import FastAPI, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
+from app.application.use_cases.catalog.add_book import DuplicateBookError
+
 
 def configure_exception_handlers(app: FastAPI) -> None:
 	@app.exception_handler(LookupError)
@@ -30,4 +32,25 @@ def configure_exception_handlers(app: FastAPI) -> None:
 		return JSONResponse(
 			status_code=status.HTTP_409_CONFLICT,
 			content={"detail": "Data integrity violation"},
+		)
+
+	@app.exception_handler(DuplicateBookError)
+	async def duplicate_book_error_handler(request, exc: DuplicateBookError):
+		conflict = exc.conflict
+		return JSONResponse(
+			status_code=status.HTTP_409_CONFLICT,
+			content={
+				"error": "duplicate_book",
+				"conflict_type": conflict.conflict_type,
+				"existing_book_id": str(conflict.existing_book_id),
+				"existing_record_id": str(conflict.existing_record_id),
+				"title": conflict.title,
+				"main_author": conflict.main_author,
+				"isbn": conflict.isbn,
+				"existing_owner_id": str(conflict.existing_owner_id) if conflict.existing_owner_id else None,
+				"existing_room_id": str(conflict.existing_room_id) if conflict.existing_room_id else None,
+				"existing_bookcase_id": str(conflict.existing_bookcase_id) if conflict.existing_bookcase_id else None,
+				"existing_section_id": str(conflict.existing_section_id) if conflict.existing_section_id else None,
+				"existing_shelf_id": str(conflict.existing_shelf_id) if conflict.existing_shelf_id else None,
+			},
 		)

@@ -7,6 +7,7 @@ from app.api.v1.endpoints import (
 	ingestion,
 	library_import,
 	map,
+	members,
 	records,
 	rooms,
 	sections,
@@ -24,4 +25,5 @@ router.include_router(ingestion.router, prefix="/ingestion")
 router.include_router(export.router, prefix="/export")
 router.include_router(library_import.router, prefix="/import")
 router.include_router(map.router, prefix="/map")
+router.include_router(members.router, prefix="/members")
 

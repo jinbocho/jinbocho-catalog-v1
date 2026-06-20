@@ -25,6 +25,7 @@ from app.api.v1.schemas.book_schemas import (
 	BookLoanResponse,
 	BookReadCreate,
 	BookReadResponse,
+	DuplicateBookConflictResponse,
 	OwnedBookCreate,
 	OwnedBookResponse,
 	OwnedBookUpdate,
@@ -85,7 +86,19 @@ async def list_active_loans(
 	return await ListActiveFamilyLoansUseCase(loan_repo).execute(UUID(payload["family_id"]))
 
 
-@router.post("/", response_model=OwnedBookResponse, status_code=status.HTTP_201_CREATED, summary="Add book")
+@router.post(
+	"/",
+	response_model=OwnedBookResponse,
+	status_code=status.HTTP_201_CREATED,
+	summary="Add book",
+	responses={
+		409: {
+			"description": "Looks like a duplicate of a book already owned by the same owner. "
+			"Resubmit with is_intentional_duplicate=true to add it anyway.",
+			"model": DuplicateBookConflictResponse,
+		},
+	},
+)
 async def add_book(
 	request: OwnedBookCreate,
 	payload: dict = Depends(require_role("admin", "editor")),
@@ -100,6 +113,9 @@ async def add_book(
 	shelf_repo = Depends(get_shelf_repository),
 	http_client: httpx.AsyncClient = Depends(get_http_client),
 ):
+	# DuplicateBookError propagates to the global handler in
+	# app/core/exception_handlers.py (same pattern as LookupError/ValueError
+	# elsewhere); get_db() rolls back automatically when an exception escapes.
 	book = await AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, http_client).execute(
 		AddBookInput(family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]), **request.model_dump())
 	)

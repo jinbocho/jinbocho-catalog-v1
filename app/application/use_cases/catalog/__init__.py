@@ -1,4 +1,4 @@
-from .add_book import AddBookInput, AddBookUseCase
+from .add_book import AddBookInput, AddBookUseCase, DuplicateBookConflict, DuplicateBookError
 from .book_loans import LendBookUseCase, ListActiveFamilyLoansUseCase, ListBookLoansUseCase, ReturnBookUseCase
 from .book_reads import ListBookReadsUseCase, ListFamilyReadsUseCase, MarkBookReadUseCase, UnmarkBookReadUseCase
 from .create_bibliographic_record import CreateBibliographicRecordInput, CreateBibliographicRecordUseCase
@@ -21,6 +21,8 @@ __all__ = [
 	# Add/Delete/Update Books
 	"AddBookInput",
 	"AddBookUseCase",
+	"DuplicateBookConflict",
+	"DuplicateBookError",
 	# Book loans (external lending)
 	"LendBookUseCase",
 	"ReturnBookUseCase",

@@ -9,6 +9,7 @@ from app.domain.entities import (
 	BookRead,
 	Bookcase,
 	OwnedBook,
+	RemovedMember,
 	Room,
 	Section,
 	Shelf,
@@ -20,6 +21,7 @@ from app.domain.repositories import (
 	BookReadRepository,
 	BookcaseRepository,
 	OwnedBookRepository,
+	RemovedMemberRepository,
 	RoomRepository,
 	SectionRepository,
 	ShelfRepository,
@@ -41,6 +43,7 @@ class FullLibraryExport:
 	book_reads: list[BookRead] = field(default_factory=list)
 	book_loans: list[BookLoan] = field(default_factory=list)
 	book_history: list[BookHistory] = field(default_factory=list)
+	removed_members: list[RemovedMember] = field(default_factory=list)
 
 
 class ExportFullLibraryUseCase:
@@ -63,6 +66,7 @@ class ExportFullLibraryUseCase:
 		book_read_repo: BookReadRepository,
 		book_loan_repo: BookLoanRepository,
 		book_history_repo: BookHistoryRepository,
+		removed_member_repo: RemovedMemberRepository,
 	) -> None:
 		self._room_repo = room_repo
 		self._bookcase_repo = bookcase_repo
@@ -73,6 +77,7 @@ class ExportFullLibraryUseCase:
 		self._book_read_repo = book_read_repo
 		self._book_loan_repo = book_loan_repo
 		self._book_history_repo = book_history_repo
+		self._removed_member_repo = removed_member_repo
 
 	async def execute(self, family_id: UUID) -> FullLibraryExport:
 		rooms = await self._fetch_all(
@@ -104,6 +109,7 @@ class ExportFullLibraryUseCase:
 			book_reads=await self._book_read_repo.list_by_family(family_id),
 			book_loans=await self._book_loan_repo.find_all_by_family(family_id),
 			book_history=await self._book_history_repo.find_all_by_family(family_id),
+			removed_members=await self._removed_member_repo.find_all_by_family(family_id),
 		)
 
 	@staticmethod

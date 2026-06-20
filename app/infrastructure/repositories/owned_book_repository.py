@@ -107,6 +107,13 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 		model = result.scalars().first()
 		return self._to_entity(model) if model else None
 
+	async def find_one_by_record(self, bibliographic_record_id: UUID) -> OwnedBook | None:
+		result = await self._session.execute(
+			select(OwnedBookModel).where(OwnedBookModel.bibliographic_record_id == bibliographic_record_id)
+		)
+		model = result.scalars().first()
+		return self._to_entity(model) if model else None
+
 	async def save(self, owned_book: OwnedBook) -> OwnedBook:
 		model = await self._session.get(OwnedBookModel, owned_book.id)
 		if model is None:

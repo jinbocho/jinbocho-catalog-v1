@@ -27,6 +27,20 @@ class CreateBibliographicRecordUseCase:
 		self._record_repo = record_repo
 
 	async def execute(self, inp: CreateBibliographicRecordInput) -> BibliographicRecord:
+		# The DB enforces UNIQUE(family_id, isbn); a blind insert would crash
+		# with a generic 409 "data integrity violation" the second time someone
+		# adds a book with an ISBN the family already has on file. Reuse the
+		# existing record instead — same rule AddBookUseCase already applies
+		# when it resolves a record by ISBN internally.
+		# Note: unlike AddBookUseCase's own internal resolution path, this use
+		# case stores isbn exactly as given (no normalize_isbn) — match that
+		# here too, or a hyphenated resubmission of the same ISBN wouldn't be
+		# found and would still crash on the unique constraint.
+		if inp.isbn:
+			existing = await self._record_repo.find_by_isbn(inp.family_id, inp.isbn)
+			if existing:
+				return existing
+
 		genre = map_to_genre(inp.genre)
 		return await self._record_repo.save(
 			BibliographicRecord(

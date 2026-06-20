@@ -2,7 +2,7 @@ import pytest
 from uuid import uuid4, UUID
 from datetime import datetime
 
-from app.domain.entities import Room, Bookcase, Section, Shelf, BibliographicRecord, OwnedBook, BookRead, BookLoan
+from app.domain.entities import Room, Bookcase, Section, Shelf, BibliographicRecord, OwnedBook, BookRead, BookLoan, RemovedMember
 from app.domain.repositories import (
 	RoomRepository,
 	BookcaseRepository,
@@ -14,6 +14,7 @@ from app.domain.repositories import (
 	BookReadRepository,
 	BookLoanRepository,
 	IsbnLookupCacheRepository,
+	RemovedMemberRepository,
 )
 
 
@@ -142,6 +143,12 @@ class MockOwnedBookRepository(OwnedBookRepository):
 				and b.shelf_id == shelf_id
 				and b.shelf_position == shelf_position
 			),
+			None,
+		)
+
+	async def find_one_by_record(self, bibliographic_record_id: UUID) -> OwnedBook | None:
+		return next(
+			(b for b in self.books.values() if b.bibliographic_record_id == bibliographic_record_id),
 			None,
 		)
 
@@ -340,6 +347,18 @@ class MockIsbnLookupCacheRepository(IsbnLookupCacheRepository):
 		return self.cache.get(isbn)
 
 
+class MockRemovedMemberRepository(RemovedMemberRepository):
+	def __init__(self):
+		self.members = {}
+
+	async def save(self, member: RemovedMember) -> RemovedMember:
+		self.members[member.id] = member
+		return member
+
+	async def find_all_by_family(self, family_id: UUID) -> list[RemovedMember]:
+		return [m for m in self.members.values() if m.family_id == family_id]
+
+
 @pytest.fixture
 def test_family_id() -> UUID:
 	return uuid4()
@@ -398,3 +417,8 @@ def book_loan_repo() -> BookLoanRepository:
 @pytest.fixture
 def cache_repo() -> IsbnLookupCacheRepository:
 	return MockIsbnLookupCacheRepository()
+
+
+@pytest.fixture
+def removed_member_repo() -> RemovedMemberRepository:
+	return MockRemovedMemberRepository()

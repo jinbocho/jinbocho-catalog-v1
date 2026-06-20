@@ -6,6 +6,7 @@ from .book_read import BookRead
 from .bookcase import Bookcase
 from .isbn_lookup_cache import IsbnLookupCache
 from .owned_book import BookCondition, BookSource, OwnedBook, ReadingStatus
+from .removed_member import RemovedMember
 from .room import Room
 from .section import Section
 from .shelf import Shelf
@@ -26,4 +27,5 @@ __all__ = [
 	"BookLoan",
 	"BookRead",
 	"IsbnLookupCache",
+	"RemovedMember",
 ]

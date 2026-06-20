@@ -14,11 +14,13 @@ from app.application.use_cases import (
 	ImportRoomItem,
 	ImportSectionItem,
 	ImportShelfItem,
+	RecordRemovedMemberInput,
+	RecordRemovedMemberUseCase,
 )
 from app.domain.entities import BibliographicRecord, BookLoan, OwnedBook, Room
 
 
-def _export_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo):
+def _export_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, removed_member_repo):
 	return ExportFullLibraryUseCase(
 		room_repo=room_repo,
 		bookcase_repo=bookcase_repo,
@@ -29,6 +31,7 @@ def _export_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_
 		book_read_repo=book_read_repo,
 		book_loan_repo=book_loan_repo,
 		book_history_repo=history_repo,
+		removed_member_repo=removed_member_repo,
 	)
 
 
@@ -49,7 +52,7 @@ def _import_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_
 @pytest.mark.asyncio
 async def test_export_full_library_includes_empty_locations_and_all_loans(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	test_family_id,
+	removed_member_repo, test_family_id,
 ):
 	# An empty room with no books — the books-only export drops this entirely.
 	await room_repo.save(Room(family_id=test_family_id, name="Empty attic"))
@@ -63,7 +66,8 @@ async def test_export_full_library_includes_empty_locations_and_all_loans(
 	await book_loan_repo.mark_returned(returned_loan.id, datetime.now(timezone.utc))
 
 	use_case = _export_use_case(
-		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo
+		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
+		removed_member_repo,
 	)
 	result = await use_case.execute(test_family_id)
 
@@ -76,7 +80,7 @@ async def test_export_full_library_includes_empty_locations_and_all_loans(
 @pytest.mark.asyncio
 async def test_export_full_library_pagination_loop_fetches_everything(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	test_family_id, monkeypatch,
+	removed_member_repo, test_family_id, monkeypatch,
 ):
 	"""Regression: the books-only export silently caps at the FE's default page
 	size. Shrink the internal page size so a handful of rooms already exercises
@@ -88,11 +92,60 @@ async def test_export_full_library_pagination_loop_fetches_everything(
 		await room_repo.save(Room(family_id=test_family_id, name=f"Room {i}"))
 
 	use_case = _export_use_case(
-		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo
+		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
+		removed_member_repo,
 	)
 	result = await use_case.execute(test_family_id)
 
 	assert len(result.rooms) == 5
+
+
+@pytest.mark.asyncio
+async def test_record_removed_member_snapshot_is_included_in_export(
+	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
+	removed_member_repo, test_family_id,
+):
+	"""A member removed from auth-service must show up in the full-library
+	export, so a future import can recreate their real account by email
+	instead of leaving owner_id/etc. references unresolved."""
+	removed_id = uuid4()
+	await RecordRemovedMemberUseCase(removed_member_repo).execute(
+		RecordRemovedMemberInput(
+			family_id=test_family_id, id=removed_id, full_name="Giuseppe Bianchi", email="giuseppe@example.com", role="viewer",
+		)
+	)
+
+	use_case = _export_use_case(
+		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
+		removed_member_repo,
+	)
+	result = await use_case.execute(test_family_id)
+
+	assert len(result.removed_members) == 1
+	snapshot = result.removed_members[0]
+	assert snapshot.id == removed_id
+	assert snapshot.full_name == "Giuseppe Bianchi"
+	assert snapshot.email == "giuseppe@example.com"
+	assert snapshot.role == "viewer"
+
+
+@pytest.mark.asyncio
+async def test_record_removed_member_upserts_by_id(removed_member_repo, test_family_id):
+	"""Recording the same removal twice (e.g. a retried request) must
+	overwrite the snapshot, not create a duplicate."""
+	removed_id = uuid4()
+	use_case = RecordRemovedMemberUseCase(removed_member_repo)
+	await use_case.execute(
+		RecordRemovedMemberInput(family_id=test_family_id, id=removed_id, full_name="Old Name", email="old@example.com", role="viewer")
+	)
+	await use_case.execute(
+		RecordRemovedMemberInput(family_id=test_family_id, id=removed_id, full_name="New Name", email="new@example.com", role="editor")
+	)
+
+	all_for_family = await removed_member_repo.find_all_by_family(test_family_id)
+	assert len(all_for_family) == 1
+	assert all_for_family[0].full_name == "New Name"
+	assert all_for_family[0].email == "new@example.com"
 
 
 @pytest.mark.asyncio

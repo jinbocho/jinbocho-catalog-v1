@@ -5,6 +5,7 @@ from .book_read_repository import BookReadRepository
 from .bookcase_repository import BookcaseRepository
 from .isbn_lookup_cache_repository import IsbnLookupCacheRepository
 from .owned_book_repository import OwnedBookRepository
+from .removed_member_repository import RemovedMemberRepository
 from .room_repository import RoomRepository
 from .section_repository import SectionRepository
 from .shelf_repository import ShelfRepository
@@ -20,4 +21,5 @@ __all__ = [
 	"BookLoanRepository",
 	"BookReadRepository",
 	"IsbnLookupCacheRepository",
+	"RemovedMemberRepository",
 ]

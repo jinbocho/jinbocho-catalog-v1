@@ -4,6 +4,7 @@ from uuid import uuid4
 from app.application.use_cases import (
 	AddBookInput,
 	AddBookUseCase,
+	DuplicateBookError,
 	CreateBibliographicRecordInput,
 	CreateBibliographicRecordUseCase,
 	GetBibliographicRecordUseCase,
@@ -37,6 +38,26 @@ async def test_create_bibliographic_record(record_repo, test_family_id):
 	assert record.title == "Python Design Patterns"
 	assert record.isbn == "978-0-13-110362-7"
 	assert record.family_id == test_family_id
+
+
+@pytest.mark.asyncio
+async def test_create_bibliographic_record_reuses_existing_isbn(record_repo, test_family_id):
+	"""Regression: re-submitting the same ISBN used to crash with a generic
+	409 'data integrity violation' (UNIQUE(family_id, isbn)) instead of
+	reusing the existing record — this is also what makes the add-book
+	duplicate-detection flow reachable, since AddBookPage always creates the
+	record first and then adds the book against its id."""
+	use_case = CreateBibliographicRecordUseCase(record_repo)
+	first = await use_case.execute(
+		CreateBibliographicRecordInput(family_id=test_family_id, title="Dune", isbn="978-0-13-110362-7")
+	)
+
+	second = await use_case.execute(
+		CreateBibliographicRecordInput(family_id=test_family_id, title="Dune (resubmitted)", isbn="978-0-13-110362-7")
+	)
+
+	assert second.id == first.id
+	assert second.title == "Dune"  # existing record wins, not overwritten
 
 
 @pytest.mark.asyncio
@@ -188,6 +209,116 @@ async def test_add_book_to_read_has_no_current_reader(
 	book = await use_case.execute(inp)
 
 	assert book.current_reader_id is None
+
+
+@pytest.mark.asyncio
+async def test_add_book_detects_isbn_duplicate(
+	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+):
+	"""Adding a second copy with an ISBN the family already has must be
+	flagged rather than silently created."""
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	await use_case.execute(
+		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id)
+	)
+
+	with pytest.raises(DuplicateBookError) as exc_info:
+		await use_case.execute(
+			AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593")
+		)
+
+	assert exc_info.value.conflict.conflict_type == "isbn_match"
+
+
+@pytest.mark.asyncio
+async def test_add_book_detects_isbn_duplicate_even_with_a_different_owner(
+	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+):
+	"""The check is family-wide, not owner-scoped: a different family member
+	can still confirm-and-add a second copy, but the system must warn first
+	rather than silently assume two owners means it's never a duplicate."""
+	other_owner_id = uuid4()
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	await use_case.execute(
+		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id)
+	)
+
+	with pytest.raises(DuplicateBookError):
+		await use_case.execute(
+			AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=other_owner_id)
+		)
+
+
+@pytest.mark.asyncio
+async def test_add_book_duplicate_conflict_reports_existing_owner_and_location(
+	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+):
+	"""The conflict must surface who already has the book and where, so the
+	confirm dialog can show it instead of just blocking blindly."""
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	room_id, bookcase_id, section_id, shelf_id = uuid4(), uuid4(), uuid4(), uuid4()
+	first = await use_case.execute(
+		AddBookInput(
+			family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id,
+			room_id=room_id, bookcase_id=bookcase_id, section_id=section_id, shelf_id=shelf_id,
+		)
+	)
+
+	with pytest.raises(DuplicateBookError) as exc_info:
+		await use_case.execute(
+			AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593")
+		)
+
+	conflict = exc_info.value.conflict
+	assert conflict.existing_book_id == first.id
+	assert conflict.existing_owner_id == test_user_id
+	assert conflict.existing_room_id == room_id
+	assert conflict.existing_bookcase_id == bookcase_id
+	assert conflict.existing_section_id == section_id
+	assert conflict.existing_shelf_id == shelf_id
+
+
+@pytest.mark.asyncio
+async def test_add_book_detects_title_author_duplicate_across_different_isbns(
+	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+):
+	"""Same title/author but a different (or missing) ISBN — e.g. added twice
+	under two different editions — must still be flagged."""
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	await use_case.execute(
+		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", main_author="Frank Herbert")
+	)
+
+	with pytest.raises(DuplicateBookError) as exc_info:
+		await use_case.execute(
+			AddBookInput(
+				family_id=test_family_id, changed_by=test_user_id, title="Dune", main_author="Frank Herbert",
+				isbn="9780441013593",
+			)
+		)
+
+	assert exc_info.value.conflict.conflict_type == "title_author_match"
+
+
+@pytest.mark.asyncio
+async def test_add_book_intentional_duplicate_bypasses_the_check(
+	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+):
+	"""The user confirmed they want a second copy — is_intentional_duplicate=True
+	skips the check and is persisted on the new book."""
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	await use_case.execute(
+		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id)
+	)
+
+	book = await use_case.execute(
+		AddBookInput(
+			family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id,
+			is_intentional_duplicate=True,
+		)
+	)
+
+	assert book.is_intentional_duplicate is True
 
 
 @pytest.mark.asyncio

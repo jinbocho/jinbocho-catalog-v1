@@ -15,6 +15,7 @@ from app.api.dependencies import (
 	get_bookcase_repository,
 	get_current_user_payload,
 	get_owned_book_repository,
+	get_removed_member_repository,
 	get_room_repository,
 	get_section_repository,
 	get_shelf_repository,
@@ -28,6 +29,7 @@ from app.api.v1.schemas.export_schemas import (
 	BookReadExportItem,
 	FullLibraryExportResponse,
 	OwnedBookExportItem,
+	RemovedMemberExportItem,
 	RoomExportItem,
 	SectionExportItem,
 	ShelfExportItem,
@@ -278,6 +280,7 @@ async def export_full_library(
 	book_read_repo=Depends(get_book_read_repository),
 	book_loan_repo=Depends(get_book_loan_repository),
 	book_history_repo=Depends(get_book_history_repository),
+	removed_member_repo=Depends(get_removed_member_repository),
 ):  # type: ignore[no-untyped-def]
 	use_case = ExportFullLibraryUseCase(
 		room_repo=room_repo,
@@ -289,6 +292,7 @@ async def export_full_library(
 		book_read_repo=book_read_repo,
 		book_loan_repo=book_loan_repo,
 		book_history_repo=book_history_repo,
+		removed_member_repo=removed_member_repo,
 	)
 	data = await use_case.execute(UUID(payload["family_id"]))
 
@@ -353,5 +357,11 @@ async def export_full_library(
 				changed_by=h.changed_by, old_data=h.old_data, new_data=h.new_data, created_at=h.created_at,
 			)
 			for h in data.book_history
+		],
+		removed_members=[
+			RemovedMemberExportItem(
+				id=m.id, full_name=m.full_name, email=m.email, role=m.role, removed_at=m.removed_at,
+			)
+			for m in data.removed_members
 		],
 	)

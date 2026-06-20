@@ -3,7 +3,7 @@ import logging
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from uuid import UUID
 
 import httpx
@@ -20,6 +20,34 @@ from app.domain.repositories import (
 from app.utils import utcnow
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class DuplicateBookConflict:
+	conflict_type: Literal["isbn_match", "title_author_match"]
+	existing_book_id: UUID
+	existing_record_id: UUID
+	title: str
+	main_author: Optional[str]
+	isbn: Optional[str]
+	# Who already has it and where — the check is family-wide, not owner-scoped
+	# (two members can each legitimately own a copy), so the caller needs this
+	# to decide whether adding a separate copy makes sense.
+	existing_owner_id: Optional[UUID]
+	existing_room_id: Optional[UUID]
+	existing_bookcase_id: Optional[UUID]
+	existing_section_id: Optional[UUID]
+	existing_shelf_id: Optional[UUID]
+
+
+class DuplicateBookError(Exception):
+	"""Raised instead of creating the book when it looks like the caller
+	already owns this exact book and hasn't confirmed they want a second copy
+	anyway (see AddBookInput.is_intentional_duplicate)."""
+
+	def __init__(self, conflict: DuplicateBookConflict) -> None:
+		self.conflict = conflict
+		super().__init__(f"Duplicate book detected: {conflict.conflict_type}")
 
 
 @dataclass
@@ -72,6 +100,12 @@ class AddBookUseCase:
 
 	async def execute(self, inp: AddBookInput) -> OwnedBook:
 		record = await self._resolve_bibliographic_record(inp)
+
+		if not inp.is_intentional_duplicate:
+			conflict = await self._check_for_duplicate(inp, record)
+			if conflict:
+				raise DuplicateBookError(conflict)
+
 		book = await self._book_repo.save(
 			OwnedBook(
 				family_id=inp.family_id,
@@ -107,6 +141,49 @@ class AddBookUseCase:
 			)
 		)
 		return book
+
+	async def _check_for_duplicate(self, inp: AddBookInput, record: BibliographicRecord) -> Optional[DuplicateBookConflict]:
+		"""Two ways a new book can look like one the family already has — this
+		is a family-wide check, not scoped to an owner: two different members
+		can legitimately each own a copy, so this never blocks that, it just
+		surfaces who already has it (and where) so the caller can decide.
+		  1. Same resolved record (i.e. same ISBN) — find_by_isbn already
+		     reused the existing record, so this is the simple case.
+		  2. A *different* record with the same title/author — catches the
+		     case where the same book was added twice under different (or
+		     missing) ISBNs and so got two separate records.
+		"""
+		existing = await self._book_repo.find_one_by_record(record.id)
+		if existing:
+			return self._to_conflict("isbn_match", existing, record)
+
+		candidate = await self._record_repo.find_by_title_author(inp.family_id, record.title, record.main_author)
+		if candidate and candidate.id != record.id:
+			existing = await self._book_repo.find_one_by_record(candidate.id)
+			if existing:
+				return self._to_conflict("title_author_match", existing, candidate)
+
+		return None
+
+	@staticmethod
+	def _to_conflict(
+		conflict_type: Literal["isbn_match", "title_author_match"],
+		existing: OwnedBook,
+		record: BibliographicRecord,
+	) -> DuplicateBookConflict:
+		return DuplicateBookConflict(
+			conflict_type=conflict_type,
+			existing_book_id=existing.id,
+			existing_record_id=record.id,
+			title=record.title,
+			main_author=record.main_author,
+			isbn=record.isbn,
+			existing_owner_id=existing.owner_id,
+			existing_room_id=existing.room_id,
+			existing_bookcase_id=existing.bookcase_id,
+			existing_section_id=existing.section_id,
+			existing_shelf_id=existing.shelf_id,
+		)
 
 	async def _resolve_bibliographic_record(self, inp: AddBookInput) -> BibliographicRecord:
 		if inp.bibliographic_record_id:

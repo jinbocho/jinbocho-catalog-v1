@@ -170,6 +170,24 @@ class BookHistoryExportItem(BaseModel):
 	created_at: datetime
 
 
+class RemovedMemberExportItem(BaseModel):
+	"""A former family member's identity, snapshotted when they were removed
+	from the family (see POST /v1/members/removed) — so a future import can
+	recreate their real account instead of leaving owner_id/etc. unresolved."""
+	id: UUID
+	full_name: str
+	email: str
+	role: str
+	removed_at: datetime
+
+
+class RecordRemovedMemberRequest(BaseModel):
+	id: UUID = Field(description="The auth-service user id being removed")
+	full_name: str
+	email: str
+	role: str = Field(pattern="^(admin|editor|viewer)$")
+
+
 class FullLibraryExportResponse(BaseModel):
 	schema_version: int = 1
 	exported_at: datetime
@@ -182,6 +200,7 @@ class FullLibraryExportResponse(BaseModel):
 	book_reads: list[BookReadExportItem]
 	book_loans: list[BookLoanExportItem]
 	book_history: list[BookHistoryExportItem]
+	removed_members: list[RemovedMemberExportItem] = Field(default_factory=list)
 
 
 class ImportFullLibraryRequest(BaseModel):
