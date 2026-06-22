@@ -1,12 +1,14 @@
-import pytest
 from uuid import uuid4
+
+import pytest
 
 from app.application.use_cases import (
 	AddBookInput,
 	AddBookUseCase,
-	DuplicateBookError,
 	CreateBibliographicRecordInput,
 	CreateBibliographicRecordUseCase,
+	DeleteBibliographicRecordUseCase,
+	DuplicateBookError,
 	GetBibliographicRecordUseCase,
 	ListBibliographicRecordsUseCase,
 	UpdateBibliographicRecordInput,
@@ -15,9 +17,8 @@ from app.application.use_cases import (
 	UpdateBookMetadataUseCase,
 	UpdateReadingStatusInput,
 	UpdateReadingStatusUseCase,
-	DeleteBibliographicRecordUseCase,
-	ListOwnedBooksUseCase,
 )
+from app.domain.entities import ReadingStatus
 
 
 @pytest.mark.asyncio
@@ -185,12 +186,12 @@ async def test_add_book_with_reading_status_sets_current_reader(
 		family_id=test_family_id,
 		changed_by=test_user_id,
 		title="The Hobbit",
-		reading_status="reading",
+		reading_status=ReadingStatus.READING,
 	)
 
 	book = await use_case.execute(inp)
 
-	assert book.reading_status == "reading"
+	assert book.reading_status is ReadingStatus.READING
 	assert book.current_reader_id == test_user_id
 
 
@@ -331,7 +332,7 @@ async def test_update_reading_status_sets_and_clears_current_reader(book_repo, h
 		OwnedBook(
 			family_id=test_family_id,
 			bibliographic_record_id=uuid4(),
-			reading_status="to_read",
+			reading_status=ReadingStatus.TO_READ,
 			created_at=utcnow(),
 			updated_at=utcnow(),
 		)
@@ -339,12 +340,16 @@ async def test_update_reading_status_sets_and_clears_current_reader(book_repo, h
 
 	use_case = UpdateReadingStatusUseCase(book_repo, history_repo)
 	updated = await use_case.execute(
-		UpdateReadingStatusInput(book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status="reading")
+		UpdateReadingStatusInput(
+			book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status=ReadingStatus.READING
+		)
 	)
 	assert updated.current_reader_id == test_user_id
 
 	updated = await use_case.execute(
-		UpdateReadingStatusInput(book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status="read")
+		UpdateReadingStatusInput(
+			book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status=ReadingStatus.READ
+		)
 	)
 	assert updated.current_reader_id is None
 
@@ -360,7 +365,7 @@ async def test_update_book_metadata_reading_status_sets_current_reader(book_repo
 		OwnedBook(
 			family_id=test_family_id,
 			bibliographic_record_id=uuid4(),
-			reading_status="to_read",
+			reading_status=ReadingStatus.TO_READ,
 			created_at=utcnow(),
 			updated_at=utcnow(),
 		)
@@ -368,7 +373,9 @@ async def test_update_book_metadata_reading_status_sets_current_reader(book_repo
 
 	use_case = UpdateBookMetadataUseCase(book_repo, history_repo)
 	updated = await use_case.execute(
-		UpdateBookMetadataInput(book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status="reading")
+		UpdateBookMetadataInput(
+			book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status=ReadingStatus.READING
+		)
 	)
 
 	assert updated.current_reader_id == test_user_id

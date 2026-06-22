@@ -6,7 +6,7 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.entities import OwnedBook
+from app.domain.entities import BookCondition, BookSource, OwnedBook, ReadingStatus
 from app.domain.repositories import OwnedBookRepository
 from app.infrastructure.models import OwnedBookModel
 
@@ -27,11 +27,11 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 			shelf_id=model.shelf_id,
 			shelf_position=model.shelf_position,
 			position_description=model.position_description,
-			condition=model.condition,
+			condition=BookCondition(model.condition) if model.condition is not None else None,
 			purchase_date=model.purchase_date,
 			purchase_price=Decimal(model.purchase_price) if model.purchase_price is not None else None,
-			source=model.source,
-			reading_status=model.reading_status,
+			source=BookSource(model.source) if model.source is not None else None,
+			reading_status=ReadingStatus(model.reading_status),
 			current_reader_id=model.current_reader_id,
 			owner_id=model.owner_id,
 			tags=list(model.tags) if model.tags else [],
@@ -50,7 +50,7 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 		self,
 		family_id: UUID,
 		shelf_id: UUID | None = None,
-		reading_status: str | None = None,
+		reading_status: ReadingStatus | None = None,
 		tag: str | None = None,
 		limit: int = 50,
 		offset: int = 0,

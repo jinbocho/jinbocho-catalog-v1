@@ -35,4 +35,4 @@ class BibliographicRecordModel(Base):
 		DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
 	)
 
-	owned_books: Mapped[list["OwnedBookModel"]] = relationship(back_populates="bibliographic_record")
+	owned_books: Mapped[list[OwnedBookModel]] = relationship(back_populates="bibliographic_record")

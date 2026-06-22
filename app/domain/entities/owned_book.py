@@ -1,24 +1,24 @@
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID, uuid4
 
 
-class ReadingStatus(str, Enum):
+class ReadingStatus(StrEnum):
 	TO_READ = "to_read"
 	READING = "reading"
 	READ = "read"
 
 
-class BookCondition(str, Enum):
+class BookCondition(StrEnum):
 	NEW = "new"
 	GOOD = "good"
 	FAIR = "fair"
 	POOR = "poor"
 
 
-class BookSource(str, Enum):
+class BookSource(StrEnum):
 	PURCHASED = "purchased"
 	GIFT = "gift"
 	BORROWED = "borrowed"
@@ -51,5 +51,5 @@ class OwnedBook:
 	is_intentional_duplicate: bool = False
 	duplicate_notes: str | None = None
 	id: UUID = field(default_factory=uuid4)
-	created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-	updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+	created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+	updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))

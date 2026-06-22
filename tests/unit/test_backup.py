@@ -1,6 +1,7 @@
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
+
+import pytest
 
 from app.application.use_cases import (
 	ExportFullLibraryUseCase,
@@ -17,7 +18,7 @@ from app.application.use_cases import (
 	RecordRemovedMemberInput,
 	RecordRemovedMemberUseCase,
 )
-from app.domain.entities import BibliographicRecord, BookLoan, OwnedBook, Room
+from app.domain.entities import BibliographicRecord, BookLoan, FamilyRole, OwnedBook, Room
 
 
 def _export_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, removed_member_repo):
@@ -63,7 +64,7 @@ async def test_export_full_library_includes_empty_locations_and_all_loans(
 	# A returned loan — list_active_by_family would drop this, find_all_by_family must not.
 	await book_loan_repo.add(BookLoan(owned_book_id=book.id, borrower_name="Alice"))
 	returned_loan = await book_loan_repo.add(BookLoan(owned_book_id=book.id, borrower_name="Bob"))
-	await book_loan_repo.mark_returned(returned_loan.id, datetime.now(timezone.utc))
+	await book_loan_repo.mark_returned(returned_loan.id, datetime.now(UTC))
 
 	use_case = _export_use_case(
 		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
@@ -85,8 +86,8 @@ async def test_export_full_library_pagination_loop_fetches_everything(
 	"""Regression: the books-only export silently caps at the FE's default page
 	size. Shrink the internal page size so a handful of rooms already exercises
 	more than one page, and confirm every room still comes back."""
-	import app.application.use_cases.backup.export_full_library as export_module
-	monkeypatch.setattr(export_module, "_PAGE_SIZE", 2)
+	import app.application.services.pagination as pagination_module
+	monkeypatch.setattr(pagination_module, "DEFAULT_PAGE_SIZE", 2)
 
 	for i in range(5):
 		await room_repo.save(Room(family_id=test_family_id, name=f"Room {i}"))
@@ -111,7 +112,8 @@ async def test_record_removed_member_snapshot_is_included_in_export(
 	removed_id = uuid4()
 	await RecordRemovedMemberUseCase(removed_member_repo).execute(
 		RecordRemovedMemberInput(
-			family_id=test_family_id, id=removed_id, full_name="Giuseppe Bianchi", email="giuseppe@example.com", role="viewer",
+			family_id=test_family_id, id=removed_id, full_name="Giuseppe Bianchi", email="giuseppe@example.com",
+			role=FamilyRole.VIEWER,
 		)
 	)
 
@@ -126,7 +128,7 @@ async def test_record_removed_member_snapshot_is_included_in_export(
 	assert snapshot.id == removed_id
 	assert snapshot.full_name == "Giuseppe Bianchi"
 	assert snapshot.email == "giuseppe@example.com"
-	assert snapshot.role == "viewer"
+	assert snapshot.role is FamilyRole.VIEWER
 
 
 @pytest.mark.asyncio
@@ -136,10 +138,14 @@ async def test_record_removed_member_upserts_by_id(removed_member_repo, test_fam
 	removed_id = uuid4()
 	use_case = RecordRemovedMemberUseCase(removed_member_repo)
 	await use_case.execute(
-		RecordRemovedMemberInput(family_id=test_family_id, id=removed_id, full_name="Old Name", email="old@example.com", role="viewer")
+		RecordRemovedMemberInput(
+			family_id=test_family_id, id=removed_id, full_name="Old Name", email="old@example.com", role=FamilyRole.VIEWER
+		)
 	)
 	await use_case.execute(
-		RecordRemovedMemberInput(family_id=test_family_id, id=removed_id, full_name="New Name", email="new@example.com", role="editor")
+		RecordRemovedMemberInput(
+			family_id=test_family_id, id=removed_id, full_name="New Name", email="new@example.com", role=FamilyRole.EDITOR
+		)
 	)
 
 	all_for_family = await removed_member_repo.find_all_by_family(test_family_id)
@@ -300,11 +306,11 @@ async def test_import_full_library_twice_does_not_duplicate_anything(
 					section_id=section_id, shelf_id=shelf_id, owner_id=test_user_id,
 				)
 			],
-			book_loans=[ImportBookLoanItem(id=uuid4(), owned_book_id=book_id, borrower_name="Alice", loaned_at=datetime(2026, 1, 1, tzinfo=timezone.utc))],
+			book_loans=[ImportBookLoanItem(id=uuid4(), owned_book_id=book_id, borrower_name="Alice", loaned_at=datetime(2026, 1, 1, tzinfo=UTC))],
 			book_history=[
 				ImportBookHistoryItem(
 					id=uuid4(), owned_book_id=book_id, event_type="created", changed_by=test_user_id,
-					created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+					created_at=datetime(2026, 1, 1, tzinfo=UTC),
 				)
 			],
 		)
@@ -338,7 +344,7 @@ async def test_import_full_library_twice_does_not_duplicate_anything(
 	assert len(await record_repo.find_all_by_family(test_family_id)) == 1
 	imported_book = (await book_repo.find_all_by_family(test_family_id))[0]
 	assert len(await history_repo.find_all_by_family(test_family_id)) == 1
-	assert len((await book_loan_repo.find_all_by_family(test_family_id))) == 1
+	assert len(await book_loan_repo.find_all_by_family(test_family_id)) == 1
 	assert imported_book.owner_id == test_user_id
 
 

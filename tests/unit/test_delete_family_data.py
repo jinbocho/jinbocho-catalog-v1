@@ -1,8 +1,9 @@
-import pytest
 from uuid import uuid4
 
+import pytest
+
 from app.application.use_cases import DeleteFamilyDataUseCase, RecordRemovedMemberInput, RecordRemovedMemberUseCase
-from app.domain.entities import BibliographicRecord, Bookcase, BookHistory, OwnedBook, Room
+from app.domain.entities import BibliographicRecord, Bookcase, BookEventType, BookHistory, FamilyRole, OwnedBook, Room
 
 
 def _use_case(room_repo, bookcase_repo, record_repo, book_repo, history_repo, removed_member_repo):
@@ -26,9 +27,13 @@ async def test_delete_family_data_wipes_everything_for_the_family(
 	book = await book_repo.save(
 		OwnedBook(family_id=test_family_id, bibliographic_record_id=record.id, bookcase_id=bookcase.id)
 	)
-	await history_repo.save(BookHistory(id=uuid4(), owned_book_id=book.id, event_type="created", changed_by=uuid4()))
+	await history_repo.save(
+		BookHistory(id=uuid4(), owned_book_id=book.id, event_type=BookEventType.CREATED, changed_by=uuid4())
+	)
 	await RecordRemovedMemberUseCase(removed_member_repo).execute(
-		RecordRemovedMemberInput(family_id=test_family_id, id=uuid4(), full_name="Gone", email="gone@example.com", role="viewer")
+		RecordRemovedMemberInput(
+			family_id=test_family_id, id=uuid4(), full_name="Gone", email="gone@example.com", role=FamilyRole.VIEWER
+		)
 	)
 
 	use_case = _use_case(room_repo, bookcase_repo, record_repo, book_repo, history_repo, removed_member_repo)

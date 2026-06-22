@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.domain.entities import BookLoan
@@ -39,7 +39,7 @@ class ReturnBookUseCase:
         active = await self._loan_repo.get_active_for_book(book_id)
         if not active:
             raise LookupError("No active loan for this book")
-        returned_at = datetime.now(timezone.utc)
+        returned_at = datetime.now(UTC)
         await self._loan_repo.mark_returned(active.id, returned_at)
         return BookLoan(
             id=active.id,

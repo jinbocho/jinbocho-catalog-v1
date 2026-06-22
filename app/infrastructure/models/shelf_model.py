@@ -25,5 +25,5 @@ class ShelfModel(Base):
 		DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
 	)
 
-	section: Mapped["SectionModel"] = relationship(back_populates="shelves")
-	books: Mapped[list["OwnedBookModel"]] = relationship(back_populates="shelf", foreign_keys="[OwnedBookModel.shelf_id]")
+	section: Mapped[SectionModel] = relationship(back_populates="shelves")
+	books: Mapped[list[OwnedBookModel]] = relationship(back_populates="shelf", foreign_keys="[OwnedBookModel.shelf_id]")

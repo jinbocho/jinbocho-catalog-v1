@@ -13,9 +13,9 @@ from app.domain.entities import (
 )
 from app.domain.repositories import (
 	BibliographicRecordRepository,
+	BookcaseRepository,
 	BookLoanRepository,
 	BookReadRepository,
-	BookcaseRepository,
 	OwnedBookRepository,
 	RoomRepository,
 	SectionRepository,

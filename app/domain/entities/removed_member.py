@@ -1,6 +1,13 @@
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from enum import StrEnum
 from uuid import UUID
+
+
+class FamilyRole(StrEnum):
+	ADMIN = "admin"
+	EDITOR = "editor"
+	VIEWER = "viewer"
 
 
 @dataclass
@@ -17,5 +24,5 @@ class RemovedMember:
 	family_id: UUID
 	full_name: str
 	email: str
-	role: str
-	removed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+	role: FamilyRole
+	removed_at: datetime = field(default_factory=lambda: datetime.now(UTC))

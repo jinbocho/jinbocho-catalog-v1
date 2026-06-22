@@ -1,11 +1,11 @@
 import logging
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Optional
-from uuid import UUID
+from typing import Any
 
 import httpx
 
+from app.application.use_cases.ingestion.google_books_mapper import extract_year, volume_to_metadata
 from app.config import settings
 from app.domain.entities import IsbnLookupCache
 from app.domain.repositories import IsbnLookupCacheRepository
@@ -21,20 +21,8 @@ class LookupIsbnOutput:
 	cached: bool
 
 
-def _extract_year(value: Optional[str]) -> Optional[int]:
-	if not value:
-		return None
-	for part in value.split("-"):
-		if part[:4].isdigit():
-			return int(part[:4])
-	digits = "".join(ch for ch in value if ch.isdigit())
-	if len(digits) >= 4:
-		return int(digits[:4])
-	return None
-
-
 class LookupIsbnUseCase:
-	def __init__(self, cache_repo: IsbnLookupCacheRepository, http_client: Optional[httpx.AsyncClient] = None) -> None:
+	def __init__(self, cache_repo: IsbnLookupCacheRepository, http_client: httpx.AsyncClient | None = None) -> None:
 		self._cache_repo = cache_repo
 		self._http_client = http_client
 
@@ -69,7 +57,7 @@ class LookupIsbnUseCase:
 
 		raise LookupError(f"No metadata found for ISBN {isbn}")
 
-	async def _fetch_google_books(self, isbn: str) -> Optional[dict[str, Any]]:
+	async def _fetch_google_books(self, isbn: str) -> dict[str, Any] | None:
 		# Network/HTTP failures here must not abort the lookup — fall through to
 		# the Open Library fallback instead of surfacing a 500.
 		try:
@@ -89,20 +77,9 @@ class LookupIsbnUseCase:
 		if not data.get("items"):
 			return None
 		volume = data["items"][0].get("volumeInfo", {})
-		return {
-			"title": volume.get("title"),
-			"main_author": (volume.get("authors") or [None])[0],
-			"other_authors": (volume.get("authors") or [])[1:],
-			"publisher": volume.get("publisher"),
-			"publication_year": _extract_year(volume.get("publishedDate")),
-			"language": volume.get("language"),
-			"genre": (volume.get("categories") or [None])[0],
-			"cover_url": (volume.get("imageLinks") or {}).get("thumbnail"),
-			"notes": volume.get("description"),
-			"isbn": isbn,
-		}
+		return volume_to_metadata(volume, isbn=isbn)
 
-	async def _fetch_open_library(self, isbn: str) -> Optional[dict[str, Any]]:
+	async def _fetch_open_library(self, isbn: str) -> dict[str, Any] | None:
 		try:
 			response = await self._http_client.get(
 				f"{settings.open_library_url}/api/books",
@@ -122,7 +99,7 @@ class LookupIsbnUseCase:
 			"main_author": authors[0] if authors else None,
 			"other_authors": authors[1:] if len(authors) > 1 else [],
 			"publisher": publishers[0] if publishers else None,
-			"publication_year": _extract_year(book.get("publish_date")),
+			"publication_year": extract_year(book.get("publish_date")),
 			"language": None,
 			"genre": None,
 			"cover_url": (book.get("cover") or {}).get("medium") or (book.get("cover") or {}).get("large"),
@@ -130,7 +107,7 @@ class LookupIsbnUseCase:
 			"isbn": isbn,
 		}
 
-	async def _fetch_open_library_search(self, isbn: str) -> Optional[dict[str, Any]]:
+	async def _fetch_open_library_search(self, isbn: str) -> dict[str, Any] | None:
 		"""Fallback using Open Library /search.json — broader index than /api/books."""
 		try:
 			response = await self._http_client.get(

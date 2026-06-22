@@ -1,16 +1,22 @@
-import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 from uuid import UUID
 
 import httpx
 
 from app.application.services import normalize_isbn
-from app.config import settings
-from app.domain.entities import BibliographicRecord, BookHistory, OwnedBook
+from app.domain.entities import (
+	BibliographicRecord,
+	BookCondition,
+	BookEventType,
+	BookHistory,
+	BookSource,
+	OwnedBook,
+	ReadingStatus,
+)
 from app.domain.repositories import (
 	BibliographicRecordRepository,
 	BookHistoryRepository,
@@ -28,16 +34,16 @@ class DuplicateBookConflict:
 	existing_book_id: UUID
 	existing_record_id: UUID
 	title: str
-	main_author: Optional[str]
-	isbn: Optional[str]
+	main_author: str | None
+	isbn: str | None
 	# Who already has it and where — the check is family-wide, not owner-scoped
 	# (two members can each legitimately own a copy), so the caller needs this
 	# to decide whether adding a separate copy makes sense.
-	existing_owner_id: Optional[UUID]
-	existing_room_id: Optional[UUID]
-	existing_bookcase_id: Optional[UUID]
-	existing_section_id: Optional[UUID]
-	existing_shelf_id: Optional[UUID]
+	existing_owner_id: UUID | None
+	existing_room_id: UUID | None
+	existing_bookcase_id: UUID | None
+	existing_section_id: UUID | None
+	existing_shelf_id: UUID | None
 
 
 class DuplicateBookError(Exception):
@@ -54,33 +60,33 @@ class DuplicateBookError(Exception):
 class AddBookInput:
 	family_id: UUID
 	changed_by: UUID
-	bibliographic_record_id: Optional[UUID] = None
-	title: Optional[str] = None
-	main_author: Optional[str] = None
+	bibliographic_record_id: UUID | None = None
+	title: str | None = None
+	main_author: str | None = None
 	other_authors: list[str] | None = None
-	isbn: Optional[str] = None
-	publisher: Optional[str] = None
-	publication_year: Optional[int] = None
-	language: Optional[str] = None
-	genre: Optional[str] = None
-	cover_url: Optional[str] = None
-	record_notes: Optional[str] = None
-	notes: Optional[str] = None
-	room_id: Optional[UUID] = None
-	bookcase_id: Optional[UUID] = None
-	section_id: Optional[UUID] = None
-	shelf_id: Optional[UUID] = None
-	shelf_position: Optional[int] = None
-	position_description: Optional[str] = None
-	condition: Optional[str] = None
-	purchase_date: Optional[date] = None
-	purchase_price: Optional[Decimal] = None
-	source: Optional[str] = None
-	reading_status: str = "to_read"
-	owner_id: Optional[UUID] = None
+	isbn: str | None = None
+	publisher: str | None = None
+	publication_year: int | None = None
+	language: str | None = None
+	genre: str | None = None
+	cover_url: str | None = None
+	record_notes: str | None = None
+	notes: str | None = None
+	room_id: UUID | None = None
+	bookcase_id: UUID | None = None
+	section_id: UUID | None = None
+	shelf_id: UUID | None = None
+	shelf_position: int | None = None
+	position_description: str | None = None
+	condition: BookCondition | None = None
+	purchase_date: date | None = None
+	purchase_price: Decimal | None = None
+	source: BookSource | None = None
+	reading_status: ReadingStatus = ReadingStatus.TO_READ
+	owner_id: UUID | None = None
 	tags: list[str] | None = None
 	is_intentional_duplicate: bool = False
-	duplicate_notes: Optional[str] = None
+	duplicate_notes: str | None = None
 
 
 class AddBookUseCase:
@@ -90,7 +96,7 @@ class AddBookUseCase:
 		book_repo: OwnedBookRepository,
 		history_repo: BookHistoryRepository,
 		cache_repo: IsbnLookupCacheRepository,
-		http_client: Optional[httpx.AsyncClient] = None,
+		http_client: httpx.AsyncClient | None = None,
 	) -> None:
 		self._record_repo = record_repo
 		self._book_repo = book_repo
@@ -121,7 +127,7 @@ class AddBookUseCase:
 				purchase_price=inp.purchase_price,
 				source=inp.source,
 				reading_status=inp.reading_status,
-				current_reader_id=inp.changed_by if inp.reading_status == "reading" else None,
+				current_reader_id=inp.changed_by if inp.reading_status == ReadingStatus.READING else None,
 				owner_id=inp.owner_id,
 				tags=inp.tags or [],
 				notes=inp.notes,
@@ -134,7 +140,7 @@ class AddBookUseCase:
 		await self._history_repo.save(
 			BookHistory(
 				owned_book_id=book.id,
-				event_type="created",
+				event_type=BookEventType.CREATED,
 				changed_by=inp.changed_by,
 				new_data={"reading_status": book.reading_status, "shelf_id": str(book.shelf_id) if book.shelf_id else None},
 				created_at=utcnow(),
@@ -142,7 +148,7 @@ class AddBookUseCase:
 		)
 		return book
 
-	async def _check_for_duplicate(self, inp: AddBookInput, record: BibliographicRecord) -> Optional[DuplicateBookConflict]:
+	async def _check_for_duplicate(self, inp: AddBookInput, record: BibliographicRecord) -> DuplicateBookConflict | None:
 		"""Two ways a new book can look like one the family already has — this
 		is a family-wide check, not scoped to an owner: two different members
 		can legitimately each own a copy, so this never blocks that, it just

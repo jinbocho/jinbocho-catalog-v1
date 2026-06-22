@@ -28,5 +28,5 @@ class BookcaseModel(Base):
 		DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
 	)
 
-	room: Mapped["RoomModel"] = relationship(back_populates="bookcases")
-	sections: Mapped[list["SectionModel"]] = relationship(back_populates="bookcase", order_by="SectionModel.section_index")
+	room: Mapped[RoomModel] = relationship(back_populates="bookcases")
+	sections: Mapped[list[SectionModel]] = relationship(back_populates="bookcase", order_by="SectionModel.section_index")

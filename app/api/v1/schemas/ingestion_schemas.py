@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -16,3 +16,7 @@ class BulkLookupRequest(BaseModel):
 		max_length=100,
 		description="List of ISBN codes to lookup",
 	)
+
+
+class BookSearchResponse(BaseModel):
+	results: list[dict[str, Any]] = Field(..., description="Candidate book metadata matches")

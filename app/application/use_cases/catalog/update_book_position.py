@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.domain.entities import BookHistory, OwnedBook
+from app.domain.entities import BookEventType, BookHistory, OwnedBook
 from app.domain.repositories import BookHistoryRepository, OwnedBookRepository
 from app.utils import utcnow
 
@@ -50,7 +50,7 @@ class UpdateBookPositionUseCase:
 		await self._history_repo.save(
 			BookHistory(
 				owned_book_id=saved.id,
-				event_type="position_changed",
+				event_type=BookEventType.POSITION_CHANGED,
 				changed_by=inp.changed_by,
 				old_data=old,
 				new_data={

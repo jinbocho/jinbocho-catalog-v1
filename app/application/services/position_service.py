@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.domain.entities import Room
 from app.domain.repositories import BookcaseRepository, RoomRepository, SectionRepository, ShelfRepository
 

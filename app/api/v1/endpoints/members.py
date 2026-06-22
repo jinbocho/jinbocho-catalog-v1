@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -6,6 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import get_removed_member_repository, require_role
 from app.api.v1.schemas.export_schemas import RecordRemovedMemberRequest, RemovedMemberExportItem
 from app.application.use_cases import RecordRemovedMemberInput, RecordRemovedMemberUseCase
+from app.domain.entities import FamilyRole
+from app.domain.repositories import RemovedMemberRepository
 from app.infrastructure.database.session import get_db
 
 router = APIRouter(tags=["members"])
@@ -22,10 +25,10 @@ router = APIRouter(tags=["members"])
 )
 async def record_removed_member(
 	request: RecordRemovedMemberRequest,
-	payload: dict = Depends(require_role("admin")),  # type: ignore[type-arg]
+	payload: dict[str, Any] = Depends(require_role("admin")),
 	db: AsyncSession = Depends(get_db),
-	removed_member_repo=Depends(get_removed_member_repository),
-):  # type: ignore[no-untyped-def]
+	removed_member_repo: RemovedMemberRepository = Depends(get_removed_member_repository),
+) -> RemovedMemberExportItem:
 	use_case = RecordRemovedMemberUseCase(removed_member_repo)
 	result = await use_case.execute(
 		RecordRemovedMemberInput(
@@ -33,7 +36,7 @@ async def record_removed_member(
 			id=request.id,
 			full_name=request.full_name,
 			email=request.email,
-			role=request.role,
+			role=FamilyRole(request.role),
 		)
 	)
 	await db.commit()

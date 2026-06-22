@@ -1,14 +1,15 @@
+from uuid import uuid4
+
 import pytest
-from uuid import uuid4, UUID
 
 from app.application.use_cases import (
 	CreateRoomInput,
 	CreateRoomUseCase,
+	DeleteRoomUseCase,
 	GetRoomUseCase,
 	ListRoomsUseCase,
 	UpdateRoomInput,
 	UpdateRoomUseCase,
-	DeleteRoomUseCase,
 )
 
 

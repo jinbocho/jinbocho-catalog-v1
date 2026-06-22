@@ -1,6 +1,7 @@
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import (
@@ -29,6 +30,17 @@ from app.application.use_cases import (
 	ImportSectionItem,
 	ImportShelfItem,
 )
+from app.domain.repositories import (
+	BibliographicRecordRepository,
+	BookcaseRepository,
+	BookHistoryRepository,
+	BookLoanRepository,
+	BookReadRepository,
+	OwnedBookRepository,
+	RoomRepository,
+	SectionRepository,
+	ShelfRepository,
+)
 from app.infrastructure.database.session import get_db
 
 router = APIRouter(tags=["import"])
@@ -46,18 +58,18 @@ router = APIRouter(tags=["import"])
 )
 async def import_full_library(
 	request: ImportFullLibraryRequest,
-	payload: dict = Depends(require_role("admin")),  # type: ignore[type-arg]
+	payload: dict[str, Any] = Depends(require_role("admin")),
 	db: AsyncSession = Depends(get_db),
-	room_repo=Depends(get_room_repository),
-	bookcase_repo=Depends(get_bookcase_repository),
-	section_repo=Depends(get_section_repository),
-	shelf_repo=Depends(get_shelf_repository),
-	record_repo=Depends(get_bibliographic_record_repository),
-	book_repo=Depends(get_owned_book_repository),
-	book_read_repo=Depends(get_book_read_repository),
-	book_loan_repo=Depends(get_book_loan_repository),
-	book_history_repo=Depends(get_book_history_repository),
-):  # type: ignore[no-untyped-def]
+	room_repo: RoomRepository = Depends(get_room_repository),
+	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
+	section_repo: SectionRepository = Depends(get_section_repository),
+	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
+	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	book_read_repo: BookReadRepository = Depends(get_book_read_repository),
+	book_loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
+	book_history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+) -> ImportFullLibraryResponse:
 	use_case = ImportFullLibraryUseCase(
 		room_repo=room_repo,
 		bookcase_repo=bookcase_repo,
@@ -70,25 +82,24 @@ async def import_full_library(
 		book_history_repo=book_history_repo,
 	)
 
-	try:
-		result = await use_case.execute(
-			ImportFullLibraryInput(
-				family_id=UUID(payload["family_id"]),
-				user_id_map={UUID(k): UUID(v) for k, v in request.user_id_map.items()},
-				rooms=[ImportRoomItem(**r.model_dump()) for r in request.rooms],
-				bookcases=[ImportBookcaseItem(**b.model_dump()) for b in request.bookcases],
-				sections=[ImportSectionItem(**s.model_dump()) for s in request.sections],
-				shelves=[ImportShelfItem(**s.model_dump()) for s in request.shelves],
-				bibliographic_records=[ImportRecordItem(**r.model_dump()) for r in request.bibliographic_records],
-				owned_books=[ImportOwnedBookItem(**b.model_dump()) for b in request.owned_books],
-				book_reads=[ImportBookReadItem(**r.model_dump()) for r in request.book_reads],
-				book_loans=[ImportBookLoanItem(**loan.model_dump()) for loan in request.book_loans],
-				book_history=[ImportBookHistoryItem(**h.model_dump()) for h in request.book_history],
-			)
+	# ValueError propagates to the global handler in app/core/exception_handlers.py
+	# (409, same as every other use case); get_db() rolls back automatically when
+	# an exception escapes.
+	result = await use_case.execute(
+		ImportFullLibraryInput(
+			family_id=UUID(payload["family_id"]),
+			user_id_map={UUID(k): UUID(v) for k, v in request.user_id_map.items()},
+			rooms=[ImportRoomItem(**r.model_dump()) for r in request.rooms],
+			bookcases=[ImportBookcaseItem(**b.model_dump()) for b in request.bookcases],
+			sections=[ImportSectionItem(**s.model_dump()) for s in request.sections],
+			shelves=[ImportShelfItem(**s.model_dump()) for s in request.shelves],
+			bibliographic_records=[ImportRecordItem(**r.model_dump()) for r in request.bibliographic_records],
+			owned_books=[ImportOwnedBookItem(**b.model_dump()) for b in request.owned_books],
+			book_reads=[ImportBookReadItem(**r.model_dump()) for r in request.book_reads],
+			book_loans=[ImportBookLoanItem(**loan.model_dump()) for loan in request.book_loans],
+			book_history=[ImportBookHistoryItem(**h.model_dump()) for h in request.book_history],
 		)
-		await db.commit()
-	except ValueError as exc:
-		await db.rollback()
-		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+	)
+	await db.commit()
 
 	return ImportFullLibraryResponse(**result.__dict__)

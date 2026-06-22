@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.domain.entities import BookHistory, OwnedBook
+from app.domain.entities import BookEventType, BookHistory, OwnedBook, ReadingStatus
 from app.domain.repositories import BookHistoryRepository, OwnedBookRepository
 from app.utils import utcnow
 
@@ -11,7 +11,7 @@ class UpdateReadingStatusInput:
 	book_id: UUID
 	family_id: UUID
 	changed_by: UUID
-	reading_status: str
+	reading_status: ReadingStatus
 
 
 class UpdateReadingStatusUseCase:
@@ -29,13 +29,13 @@ class UpdateReadingStatusUseCase:
 		old_status = book.reading_status
 		book.reading_status = inp.reading_status
 		# Track who holds the copy: set on "reading", clear otherwise.
-		book.current_reader_id = inp.changed_by if inp.reading_status == "reading" else None
+		book.current_reader_id = inp.changed_by if inp.reading_status == ReadingStatus.READING else None
 		book.updated_at = utcnow()
 		saved = await self._book_repo.save(book)
 		await self._history_repo.save(
 			BookHistory(
 				owned_book_id=saved.id,
-				event_type="reading_status_changed",
+				event_type=BookEventType.READING_STATUS_CHANGED,
 				changed_by=inp.changed_by,
 				old_data={"reading_status": old_status},
 				new_data={"reading_status": saved.reading_status},

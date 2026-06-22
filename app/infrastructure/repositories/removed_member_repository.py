@@ -4,7 +4,7 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.entities import RemovedMember
+from app.domain.entities import FamilyRole, RemovedMember
 from app.domain.repositories import RemovedMemberRepository
 from app.infrastructure.models import RemovedMemberModel
 
@@ -20,7 +20,7 @@ class SQLAlchemyRemovedMemberRepository(RemovedMemberRepository):
 			family_id=model.family_id,
 			full_name=model.full_name,
 			email=model.email,
-			role=model.role,
+			role=FamilyRole(model.role),
 			removed_at=model.removed_at,
 		)
 

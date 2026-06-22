@@ -1,3 +1,4 @@
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 import httpx
@@ -9,10 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.domain.repositories import (
     BibliographicRecordRepository,
+    BookcaseRepository,
     BookHistoryRepository,
     BookLoanRepository,
     BookReadRepository,
-    BookcaseRepository,
     IsbnLookupCacheRepository,
     OwnedBookRepository,
     RemovedMemberRepository,
@@ -23,10 +24,10 @@ from app.domain.repositories import (
 from app.infrastructure.database.session import get_db
 from app.infrastructure.repositories import (
     SQLAlchemyBibliographicRecordRepository,
+    SQLAlchemyBookcaseRepository,
     SQLAlchemyBookHistoryRepository,
     SQLAlchemyBookLoanRepository,
     SQLAlchemyBookReadRepository,
-    SQLAlchemyBookcaseRepository,
     SQLAlchemyIsbnLookupCacheRepository,
     SQLAlchemyOwnedBookRepository,
     SQLAlchemyRemovedMemberRepository,
@@ -55,7 +56,7 @@ async def get_current_user_payload(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from None
 
     family_id_str = payload.get("family_id")
     sub = payload.get("sub")
@@ -73,7 +74,7 @@ def get_http_client(request: Request) -> httpx.AsyncClient:
     return request.app.state.http_client
 
 
-def require_role(*roles: str):
+def require_role(*roles: str) -> Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]:
     async def dependency(payload: dict[str, Any] = Depends(get_current_user_payload)) -> dict[str, Any]:
         if payload.get("role") not in roles:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient role")

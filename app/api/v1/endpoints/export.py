@@ -1,5 +1,5 @@
 import csv
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import StringIO
 from typing import Any
 from uuid import UUID
@@ -36,6 +36,18 @@ from app.api.v1.schemas.export_schemas import (
 )
 from app.application.use_cases import ExportBooksUseCase, ExportFullLibraryUseCase
 from app.application.use_cases.export.export_books import ExportBookItem
+from app.domain.repositories import (
+	BibliographicRecordRepository,
+	BookcaseRepository,
+	BookHistoryRepository,
+	BookLoanRepository,
+	BookReadRepository,
+	OwnedBookRepository,
+	RemovedMemberRepository,
+	RoomRepository,
+	SectionRepository,
+	ShelfRepository,
+)
 
 router = APIRouter(tags=["export"])
 
@@ -64,16 +76,16 @@ _CSV_FIELDS = [
 ]
 
 
-def _ev(v: Any) -> Any:
-	"""Return enum .value if present, otherwise the value itself.
-
-	The ORM layer returns raw strings instead of enums until Phase 12 enum
-	casting is fixed — this helper survives both cases.
-	"""
-	return v.value if hasattr(v, "value") else v
-
-
-def _build_use_case(book_repo, record_repo, room_repo, bookcase_repo, section_repo, shelf_repo, book_read_repo, book_loan_repo):  # type: ignore[no-untyped-def]
+def _build_use_case(
+	book_repo: OwnedBookRepository,
+	record_repo: BibliographicRecordRepository,
+	room_repo: RoomRepository,
+	bookcase_repo: BookcaseRepository,
+	section_repo: SectionRepository,
+	shelf_repo: ShelfRepository,
+	book_read_repo: BookReadRepository,
+	book_loan_repo: BookLoanRepository,
+) -> ExportBooksUseCase:
 	return ExportBooksUseCase(
 		book_repo=book_repo,
 		record_repo=record_repo,
@@ -86,7 +98,7 @@ def _build_use_case(book_repo, record_repo, room_repo, bookcase_repo, section_re
 	)
 
 
-def _csv_row(item: ExportBookItem) -> dict:  # type: ignore[type-arg]
+def _csv_row(item: ExportBookItem) -> dict[str, Any]:
 	b = item.book
 	r = item.record
 
@@ -102,9 +114,9 @@ def _csv_row(item: ExportBookItem) -> dict:  # type: ignore[type-arg]
 		"family_id": str(b.family_id),
 		"owner_id": str(b.owner_id) if b.owner_id else None,
 		"current_reader_id": str(b.current_reader_id) if b.current_reader_id else None,
-		"reading_status": _ev(b.reading_status),
-		"condition": _ev(b.condition) if b.condition else None,
-		"source": _ev(b.source) if b.source else None,
+		"reading_status": b.reading_status.value,
+		"condition": b.condition.value if b.condition else None,
+		"source": b.source.value if b.source else None,
 		"purchase_date": b.purchase_date.isoformat() if b.purchase_date else None,
 		"purchase_price": str(b.purchase_price) if b.purchase_price is not None else None,
 		"tags": "|".join(b.tags),
@@ -143,7 +155,7 @@ def _csv_row(item: ExportBookItem) -> dict:  # type: ignore[type-arg]
 	}
 
 
-def _json_book(item: ExportBookItem) -> dict:  # type: ignore[type-arg]
+def _json_book(item: ExportBookItem) -> dict[str, Any]:
 	b = item.book
 	r = item.record
 	loan = item.active_loan
@@ -163,9 +175,9 @@ def _json_book(item: ExportBookItem) -> dict:  # type: ignore[type-arg]
 			"cover_url": r.cover_url,
 			"notes": r.notes,
 		} if r else None,
-		"reading_status": _ev(b.reading_status),
-		"condition": _ev(b.condition) if b.condition else None,
-		"source": _ev(b.source) if b.source else None,
+		"reading_status": b.reading_status.value,
+		"condition": b.condition.value if b.condition else None,
+		"source": b.source.value if b.source else None,
 		"purchase_date": b.purchase_date.isoformat() if b.purchase_date else None,
 		"purchase_price": str(b.purchase_price) if b.purchase_price is not None else None,
 		"owner_id": str(b.owner_id) if b.owner_id else None,
@@ -206,16 +218,16 @@ def _json_book(item: ExportBookItem) -> dict:  # type: ignore[type-arg]
 async def export_books_csv(
 	limit: int = Query(default=1000, ge=1, le=10000),
 	offset: int = Query(default=0, ge=0),
-	payload: dict = Depends(get_current_user_payload),  # type: ignore[type-arg]
-	book_repo=Depends(get_owned_book_repository),
-	record_repo=Depends(get_bibliographic_record_repository),
-	room_repo=Depends(get_room_repository),
-	bookcase_repo=Depends(get_bookcase_repository),
-	section_repo=Depends(get_section_repository),
-	shelf_repo=Depends(get_shelf_repository),
-	book_read_repo=Depends(get_book_read_repository),
-	book_loan_repo=Depends(get_book_loan_repository),
-):  # type: ignore[no-untyped-def]
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+	room_repo: RoomRepository = Depends(get_room_repository),
+	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
+	section_repo: SectionRepository = Depends(get_section_repository),
+	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
+	book_read_repo: BookReadRepository = Depends(get_book_read_repository),
+	book_loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
+) -> StreamingResponse:
 	items = await _build_use_case(
 		book_repo, record_repo, room_repo, bookcase_repo,
 		section_repo, shelf_repo, book_read_repo, book_loan_repo,
@@ -238,23 +250,23 @@ async def export_books_csv(
 async def export_books_json(
 	limit: int = Query(default=1000, ge=1, le=10000),
 	offset: int = Query(default=0, ge=0),
-	payload: dict = Depends(get_current_user_payload),  # type: ignore[type-arg]
-	book_repo=Depends(get_owned_book_repository),
-	record_repo=Depends(get_bibliographic_record_repository),
-	room_repo=Depends(get_room_repository),
-	bookcase_repo=Depends(get_bookcase_repository),
-	section_repo=Depends(get_section_repository),
-	shelf_repo=Depends(get_shelf_repository),
-	book_read_repo=Depends(get_book_read_repository),
-	book_loan_repo=Depends(get_book_loan_repository),
-):  # type: ignore[no-untyped-def]
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+	room_repo: RoomRepository = Depends(get_room_repository),
+	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
+	section_repo: SectionRepository = Depends(get_section_repository),
+	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
+	book_read_repo: BookReadRepository = Depends(get_book_read_repository),
+	book_loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
+) -> dict[str, Any]:
 	items = await _build_use_case(
 		book_repo, record_repo, room_repo, bookcase_repo,
 		section_repo, shelf_repo, book_read_repo, book_loan_repo,
 	).execute(UUID(payload["family_id"]), limit, offset)
 
 	return {
-		"exported_at": datetime.now(timezone.utc).isoformat(),
+		"exported_at": datetime.now(UTC).isoformat(),
 		"total": len(items),
 		"books": [_json_book(item) for item in items],
 	}
@@ -270,18 +282,18 @@ async def export_books_json(
 	"GET /v1/users/export (auth-service) for a complete family backup. Requires admin role.",
 )
 async def export_full_library(
-	payload: dict = Depends(require_role("admin")),  # type: ignore[type-arg]
-	room_repo=Depends(get_room_repository),
-	bookcase_repo=Depends(get_bookcase_repository),
-	section_repo=Depends(get_section_repository),
-	shelf_repo=Depends(get_shelf_repository),
-	record_repo=Depends(get_bibliographic_record_repository),
-	book_repo=Depends(get_owned_book_repository),
-	book_read_repo=Depends(get_book_read_repository),
-	book_loan_repo=Depends(get_book_loan_repository),
-	book_history_repo=Depends(get_book_history_repository),
-	removed_member_repo=Depends(get_removed_member_repository),
-):  # type: ignore[no-untyped-def]
+	payload: dict[str, Any] = Depends(require_role("admin")),
+	room_repo: RoomRepository = Depends(get_room_repository),
+	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
+	section_repo: SectionRepository = Depends(get_section_repository),
+	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
+	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	book_read_repo: BookReadRepository = Depends(get_book_read_repository),
+	book_loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
+	book_history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+	removed_member_repo: RemovedMemberRepository = Depends(get_removed_member_repository),
+) -> FullLibraryExportResponse:
 	use_case = ExportFullLibraryUseCase(
 		room_repo=room_repo,
 		bookcase_repo=bookcase_repo,
@@ -297,7 +309,7 @@ async def export_full_library(
 	data = await use_case.execute(UUID(payload["family_id"]))
 
 	return FullLibraryExportResponse(
-		exported_at=datetime.now(timezone.utc),
+		exported_at=datetime.now(UTC),
 		rooms=[RoomExportItem(id=r.id, name=r.name, description=r.description) for r in data.rooms],
 		bookcases=[
 			BookcaseExportItem(
@@ -329,10 +341,10 @@ async def export_full_library(
 				id=b.id, bibliographic_record_id=b.bibliographic_record_id,
 				room_id=b.room_id, bookcase_id=b.bookcase_id, section_id=b.section_id, shelf_id=b.shelf_id,
 				shelf_position=b.shelf_position, position_description=b.position_description,
-				condition=_ev(b.condition) if b.condition else None,
+				condition=b.condition.value if b.condition else None,
 				purchase_date=b.purchase_date, purchase_price=b.purchase_price,
-				source=_ev(b.source) if b.source else None,
-				reading_status=_ev(b.reading_status),
+				source=b.source.value if b.source else None,
+				reading_status=b.reading_status.value,
 				current_reader_id=b.current_reader_id, owner_id=b.owner_id,
 				tags=b.tags, notes=b.notes,
 				is_intentional_duplicate=b.is_intentional_duplicate, duplicate_notes=b.duplicate_notes,
@@ -353,7 +365,7 @@ async def export_full_library(
 		],
 		book_history=[
 			BookHistoryExportItem(
-				id=h.id, owned_book_id=h.owned_book_id, event_type=_ev(h.event_type),
+				id=h.id, owned_book_id=h.owned_book_id, event_type=h.event_type.value,
 				changed_by=h.changed_by, old_data=h.old_data, new_data=h.new_data, created_at=h.created_at,
 			)
 			for h in data.book_history

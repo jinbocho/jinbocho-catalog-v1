@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities import BibliographicRecord, map_to_genre
@@ -11,15 +10,15 @@ from app.utils import utcnow
 class CreateBibliographicRecordInput:
 	family_id: UUID
 	title: str
-	main_author: Optional[str] = None
+	main_author: str | None = None
 	other_authors: list[str] | None = None
-	isbn: Optional[str] = None
-	publisher: Optional[str] = None
-	publication_year: Optional[int] = None
-	language: Optional[str] = None
-	genre: Optional[str] = None
-	cover_url: Optional[str] = None
-	notes: Optional[str] = None
+	isbn: str | None = None
+	publisher: str | None = None
+	publication_year: int | None = None
+	language: str | None = None
+	genre: str | None = None
+	cover_url: str | None = None
+	notes: str | None = None
 
 
 class CreateBibliographicRecordUseCase:

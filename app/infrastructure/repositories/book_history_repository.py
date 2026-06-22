@@ -4,7 +4,7 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.entities import BookHistory
+from app.domain.entities import BookEventType, BookHistory
 from app.domain.repositories import BookHistoryRepository
 from app.infrastructure.models import BookHistoryModel
 from app.infrastructure.models.owned_book_model import OwnedBookModel
@@ -19,7 +19,7 @@ class SQLAlchemyBookHistoryRepository(BookHistoryRepository):
 		return BookHistory(
 			id=model.id,
 			owned_book_id=model.owned_book_id,
-			event_type=model.event_type,
+			event_type=BookEventType(model.event_type),
 			changed_by=model.changed_by,
 			old_data=model.old_data,
 			new_data=model.new_data,

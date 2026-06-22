@@ -1,13 +1,13 @@
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from uuid import UUID
 
+from app.application.services import fetch_all_pages
 from app.domain.entities import (
 	BibliographicRecord,
+	Bookcase,
 	BookHistory,
 	BookLoan,
 	BookRead,
-	Bookcase,
 	OwnedBook,
 	RemovedMember,
 	Room,
@@ -16,20 +16,16 @@ from app.domain.entities import (
 )
 from app.domain.repositories import (
 	BibliographicRecordRepository,
+	BookcaseRepository,
 	BookHistoryRepository,
 	BookLoanRepository,
 	BookReadRepository,
-	BookcaseRepository,
 	OwnedBookRepository,
 	RemovedMemberRepository,
 	RoomRepository,
 	SectionRepository,
 	ShelfRepository,
 )
-
-# Internal page size for looping the existing paginated repo methods — not a
-# limit on the export itself, the loop continues until every page is exhausted.
-_PAGE_SIZE = 500
 
 
 @dataclass
@@ -80,22 +76,22 @@ class ExportFullLibraryUseCase:
 		self._removed_member_repo = removed_member_repo
 
 	async def execute(self, family_id: UUID) -> FullLibraryExport:
-		rooms = await self._fetch_all(
+		rooms = await fetch_all_pages(
 			lambda limit, offset: self._room_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		)
-		bookcases = await self._fetch_all(
+		bookcases = await fetch_all_pages(
 			lambda limit, offset: self._bookcase_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		)
-		sections = await self._fetch_all(
+		sections = await fetch_all_pages(
 			lambda limit, offset: self._section_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		)
-		shelves = await self._fetch_all(
+		shelves = await fetch_all_pages(
 			lambda limit, offset: self._shelf_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		)
-		records = await self._fetch_all(
+		records = await fetch_all_pages(
 			lambda limit, offset: self._record_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		)
-		books = await self._fetch_all(
+		books = await fetch_all_pages(
 			lambda limit, offset: self._book_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		)
 
@@ -111,17 +107,3 @@ class ExportFullLibraryUseCase:
 			book_history=await self._book_history_repo.find_all_by_family(family_id),
 			removed_members=await self._removed_member_repo.find_all_by_family(family_id),
 		)
-
-	@staticmethod
-	async def _fetch_all(fetch_page: Callable[[int, int], Awaitable[list]]) -> list:  # type: ignore[type-arg]
-		"""Loops a `find_all_by_family(limit, offset)`-shaped repo method until
-		a page comes back shorter than the page size — unlike the books-only
-		export, this never silently caps out at the first page."""
-		results: list = []  # type: ignore[type-arg]
-		offset = 0
-		while True:
-			page = await fetch_page(_PAGE_SIZE, offset)
-			results.extend(page)
-			if len(page) < _PAGE_SIZE:
-				return results
-			offset += _PAGE_SIZE

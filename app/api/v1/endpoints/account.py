@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -14,6 +15,14 @@ from app.api.dependencies import (
 )
 from app.api.v1.schemas.export_schemas import DeleteFamilyDataResponse
 from app.application.use_cases import DeleteFamilyDataUseCase
+from app.domain.repositories import (
+	BibliographicRecordRepository,
+	BookcaseRepository,
+	BookHistoryRepository,
+	OwnedBookRepository,
+	RemovedMemberRepository,
+	RoomRepository,
+)
 from app.infrastructure.database.session import get_db
 
 router = APIRouter(tags=["account"])
@@ -31,15 +40,15 @@ router = APIRouter(tags=["account"])
 	"Requires admin role.",
 )
 async def delete_account_data(
-	payload: dict = Depends(require_role("admin")),  # type: ignore[type-arg]
+	payload: dict[str, Any] = Depends(require_role("admin")),
 	db: AsyncSession = Depends(get_db),
-	room_repo=Depends(get_room_repository),
-	bookcase_repo=Depends(get_bookcase_repository),
-	record_repo=Depends(get_bibliographic_record_repository),
-	book_repo=Depends(get_owned_book_repository),
-	book_history_repo=Depends(get_book_history_repository),
-	removed_member_repo=Depends(get_removed_member_repository),
-):  # type: ignore[no-untyped-def]
+	room_repo: RoomRepository = Depends(get_room_repository),
+	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
+	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	book_history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+	removed_member_repo: RemovedMemberRepository = Depends(get_removed_member_repository),
+) -> DeleteFamilyDataResponse:
 	use_case = DeleteFamilyDataUseCase(
 		room_repo=room_repo,
 		bookcase_repo=bookcase_repo,

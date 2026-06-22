@@ -5,7 +5,6 @@ from app.domain.repositories import BookcaseRepository, SectionRepository, Shelf
 
 
 async def _get_shelf_for_family(shelf_repo: ShelfRepository, section_repo: SectionRepository, bookcase_repo: BookcaseRepository, shelf_id: UUID, family_id: UUID) -> Shelf:
-	from ..bookcase.read import _get_bookcase_for_family
 	from ..section.read import _get_section_for_family
 	shelf = await shelf_repo.find_by_id(shelf_id)
 	if shelf is None:

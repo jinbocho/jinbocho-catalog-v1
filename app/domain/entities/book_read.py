@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 
@@ -8,5 +8,5 @@ class BookRead:
     owned_book_id: UUID
     # Users live in the auth service → bare UUID, no FK.
     user_id: UUID
-    read_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    read_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     id: UUID = field(default_factory=uuid4)

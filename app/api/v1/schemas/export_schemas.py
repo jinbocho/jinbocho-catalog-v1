@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -9,30 +9,30 @@ from pydantic import BaseModel, ConfigDict, Field
 class ExportedRecordInfo(BaseModel):
 	id: UUID
 	title: str
-	main_author: Optional[str] = None
+	main_author: str | None = None
 	other_authors: list[str] = Field(default_factory=list)
-	isbn: Optional[str] = None
-	publisher: Optional[str] = None
-	publication_year: Optional[int] = None
-	language: Optional[str] = None
-	genre: Optional[str] = None
-	cover_url: Optional[str] = None
-	notes: Optional[str] = None
+	isbn: str | None = None
+	publisher: str | None = None
+	publication_year: int | None = None
+	language: str | None = None
+	genre: str | None = None
+	cover_url: str | None = None
+	notes: str | None = None
 
 
 class ExportedLocationInfo(BaseModel):
-	room_id: Optional[UUID] = None
-	room_name: Optional[str] = None
-	bookcase_id: Optional[UUID] = None
-	bookcase_name: Optional[str] = None
-	section_id: Optional[UUID] = None
-	section_index: Optional[int] = None
-	section_label: Optional[str] = None
-	shelf_id: Optional[UUID] = None
-	shelf_index: Optional[int] = None
-	shelf_notes: Optional[str] = None
-	shelf_position: Optional[int] = None
-	position_description: Optional[str] = None
+	room_id: UUID | None = None
+	room_name: str | None = None
+	bookcase_id: UUID | None = None
+	bookcase_name: str | None = None
+	section_id: UUID | None = None
+	section_index: int | None = None
+	section_label: str | None = None
+	shelf_id: UUID | None = None
+	shelf_index: int | None = None
+	shelf_notes: str | None = None
+	shelf_position: int | None = None
+	position_description: str | None = None
 
 
 class ExportedReaderInfo(BaseModel):
@@ -43,26 +43,26 @@ class ExportedReaderInfo(BaseModel):
 class ExportedLoanInfo(BaseModel):
 	borrower_name: str
 	loaned_at: datetime
-	due_date: Optional[datetime] = None
+	due_date: datetime | None = None
 
 
 class ExportedBookResponse(BaseModel):
 	id: UUID = Field(..., description="Book ID")
-	record: Optional[ExportedRecordInfo] = Field(None, description="Bibliographic metadata")
+	record: ExportedRecordInfo | None = Field(None, description="Bibliographic metadata")
 	reading_status: str = Field(..., description="Reading status")
-	condition: Optional[str] = None
-	source: Optional[str] = None
-	purchase_date: Optional[date] = None
-	purchase_price: Optional[Decimal] = None
-	owner_id: Optional[UUID] = Field(None, description="Family member who owns this copy")
-	current_reader_id: Optional[UUID] = Field(None, description="Who is currently reading it")
+	condition: str | None = None
+	source: str | None = None
+	purchase_date: date | None = None
+	purchase_price: Decimal | None = None
+	owner_id: UUID | None = Field(None, description="Family member who owns this copy")
+	current_reader_id: UUID | None = Field(None, description="Who is currently reading it")
 	tags: list[str] = Field(default_factory=list)
-	notes: Optional[str] = None
+	notes: str | None = None
 	is_intentional_duplicate: bool = False
-	duplicate_notes: Optional[str] = None
+	duplicate_notes: str | None = None
 	location: ExportedLocationInfo = Field(default_factory=ExportedLocationInfo)
 	readers: list[ExportedReaderInfo] = Field(default_factory=list, description="All who have read this copy")
-	active_loan: Optional[ExportedLoanInfo] = Field(None, description="Current active loan, if any")
+	active_loan: ExportedLoanInfo | None = Field(None, description="Current active loan, if any")
 	created_at: datetime
 	updated_at: datetime
 
@@ -75,71 +75,71 @@ class ExportedBookResponse(BaseModel):
 class RoomExportItem(BaseModel):
 	id: UUID
 	name: str
-	description: Optional[str] = None
+	description: str | None = None
 
 
 class BookcaseExportItem(BaseModel):
 	id: UUID
 	room_id: UUID
 	name: str
-	description: Optional[str] = None
-	type: Optional[str] = None
-	notes: Optional[str] = None
-	image_url: Optional[str] = None
+	description: str | None = None
+	type: str | None = None
+	notes: str | None = None
+	image_url: str | None = None
 
 
 class SectionExportItem(BaseModel):
 	id: UUID
 	bookcase_id: UUID
 	section_index: int
-	label: Optional[str] = None
+	label: str | None = None
 
 
 class ShelfExportItem(BaseModel):
 	id: UUID
 	section_id: UUID
 	shelf_index: int
-	notes: Optional[str] = None
+	notes: str | None = None
 
 
 class BibliographicRecordExportItem(BaseModel):
 	id: UUID
 	title: str
-	main_author: Optional[str] = None
+	main_author: str | None = None
 	other_authors: list[str] = Field(default_factory=list)
-	isbn: Optional[str] = None
-	publisher: Optional[str] = None
-	publication_year: Optional[int] = None
-	language: Optional[str] = None
-	genre: Optional[str] = None
-	genre_raw: Optional[str] = None
-	cover_url: Optional[str] = None
-	notes: Optional[str] = None
-	incipit: Optional[str] = None
-	incipit_source: Optional[str] = None
-	incipit_generated_at: Optional[datetime] = None
+	isbn: str | None = None
+	publisher: str | None = None
+	publication_year: int | None = None
+	language: str | None = None
+	genre: str | None = None
+	genre_raw: str | None = None
+	cover_url: str | None = None
+	notes: str | None = None
+	incipit: str | None = None
+	incipit_source: str | None = None
+	incipit_generated_at: datetime | None = None
 
 
 class OwnedBookExportItem(BaseModel):
 	id: UUID
 	bibliographic_record_id: UUID
-	room_id: Optional[UUID] = None
-	bookcase_id: Optional[UUID] = None
-	section_id: Optional[UUID] = None
-	shelf_id: Optional[UUID] = None
-	shelf_position: Optional[int] = None
-	position_description: Optional[str] = None
-	condition: Optional[str] = None
-	purchase_date: Optional[date] = None
-	purchase_price: Optional[Decimal] = None
-	source: Optional[str] = None
+	room_id: UUID | None = None
+	bookcase_id: UUID | None = None
+	section_id: UUID | None = None
+	shelf_id: UUID | None = None
+	shelf_position: int | None = None
+	position_description: str | None = None
+	condition: str | None = None
+	purchase_date: date | None = None
+	purchase_price: Decimal | None = None
+	source: str | None = None
 	reading_status: str = "to_read"
-	current_reader_id: Optional[UUID] = None
-	owner_id: Optional[UUID] = None
+	current_reader_id: UUID | None = None
+	owner_id: UUID | None = None
 	tags: list[str] = Field(default_factory=list)
-	notes: Optional[str] = None
+	notes: str | None = None
 	is_intentional_duplicate: bool = False
-	duplicate_notes: Optional[str] = None
+	duplicate_notes: str | None = None
 	created_at: datetime
 	updated_at: datetime
 
@@ -156,8 +156,8 @@ class BookLoanExportItem(BaseModel):
 	owned_book_id: UUID
 	borrower_name: str
 	loaned_at: datetime
-	due_date: Optional[datetime] = None
-	returned_at: Optional[datetime] = None
+	due_date: datetime | None = None
+	returned_at: datetime | None = None
 
 
 class BookHistoryExportItem(BaseModel):
@@ -165,8 +165,8 @@ class BookHistoryExportItem(BaseModel):
 	owned_book_id: UUID
 	event_type: str
 	changed_by: UUID
-	old_data: Optional[dict[str, Any]] = None
-	new_data: Optional[dict[str, Any]] = None
+	old_data: dict[str, Any] | None = None
+	new_data: dict[str, Any] | None = None
 	created_at: datetime
 
 

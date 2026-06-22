@@ -1,6 +1,5 @@
 from .delete_family_data import DeleteFamilyDataOutput, DeleteFamilyDataUseCase
 from .export_full_library import ExportFullLibraryUseCase, FullLibraryExport
-from .record_removed_member import RecordRemovedMemberInput, RecordRemovedMemberUseCase
 from .import_full_library import (
 	ImportBookcaseItem,
 	ImportBookHistoryItem,
@@ -15,6 +14,7 @@ from .import_full_library import (
 	ImportSectionItem,
 	ImportShelfItem,
 )
+from .record_removed_member import RecordRemovedMemberInput, RecordRemovedMemberUseCase
 
 __all__ = [
 	"ExportFullLibraryUseCase",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import DateTime, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -15,7 +16,7 @@ class IsbnLookupCacheModel(Base):
 
 	id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 	isbn: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
-	cache_metadata: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False)
+	cache_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False)
 	source: Mapped[str] = mapped_column(String(50), nullable=False)
 	fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

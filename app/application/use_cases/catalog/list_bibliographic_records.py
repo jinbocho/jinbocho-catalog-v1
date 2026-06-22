@@ -1,4 +1,3 @@
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities import BibliographicRecord
@@ -12,8 +11,8 @@ class ListBibliographicRecordsUseCase:
 	async def execute(
 		self,
 		family_id: UUID,
-		q: Optional[str],
-		genre: Optional[str],
+		q: str | None,
+		genre: str | None,
 		limit: int,
 		offset: int,
 	) -> list[BibliographicRecord]:

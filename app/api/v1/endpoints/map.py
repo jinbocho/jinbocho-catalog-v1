@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -10,8 +11,20 @@ from app.api.dependencies import (
 	get_section_repository,
 	get_shelf_repository,
 )
-from app.api.v1.schemas.map_schemas import BookcaseMapResponse, BookOnShelfResponse, SectionMapResponse, ShelfMapResponse
+from app.api.v1.schemas.map_schemas import (
+	BookcaseMapResponse,
+	BookOnShelfResponse,
+	SectionMapResponse,
+	ShelfMapResponse,
+)
 from app.application.use_cases import GetBookcaseMapUseCase
+from app.domain.repositories import (
+	BibliographicRecordRepository,
+	BookcaseRepository,
+	OwnedBookRepository,
+	SectionRepository,
+	ShelfRepository,
+)
 
 router = APIRouter(tags=["map"])
 
@@ -19,13 +32,13 @@ router = APIRouter(tags=["map"])
 @router.get("/bookcase/{bookcase_id}", response_model=BookcaseMapResponse, summary="Get bookcase map")
 async def get_bookcase_map(
 	bookcase_id: UUID,
-	payload: dict = Depends(get_current_user_payload),
-	bookcase_repo = Depends(get_bookcase_repository),
-	section_repo = Depends(get_section_repository),
-	shelf_repo = Depends(get_shelf_repository),
-	book_repo = Depends(get_owned_book_repository),
-	record_repo = Depends(get_bibliographic_record_repository),
-):
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
+	section_repo: SectionRepository = Depends(get_section_repository),
+	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+) -> BookcaseMapResponse:
 	bookcase, sections_data = await GetBookcaseMapUseCase(bookcase_repo, section_repo, shelf_repo, book_repo, record_repo).execute(
 		UUID(payload["family_id"]), bookcase_id
 	)

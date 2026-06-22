@@ -1,4 +1,19 @@
-OPENAPI_TAGS_METADATA = [
+from typing import TypedDict
+
+
+class OpenApiTagMetadata(TypedDict):
+	name: str
+	description: str
+
+
+class OpenApiConfig(TypedDict):
+	title: str
+	description: str
+	version: str
+	tags: list[OpenApiTagMetadata]
+
+
+OPENAPI_TAGS_METADATA: list[OpenApiTagMetadata] = [
 	{"name": "rooms", "description": "Operations on rooms"},
 	{"name": "bookcases", "description": "Operations on bookcases"},
 	{"name": "sections", "description": "Operations on sections"},
@@ -20,7 +35,7 @@ SECURITY_SCHEME = {
 	}
 }
 
-OPENAPI_CONFIG = {
+OPENAPI_CONFIG: OpenApiConfig = {
 	"title": "Catalog Service API",
 	"description": "Manage books, locations, and catalog metadata",
 	"version": "1.0.0",

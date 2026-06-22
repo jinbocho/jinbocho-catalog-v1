@@ -3,7 +3,14 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from app.domain.entities import BookHistory, OwnedBook
+from app.domain.entities import (
+	BookCondition,
+	BookEventType,
+	BookHistory,
+	BookSource,
+	OwnedBook,
+	ReadingStatus,
+)
 from app.domain.repositories import BookHistoryRepository, OwnedBookRepository
 from app.utils import utcnow
 
@@ -13,11 +20,11 @@ class UpdateBookMetadataInput:
 	book_id: UUID
 	family_id: UUID
 	changed_by: UUID
-	condition: str | None = None
+	condition: BookCondition | None = None
 	purchase_date: date | None = None
 	purchase_price: Decimal | None = None
-	source: str | None = None
-	reading_status: str | None = None
+	source: BookSource | None = None
+	reading_status: ReadingStatus | None = None
 	owner_id: UUID | None = None
 	tags: list[str] | None = None
 	notes: str | None = None
@@ -43,7 +50,7 @@ class UpdateBookMetadataUseCase:
 		if inp.reading_status is not None:
 			book.reading_status = inp.reading_status
 			# Mirror the same rule as UpdateReadingStatusUseCase: only "reading" holds a reader.
-			book.current_reader_id = inp.changed_by if inp.reading_status == "reading" else None
+			book.current_reader_id = inp.changed_by if inp.reading_status == ReadingStatus.READING else None
 		if inp.owner_id is not None:
 			book.owner_id = inp.owner_id
 		if inp.tags is not None:
@@ -54,7 +61,10 @@ class UpdateBookMetadataUseCase:
 		updated = await self._book_repo.save(book)
 		await self._history_repo.save(
 			BookHistory(
-				owned_book_id=book.id, event_type="metadata_updated", changed_by=inp.changed_by, created_at=utcnow()
+				owned_book_id=book.id,
+					event_type=BookEventType.METADATA_UPDATED,
+					changed_by=inp.changed_by,
+					created_at=utcnow(),
 			)
 		)
 		return updated

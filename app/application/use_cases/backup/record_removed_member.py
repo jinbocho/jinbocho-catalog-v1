@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.domain.entities import RemovedMember
+from app.domain.entities import FamilyRole, RemovedMember
 from app.domain.repositories import RemovedMemberRepository
 
 
@@ -11,7 +11,7 @@ class RecordRemovedMemberInput:
 	id: UUID
 	full_name: str
 	email: str
-	role: str
+	role: FamilyRole
 
 
 class RecordRemovedMemberUseCase:

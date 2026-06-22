@@ -21,4 +21,8 @@ class GetOwnedBookUseCase:
 		if not book or book.family_id != family_id:
 			raise LookupError("Book not found")
 		record = await self._record_repo.find_by_id(book.bibliographic_record_id)
+		if record is None:
+			# bibliographic_record_id is FK RESTRICT — a missing record here means
+			# the referential integrity invariant was violated, not a normal 404.
+			raise LookupError("BibliographicRecord not found")
 		return GetOwnedBookOutput(book=book, record=record)

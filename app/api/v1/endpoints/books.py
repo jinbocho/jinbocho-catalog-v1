@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -53,6 +53,19 @@ from app.application.use_cases import (
 	UpdateReadingStatusInput,
 	UpdateReadingStatusUseCase,
 )
+from app.domain.entities import BookHistory, BookLoan, BookRead, OwnedBook, ReadingStatus
+from app.domain.repositories import (
+	BibliographicRecordRepository,
+	BookcaseRepository,
+	BookHistoryRepository,
+	BookLoanRepository,
+	BookReadRepository,
+	IsbnLookupCacheRepository,
+	OwnedBookRepository,
+	RoomRepository,
+	SectionRepository,
+	ShelfRepository,
+)
 from app.infrastructure.database.session import get_db
 
 router = APIRouter(tags=["books"])
@@ -62,9 +75,9 @@ router = APIRouter(tags=["books"])
 async def list_books(
 	limit: int = Query(default=50, ge=1, le=200),
 	offset: int = Query(default=0, ge=0),
-	payload: dict = Depends(get_current_user_payload),
-	book_repo = Depends(get_owned_book_repository),
-):
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+) -> list[OwnedBook]:
 	return await ListOwnedBooksUseCase(book_repo).execute(UUID(payload["family_id"]), limit=limit, offset=offset)
 
 
@@ -72,17 +85,17 @@ async def list_books(
 # them as UUID path parameters.
 @router.get("/reads", response_model=list[BookReadResponse], summary="List all reads for the family")
 async def list_family_reads(
-	payload: dict = Depends(get_current_user_payload),
-	read_repo = Depends(get_book_read_repository),
-):
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
+) -> list[BookRead]:
 	return await ListFamilyReadsUseCase(read_repo).execute(UUID(payload["family_id"]))
 
 
 @router.get("/loans/active", response_model=list[BookLoanResponse], summary="List all active loans for the family")
 async def list_active_loans(
-	payload: dict = Depends(get_current_user_payload),
-	loan_repo = Depends(get_book_loan_repository),
-):
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
+) -> list[BookLoan]:
 	return await ListActiveFamilyLoansUseCase(loan_repo).execute(UUID(payload["family_id"]))
 
 
@@ -101,18 +114,18 @@ async def list_active_loans(
 )
 async def add_book(
 	request: OwnedBookCreate,
-	payload: dict = Depends(require_role("admin", "editor")),
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
-	book_repo = Depends(get_owned_book_repository),
-	record_repo = Depends(get_bibliographic_record_repository),
-	history_repo = Depends(get_book_history_repository),
-	cache_repo = Depends(get_isbn_lookup_cache_repository),
-	room_repo = Depends(get_room_repository),
-	bookcase_repo = Depends(get_bookcase_repository),
-	section_repo = Depends(get_section_repository),
-	shelf_repo = Depends(get_shelf_repository),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+	cache_repo: IsbnLookupCacheRepository = Depends(get_isbn_lookup_cache_repository),
+	room_repo: RoomRepository = Depends(get_room_repository),
+	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
+	section_repo: SectionRepository = Depends(get_section_repository),
+	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
 	http_client: httpx.AsyncClient = Depends(get_http_client),
-):
+) -> OwnedBook:
 	# DuplicateBookError propagates to the global handler in
 	# app/core/exception_handlers.py (same pattern as LookupError/ValueError
 	# elsewhere); get_db() rolls back automatically when an exception escapes.
@@ -126,10 +139,10 @@ async def add_book(
 @router.get("/{book_id}", response_model=OwnedBookResponse, summary="Get book")
 async def get_book(
 	book_id: UUID,
-	payload: dict = Depends(get_current_user_payload),
-	book_repo = Depends(get_owned_book_repository),
-	record_repo = Depends(get_bibliographic_record_repository),
-):
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+) -> OwnedBook:
 	result = await GetOwnedBookUseCase(book_repo, record_repo).execute(book_id, UUID(payload["family_id"]))
 	return result.book
 
@@ -138,13 +151,18 @@ async def get_book(
 async def update_book(
 	book_id: UUID,
 	request: OwnedBookUpdate,
-	payload: dict = Depends(require_role("admin", "editor")),
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
-	book_repo = Depends(get_owned_book_repository),
-	history_repo = Depends(get_book_history_repository),
-):
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+) -> OwnedBook:
 	updated = await UpdateBookMetadataUseCase(book_repo, history_repo).execute(
-		UpdateBookMetadataInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]), **request.model_dump(exclude_unset=True))
+		UpdateBookMetadataInput(
+			book_id=book_id,
+			family_id=UUID(payload["family_id"]),
+			changed_by=UUID(payload["sub"]),
+			**request.model_dump(exclude_unset=True),
+		)
 	)
 	await db.commit()
 	return updated
@@ -158,15 +176,23 @@ async def update_book_position(
 	section_id: UUID | None = None,
 	shelf_id: UUID | None = None,
 	shelf_position: int | None = None,
-	payload: dict = Depends(require_role("admin", "editor")),
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
-	book_repo = Depends(get_owned_book_repository),
-	history_repo = Depends(get_book_history_repository),
-):
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+) -> OwnedBook:
 	updated = await UpdateBookPositionUseCase(book_repo, history_repo).execute(
-		UpdateBookPositionInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]),
-			room_id=room_id, bookcase_id=bookcase_id, section_id=section_id, shelf_id=shelf_id, shelf_position=shelf_position,
-			position_description=None)
+		UpdateBookPositionInput(
+			book_id=book_id,
+			family_id=UUID(payload["family_id"]),
+			changed_by=UUID(payload["sub"]),
+			room_id=room_id,
+			bookcase_id=bookcase_id,
+			section_id=section_id,
+			shelf_id=shelf_id,
+			shelf_position=shelf_position,
+			position_description=None,
+		)
 	)
 	await db.commit()
 	return updated
@@ -175,14 +201,19 @@ async def update_book_position(
 @router.post("/{book_id}/reading-status", response_model=OwnedBookResponse, summary="Update reading status")
 async def update_reading_status(
 	book_id: UUID,
-	reading_status: Literal["to_read", "reading", "read"],
-	payload: dict = Depends(require_role("admin", "editor")),
+	reading_status: ReadingStatus,
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
-	book_repo = Depends(get_owned_book_repository),
-	history_repo = Depends(get_book_history_repository),
-):
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+) -> OwnedBook:
 	updated = await UpdateReadingStatusUseCase(book_repo, history_repo).execute(
-		UpdateReadingStatusInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]), reading_status=reading_status)
+		UpdateReadingStatusInput(
+			book_id=book_id,
+			family_id=UUID(payload["family_id"]),
+			changed_by=UUID(payload["sub"]),
+			reading_status=reading_status,
+		)
 	)
 	await db.commit()
 	return updated
@@ -191,11 +222,11 @@ async def update_reading_status(
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete book")
 async def delete_book(
 	book_id: UUID,
-	payload: dict = Depends(require_role("admin", "editor")),
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
-	book_repo = Depends(get_owned_book_repository),
-	history_repo = Depends(get_book_history_repository),
-):
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+) -> None:
 	await DeleteBookUseCase(book_repo, history_repo).execute(
 		DeleteBookInput(book_id=book_id, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]))
 	)
@@ -205,46 +236,53 @@ async def delete_book(
 @router.get("/{book_id}/history", summary="Get book history")
 async def get_book_history(
 	book_id: UUID,
-	payload: dict = Depends(get_current_user_payload),
-	history_repo = Depends(get_book_history_repository),
-	book_repo = Depends(get_owned_book_repository),
-):
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+) -> list[BookHistory]:
 	return await GetBookHistoryUseCase(history_repo, book_repo).execute(book_id, UUID(payload["family_id"]))
 
 
 @router.get("/{book_id}/reads", response_model=list[BookReadResponse], summary="List readers of a book")
 async def list_book_reads(
 	book_id: UUID,
-	payload: dict = Depends(get_current_user_payload),
-	book_repo = Depends(get_owned_book_repository),
-	read_repo = Depends(get_book_read_repository),
-):
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
+) -> list[BookRead]:
 	return await ListBookReadsUseCase(book_repo, read_repo).execute(book_id, UUID(payload["family_id"]))
 
 
-@router.post("/{book_id}/reads", response_model=BookReadResponse, status_code=status.HTTP_201_CREATED, summary="Mark book as read by a member")
+@router.post(
+	"/{book_id}/reads",
+	response_model=BookReadResponse,
+	status_code=status.HTTP_201_CREATED,
+	summary="Mark book as read by a member",
+)
 async def mark_book_read(
 	book_id: UUID,
 	request: BookReadCreate,
-	payload: dict = Depends(require_role("admin", "editor")),
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
-	book_repo = Depends(get_owned_book_repository),
-	read_repo = Depends(get_book_read_repository),
-):
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
+) -> BookRead:
 	result = await MarkBookReadUseCase(book_repo, read_repo).execute(book_id, UUID(payload["family_id"]), request.user_id)
 	await db.commit()
 	return result
 
 
-@router.delete("/{book_id}/reads/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Remove read mark for a member")
+@router.delete(
+	"/{book_id}/reads/{user_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Remove read mark for a member"
+)
 async def unmark_book_read(
 	book_id: UUID,
 	user_id: UUID,
-	payload: dict = Depends(require_role("admin", "editor")),
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
-	book_repo = Depends(get_owned_book_repository),
-	read_repo = Depends(get_book_read_repository),
-):
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
+) -> None:
 	await UnmarkBookReadUseCase(book_repo, read_repo).execute(book_id, UUID(payload["family_id"]), user_id)
 	await db.commit()
 
@@ -252,22 +290,27 @@ async def unmark_book_read(
 @router.get("/{book_id}/loans", response_model=list[BookLoanResponse], summary="List loan history for a book")
 async def list_book_loans(
 	book_id: UUID,
-	payload: dict = Depends(get_current_user_payload),
-	book_repo = Depends(get_owned_book_repository),
-	loan_repo = Depends(get_book_loan_repository),
-):
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
+) -> list[BookLoan]:
 	return await ListBookLoansUseCase(book_repo, loan_repo).execute(book_id, UUID(payload["family_id"]))
 
 
-@router.post("/{book_id}/loans", response_model=BookLoanResponse, status_code=status.HTTP_201_CREATED, summary="Lend a book to someone outside the family")
+@router.post(
+	"/{book_id}/loans",
+	response_model=BookLoanResponse,
+	status_code=status.HTTP_201_CREATED,
+	summary="Lend a book to someone outside the family",
+)
 async def lend_book(
 	book_id: UUID,
 	request: BookLoanCreate,
-	payload: dict = Depends(require_role("admin", "editor")),
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
-	book_repo = Depends(get_owned_book_repository),
-	loan_repo = Depends(get_book_loan_repository),
-):
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
+) -> BookLoan:
 	result = await LendBookUseCase(book_repo, loan_repo).execute(
 		book_id, UUID(payload["family_id"]), request.borrower_name, request.due_date
 	)
@@ -278,11 +321,11 @@ async def lend_book(
 @router.post("/{book_id}/loans/return", response_model=BookLoanResponse, summary="Mark the active loan as returned")
 async def return_book(
 	book_id: UUID,
-	payload: dict = Depends(require_role("admin", "editor")),
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
-	book_repo = Depends(get_owned_book_repository),
-	loan_repo = Depends(get_book_loan_repository),
-):
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
+) -> BookLoan:
 	returned_loan = await ReturnBookUseCase(book_repo, loan_repo).execute(book_id, UUID(payload["family_id"]))
 	await db.commit()
 	return returned_loan

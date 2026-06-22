@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from uuid import UUID
 
-from app.domain.entities import BookHistory
+from app.domain.entities import BookEventType, BookHistory
 from app.domain.repositories import BookHistoryRepository, OwnedBookRepository
 from app.utils import utcnow
 
@@ -27,7 +27,7 @@ class DeleteBookUseCase:
 		await self._history_repo.save(
 			BookHistory(
 				owned_book_id=book.id,
-				event_type="deleted",
+				event_type=BookEventType.DELETED,
 				changed_by=inp.changed_by,
 				old_data={"bibliographic_record_id": str(book.bibliographic_record_id)},
 				created_at=utcnow(),

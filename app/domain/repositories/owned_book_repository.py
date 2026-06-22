@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from app.domain.entities import OwnedBook
+from app.domain.entities import OwnedBook, ReadingStatus
 
 
 class OwnedBookRepository(ABC):
@@ -13,7 +13,7 @@ class OwnedBookRepository(ABC):
 		self,
 		family_id: UUID,
 		shelf_id: UUID | None = None,
-		reading_status: str | None = None,
+		reading_status: ReadingStatus | None = None,
 		tag: str | None = None,
 		limit: int = 50,
 		offset: int = 0,

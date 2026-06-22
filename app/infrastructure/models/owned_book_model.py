@@ -44,5 +44,5 @@ class OwnedBookModel(Base):
 		DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
 	)
 
-	bibliographic_record: Mapped["BibliographicRecordModel"] = relationship(back_populates="owned_books")
-	shelf: Mapped["ShelfModel | None"] = relationship(back_populates="books", foreign_keys=[shelf_id])
+	bibliographic_record: Mapped[BibliographicRecordModel] = relationship(back_populates="owned_books")
+	shelf: Mapped[ShelfModel | None] = relationship(back_populates="books", foreign_keys=[shelf_id])

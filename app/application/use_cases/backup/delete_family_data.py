@@ -1,17 +1,15 @@
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from uuid import UUID
 
+from app.application.services import fetch_all_pages
 from app.domain.repositories import (
 	BibliographicRecordRepository,
-	BookHistoryRepository,
 	BookcaseRepository,
+	BookHistoryRepository,
 	OwnedBookRepository,
 	RemovedMemberRepository,
 	RoomRepository,
 )
-
-_PAGE_SIZE = 500
 
 
 @dataclass
@@ -60,7 +58,7 @@ class DeleteFamilyDataUseCase:
 		self._removed_member_repo = removed_member_repo
 
 	async def execute(self, family_id: UUID) -> DeleteFamilyDataOutput:
-		book_ids = [book.id for book in await self._fetch_all(
+		book_ids = [book.id for book in await fetch_all_pages(
 			lambda limit, offset: self._book_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		)]
 		await self._book_history_repo.delete_by_owned_book_ids(book_ids)
@@ -68,17 +66,17 @@ class DeleteFamilyDataUseCase:
 		owned_books_deleted = len(book_ids)
 		await self._book_repo.delete_all_by_family(family_id)
 
-		records_deleted = len(await self._fetch_all(
+		records_deleted = len(await fetch_all_pages(
 			lambda limit, offset: self._record_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		))
 		await self._record_repo.delete_all_by_family(family_id)
 
-		bookcases_deleted = len(await self._fetch_all(
+		bookcases_deleted = len(await fetch_all_pages(
 			lambda limit, offset: self._bookcase_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		))
 		await self._bookcase_repo.delete_all_by_family(family_id)
 
-		rooms_deleted = len(await self._fetch_all(
+		rooms_deleted = len(await fetch_all_pages(
 			lambda limit, offset: self._room_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		))
 		await self._room_repo.delete_all_by_family(family_id)
@@ -93,14 +91,3 @@ class DeleteFamilyDataUseCase:
 			owned_books_deleted=owned_books_deleted,
 			removed_members_deleted=removed_members_deleted,
 		)
-
-	@staticmethod
-	async def _fetch_all(fetch_page: Callable[[int, int], Awaitable[list]]) -> list:  # type: ignore[type-arg]
-		results: list = []  # type: ignore[type-arg]
-		offset = 0
-		while True:
-			page = await fetch_page(_PAGE_SIZE, offset)
-			results.extend(page)
-			if len(page) < _PAGE_SIZE:
-				return results
-			offset += _PAGE_SIZE
