@@ -64,6 +64,26 @@ class SQLAlchemyBookReadRepository(BookReadRepository):
         )
         return [self._to_entity(m) for m in result.scalars().all()]
 
+    async def is_read(self, owned_book_id: UUID, user_id: UUID) -> bool:
+        result = await self._session.execute(
+            select(BookReadModel.id).where(
+                BookReadModel.owned_book_id == owned_book_id,
+                BookReadModel.user_id == user_id,
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
+    async def list_read_book_ids(self, owned_book_ids: list[UUID], user_id: UUID) -> set[UUID]:
+        if not owned_book_ids:
+            return set()
+        result = await self._session.execute(
+            select(BookReadModel.owned_book_id).where(
+                BookReadModel.user_id == user_id,
+                BookReadModel.owned_book_id.in_(owned_book_ids),
+            )
+        )
+        return set(result.scalars().all())
+
     async def restore(self, book_read: BookRead) -> BookRead:
         model = await self._session.get(BookReadModel, book_read.id)
         if model is None:

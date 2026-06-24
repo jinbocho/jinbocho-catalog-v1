@@ -11,7 +11,7 @@ from app.domain.entities import (
 	OwnedBook,
 	ReadingStatus,
 )
-from app.domain.repositories import BookHistoryRepository, OwnedBookRepository
+from app.domain.repositories import BookHistoryRepository, BookReadRepository, OwnedBookRepository
 from app.utils import utcnow
 
 
@@ -31,8 +31,14 @@ class UpdateBookMetadataInput:
 
 
 class UpdateBookMetadataUseCase:
-	def __init__(self, book_repo: OwnedBookRepository, history_repo: BookHistoryRepository) -> None:
+	def __init__(
+		self,
+		book_repo: OwnedBookRepository,
+		read_repo: BookReadRepository,
+		history_repo: BookHistoryRepository,
+	) -> None:
 		self._book_repo = book_repo
+		self._read_repo = read_repo
 		self._history_repo = history_repo
 
 	async def execute(self, inp: UpdateBookMetadataInput) -> OwnedBook:
@@ -48,9 +54,19 @@ class UpdateBookMetadataUseCase:
 		if inp.source is not None:
 			book.source = inp.source
 		if inp.reading_status is not None:
-			book.reading_status = inp.reading_status
-			# Mirror the same rule as UpdateReadingStatusUseCase: only "reading" holds a reader.
-			book.current_reader_id = inp.changed_by if inp.reading_status == ReadingStatus.READING else None
+			# Mirror the same per-member rule as UpdateReadingStatusUseCase:
+			# "reading" claims the shared copy, "read"/"to_read" only ever
+			# affect this caller's own BookRead row.
+			if inp.reading_status == ReadingStatus.READING:
+				book.current_reader_id = inp.changed_by
+			else:
+				if book.current_reader_id == inp.changed_by:
+					book.current_reader_id = None
+				if inp.reading_status == ReadingStatus.READ:
+					await self._read_repo.add(book.id, inp.changed_by)
+				else:
+					await self._read_repo.remove(book.id, inp.changed_by)
+			book.reading_status = ReadingStatus.READING if book.current_reader_id is not None else ReadingStatus.TO_READ
 		if inp.owner_id is not None:
 			book.owner_id = inp.owner_id
 		if inp.tags is not None:
@@ -59,6 +75,9 @@ class UpdateBookMetadataUseCase:
 			book.notes = inp.notes
 		book.updated_at = utcnow()
 		updated = await self._book_repo.save(book)
+		if inp.reading_status is not None:
+			has_read = await self._read_repo.is_read(updated.id, inp.changed_by)
+			updated.reading_status = updated.reading_status_for(inp.changed_by, has_read)
 		await self._history_repo.save(
 			BookHistory(
 				owned_book_id=book.id,

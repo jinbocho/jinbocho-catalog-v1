@@ -53,3 +53,14 @@ class OwnedBook:
 	id: UUID = field(default_factory=uuid4)
 	created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 	updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+	def reading_status_for(self, viewer_id: UUID, has_read: bool) -> ReadingStatus:
+		"""Reading status as seen by a specific family member. "Reading" is
+		inherently shared (only one person can hold the single physical copy
+		at a time); "read" is per-member, derived from BookRead rows, so one
+		member finishing the book doesn't mark it read for everyone else."""
+		if self.current_reader_id == viewer_id:
+			return ReadingStatus.READING
+		if has_read:
+			return ReadingStatus.READ
+		return ReadingStatus.TO_READ

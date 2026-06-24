@@ -52,5 +52,6 @@ def configure_exception_handlers(app: FastAPI) -> None:
 				"existing_bookcase_id": str(conflict.existing_bookcase_id) if conflict.existing_bookcase_id else None,
 				"existing_section_id": str(conflict.existing_section_id) if conflict.existing_section_id else None,
 				"existing_shelf_id": str(conflict.existing_shelf_id) if conflict.existing_shelf_id else None,
+				"match_reason": conflict.match_reason,
 			},
 		)

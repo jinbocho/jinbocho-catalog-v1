@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.dependencies import (
 	get_bibliographic_record_repository,
+	get_book_read_repository,
 	get_bookcase_repository,
 	get_current_user_payload,
 	get_owned_book_repository,
@@ -21,6 +22,7 @@ from app.application.use_cases import GetBookcaseMapUseCase
 from app.domain.repositories import (
 	BibliographicRecordRepository,
 	BookcaseRepository,
+	BookReadRepository,
 	OwnedBookRepository,
 	SectionRepository,
 	ShelfRepository,
@@ -38,9 +40,11 @@ async def get_bookcase_map(
 	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
 ) -> BookcaseMapResponse:
-	bookcase, sections_data = await GetBookcaseMapUseCase(bookcase_repo, section_repo, shelf_repo, book_repo, record_repo).execute(
-		UUID(payload["family_id"]), bookcase_id
+	use_case = GetBookcaseMapUseCase(bookcase_repo, section_repo, shelf_repo, book_repo, record_repo, read_repo)
+	bookcase, sections_data = await use_case.execute(
+		UUID(payload["family_id"]), bookcase_id, viewer_id=UUID(payload["sub"])
 	)
 
 	# Transform to response format

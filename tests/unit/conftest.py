@@ -303,6 +303,13 @@ class MockBookReadRepository(BookReadRepository):
 		# owned_book -> family join; it returns everything stored.
 		return list(self.reads.values())
 
+	async def is_read(self, owned_book_id: UUID, user_id: UUID) -> bool:
+		return any(r.owned_book_id == owned_book_id and r.user_id == user_id for r in self.reads.values())
+
+	async def list_read_book_ids(self, owned_book_ids: list[UUID], user_id: UUID) -> set[UUID]:
+		ids = set(owned_book_ids)
+		return {r.owned_book_id for r in self.reads.values() if r.user_id == user_id and r.owned_book_id in ids}
+
 	async def restore(self, book_read: BookRead) -> BookRead:
 		existing = next(
 			(
@@ -340,6 +347,19 @@ class MockBookLoanRepository(BookLoanRepository):
 
 	async def list_active_by_family(self, family_id: UUID) -> list[BookLoan]:
 		return [loan for loan in self.loans.values() if loan.returned_at is None]
+
+	async def list_due_for_reminder(self, due_before) -> list[BookLoan]:
+		return [
+			loan for loan in self.loans.values()
+			if loan.returned_at is None
+			and loan.reminder_sent_at is None
+			and loan.due_date is not None
+			and loan.due_date <= due_before
+		]
+
+	async def mark_reminder_sent(self, loan_id: UUID, sent_at) -> None:
+		if loan_id in self.loans:
+			self.loans[loan_id].reminder_sent_at = sent_at
 
 	async def find_all_by_family(self, family_id: UUID) -> list[BookLoan]:
 		# Like MockBookHistoryRepository, this mock doesn't model the

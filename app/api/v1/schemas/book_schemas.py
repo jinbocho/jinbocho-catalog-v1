@@ -15,7 +15,7 @@ class DuplicateBookConflictResponse(BaseModel):
 	has it and where. Resubmit with is_intentional_duplicate=true to add it
 	anyway."""
 	error: Literal["duplicate_book"] = "duplicate_book"
-	conflict_type: Literal["isbn_match", "title_author_match"]
+	conflict_type: Literal["isbn_match", "title_author_match", "fuzzy_match"]
 	existing_book_id: UUID
 	existing_record_id: UUID
 	title: str
@@ -26,6 +26,7 @@ class DuplicateBookConflictResponse(BaseModel):
 	existing_bookcase_id: UUID | None = None
 	existing_section_id: UUID | None = None
 	existing_shelf_id: UUID | None = None
+	match_reason: str | None = None
 
 
 class OwnedBookCreate(BaseModel):

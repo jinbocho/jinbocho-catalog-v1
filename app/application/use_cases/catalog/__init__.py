@@ -11,6 +11,7 @@ from .get_owned_book import GetOwnedBookOutput, GetOwnedBookUseCase
 from .list_bibliographic_records import ListBibliographicRecordsUseCase
 from .list_genres import GenreCount, ListGenresUseCase
 from .list_owned_books import ListOwnedBooksUseCase
+from .loan_reminders import SendLoanRemindersUseCase
 from .set_incipit import SetIncipitUseCase
 from .update_bibliographic_record import UpdateBibliographicRecordInput, UpdateBibliographicRecordUseCase
 from .update_book_metadata import UpdateBookMetadataInput, UpdateBookMetadataUseCase
@@ -28,6 +29,7 @@ __all__ = [
 	"ReturnBookUseCase",
 	"ListBookLoansUseCase",
 	"ListActiveFamilyLoansUseCase",
+	"SendLoanRemindersUseCase",
 	# Book reads (per-member reading history)
 	"MarkBookReadUseCase",
 	"UnmarkBookReadUseCase",

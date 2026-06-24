@@ -14,6 +14,7 @@ from app.domain.repositories import (
     BookHistoryRepository,
     BookLoanRepository,
     BookReadRepository,
+    DuplicateJudge,
     IsbnLookupCacheRepository,
     OwnedBookRepository,
     RemovedMemberRepository,
@@ -22,6 +23,7 @@ from app.domain.repositories import (
     ShelfRepository,
 )
 from app.infrastructure.database.session import get_db
+from app.infrastructure.external import HttpDuplicateJudge
 from app.infrastructure.repositories import (
     SQLAlchemyBibliographicRecordRepository,
     SQLAlchemyBookcaseRepository,
@@ -72,6 +74,10 @@ async def get_current_user_payload(
 
 def get_http_client(request: Request) -> httpx.AsyncClient:
     return request.app.state.http_client
+
+
+def get_duplicate_judge(http_client: httpx.AsyncClient = Depends(get_http_client)) -> DuplicateJudge:
+    return HttpDuplicateJudge(http_client)
 
 
 def require_role(*roles: str) -> Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]:

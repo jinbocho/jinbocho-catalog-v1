@@ -3,7 +3,9 @@ from .book_history_repository import BookHistoryRepository
 from .book_loan_repository import BookLoanRepository
 from .book_read_repository import BookReadRepository
 from .bookcase_repository import BookcaseRepository
+from .duplicate_judge import DuplicateCandidate, DuplicateJudge, DuplicateJudgement
 from .isbn_lookup_cache_repository import IsbnLookupCacheRepository
+from .loan_reminder_notifier import LoanReminderNotifier
 from .owned_book_repository import OwnedBookRepository
 from .removed_member_repository import RemovedMemberRepository
 from .room_repository import RoomRepository
@@ -22,4 +24,8 @@ __all__ = [
 	"BookReadRepository",
 	"IsbnLookupCacheRepository",
 	"RemovedMemberRepository",
+	"LoanReminderNotifier",
+	"DuplicateJudge",
+	"DuplicateCandidate",
+	"DuplicateJudgement",
 ]

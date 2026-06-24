@@ -177,11 +177,11 @@ async def test_delete_bibliographic_record(record_repo, book_repo, test_family_i
 
 @pytest.mark.asyncio
 async def test_add_book_with_reading_status_sets_current_reader(
-	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
 ):
 	"""Adding a book already marked as 'reading' must set current_reader_id
 	(regression: this used to be silently left null, hiding who's reading it)."""
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo)
 	inp = AddBookInput(
 		family_id=test_family_id,
 		changed_by=test_user_id,
@@ -196,11 +196,33 @@ async def test_add_book_with_reading_status_sets_current_reader(
 
 
 @pytest.mark.asyncio
+async def test_add_book_read_records_a_per_member_book_read(
+	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
+):
+	"""Adding a book already marked 'read' must record it as read by the
+	creator only — not as a family-wide status everyone else inherits."""
+	other_user_id = uuid4()
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo)
+	inp = AddBookInput(
+		family_id=test_family_id,
+		changed_by=test_user_id,
+		title="The Hobbit",
+		reading_status=ReadingStatus.READ,
+	)
+
+	book = await use_case.execute(inp)
+
+	assert book.reading_status is ReadingStatus.READ
+	assert await book_read_repo.is_read(book.id, test_user_id) is True
+	assert await book_read_repo.is_read(book.id, other_user_id) is False
+
+
+@pytest.mark.asyncio
 async def test_add_book_to_read_has_no_current_reader(
-	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
 ):
 	"""Default 'to_read' status must not assign a reader."""
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo)
 	inp = AddBookInput(
 		family_id=test_family_id,
 		changed_by=test_user_id,
@@ -214,11 +236,11 @@ async def test_add_book_to_read_has_no_current_reader(
 
 @pytest.mark.asyncio
 async def test_add_book_detects_isbn_duplicate(
-	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
 ):
 	"""Adding a second copy with an ISBN the family already has must be
 	flagged rather than silently created."""
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo)
 	await use_case.execute(
 		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id)
 	)
@@ -233,13 +255,13 @@ async def test_add_book_detects_isbn_duplicate(
 
 @pytest.mark.asyncio
 async def test_add_book_detects_isbn_duplicate_even_with_a_different_owner(
-	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
 ):
 	"""The check is family-wide, not owner-scoped: a different family member
 	can still confirm-and-add a second copy, but the system must warn first
 	rather than silently assume two owners means it's never a duplicate."""
 	other_owner_id = uuid4()
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo)
 	await use_case.execute(
 		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id)
 	)
@@ -252,11 +274,11 @@ async def test_add_book_detects_isbn_duplicate_even_with_a_different_owner(
 
 @pytest.mark.asyncio
 async def test_add_book_duplicate_conflict_reports_existing_owner_and_location(
-	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
 ):
 	"""The conflict must surface who already has the book and where, so the
 	confirm dialog can show it instead of just blocking blindly."""
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo)
 	room_id, bookcase_id, section_id, shelf_id = uuid4(), uuid4(), uuid4(), uuid4()
 	first = await use_case.execute(
 		AddBookInput(
@@ -281,11 +303,11 @@ async def test_add_book_duplicate_conflict_reports_existing_owner_and_location(
 
 @pytest.mark.asyncio
 async def test_add_book_detects_title_author_duplicate_across_different_isbns(
-	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
 ):
 	"""Same title/author but a different (or missing) ISBN — e.g. added twice
 	under two different editions — must still be flagged."""
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo)
 	await use_case.execute(
 		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", main_author="Frank Herbert")
 	)
@@ -303,11 +325,11 @@ async def test_add_book_detects_title_author_duplicate_across_different_isbns(
 
 @pytest.mark.asyncio
 async def test_add_book_intentional_duplicate_bypasses_the_check(
-	record_repo, book_repo, history_repo, cache_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
 ):
 	"""The user confirmed they want a second copy — is_intentional_duplicate=True
 	skips the check and is persisted on the new book."""
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo)
 	await use_case.execute(
 		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id)
 	)
@@ -323,7 +345,9 @@ async def test_add_book_intentional_duplicate_bypasses_the_check(
 
 
 @pytest.mark.asyncio
-async def test_update_reading_status_sets_and_clears_current_reader(book_repo, history_repo, test_family_id, test_user_id):
+async def test_update_reading_status_sets_and_clears_current_reader(
+	book_repo, book_read_repo, history_repo, test_family_id, test_user_id
+):
 	"""Switching to 'reading' assigns the current reader; switching away clears it."""
 	from app.domain.entities import OwnedBook
 	from app.utils import utcnow
@@ -338,7 +362,7 @@ async def test_update_reading_status_sets_and_clears_current_reader(book_repo, h
 		)
 	)
 
-	use_case = UpdateReadingStatusUseCase(book_repo, history_repo)
+	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo)
 	updated = await use_case.execute(
 		UpdateReadingStatusInput(
 			book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status=ReadingStatus.READING
@@ -355,7 +379,44 @@ async def test_update_reading_status_sets_and_clears_current_reader(book_repo, h
 
 
 @pytest.mark.asyncio
-async def test_update_book_metadata_reading_status_sets_current_reader(book_repo, history_repo, test_family_id, test_user_id):
+async def test_update_reading_status_read_is_per_member(
+	book_repo, book_read_repo, history_repo, test_family_id, test_user_id
+):
+	"""Regression: one member marking a book read must not flip it to "read"
+	for every other family member — only their own BookRead row changes."""
+	from app.domain.entities import OwnedBook
+	from app.utils import utcnow
+
+	other_user_id = uuid4()
+	book = await book_repo.save(
+		OwnedBook(
+			family_id=test_family_id,
+			bibliographic_record_id=uuid4(),
+			reading_status=ReadingStatus.TO_READ,
+			created_at=utcnow(),
+			updated_at=utcnow(),
+		)
+	)
+
+	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo)
+	updated = await use_case.execute(
+		UpdateReadingStatusInput(
+			book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status=ReadingStatus.READ
+		)
+	)
+
+	# The caller sees "read"...
+	caller_has_read = await book_read_repo.is_read(book.id, test_user_id)
+	assert updated.reading_status_for(test_user_id, caller_has_read) == ReadingStatus.READ
+	# ...but another family member who hasn't read it still sees "to_read".
+	other_has_read = await book_read_repo.is_read(book.id, other_user_id)
+	assert updated.reading_status_for(other_user_id, other_has_read) == ReadingStatus.TO_READ
+
+
+@pytest.mark.asyncio
+async def test_update_book_metadata_reading_status_sets_current_reader(
+	book_repo, book_read_repo, history_repo, test_family_id, test_user_id
+):
 	"""The generic metadata-update path must mirror the same current_reader_id rule
 	as the dedicated reading-status endpoint (regression: it didn't)."""
 	from app.domain.entities import OwnedBook
@@ -371,7 +432,7 @@ async def test_update_book_metadata_reading_status_sets_current_reader(book_repo
 		)
 	)
 
-	use_case = UpdateBookMetadataUseCase(book_repo, history_repo)
+	use_case = UpdateBookMetadataUseCase(book_repo, book_read_repo, history_repo)
 	updated = await use_case.execute(
 		UpdateBookMetadataInput(
 			book_id=book.id, family_id=test_family_id, changed_by=test_user_id, reading_status=ReadingStatus.READING

@@ -23,6 +23,7 @@ class SQLAlchemyBookLoanRepository(BookLoanRepository):
             loaned_at=model.loaned_at,
             due_date=model.due_date,
             returned_at=model.returned_at,
+            reminder_sent_at=model.reminder_sent_at,
         )
 
     async def add(self, loan: BookLoan) -> BookLoan:
@@ -76,6 +77,26 @@ class SQLAlchemyBookLoanRepository(BookLoanRepository):
         )
         return [self._to_entity(m) for m in result.scalars().all()]
 
+    async def list_due_for_reminder(self, due_before: datetime) -> list[BookLoan]:
+        result = await self._session.execute(
+            select(BookLoanModel).where(
+                BookLoanModel.returned_at.is_(None),
+                BookLoanModel.reminder_sent_at.is_(None),
+                BookLoanModel.due_date.is_not(None),
+                BookLoanModel.due_date <= due_before,
+            )
+        )
+        return [self._to_entity(m) for m in result.scalars().all()]
+
+    async def mark_reminder_sent(self, loan_id: UUID, sent_at: datetime) -> None:
+        result = await self._session.execute(
+            select(BookLoanModel).where(BookLoanModel.id == loan_id)
+        )
+        model = result.scalar_one_or_none()
+        if model is not None:
+            model.reminder_sent_at = sent_at
+            await self._session.flush()
+
     async def find_all_by_family(self, family_id: UUID) -> list[BookLoan]:
         result = await self._session.execute(
             select(BookLoanModel)
@@ -107,6 +128,7 @@ class SQLAlchemyBookLoanRepository(BookLoanRepository):
                 loaned_at=loan.loaned_at,
                 due_date=loan.due_date,
                 returned_at=loan.returned_at,
+                reminder_sent_at=loan.reminder_sent_at,
             )
             self._session.add(model)
         await self._session.flush()

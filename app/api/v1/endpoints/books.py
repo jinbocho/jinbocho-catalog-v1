@@ -12,6 +12,7 @@ from app.api.dependencies import (
 	get_book_read_repository,
 	get_bookcase_repository,
 	get_current_user_payload,
+	get_duplicate_judge,
 	get_http_client,
 	get_isbn_lookup_cache_repository,
 	get_owned_book_repository,
@@ -60,6 +61,7 @@ from app.domain.repositories import (
 	BookHistoryRepository,
 	BookLoanRepository,
 	BookReadRepository,
+	DuplicateJudge,
 	IsbnLookupCacheRepository,
 	OwnedBookRepository,
 	RoomRepository,
@@ -77,8 +79,11 @@ async def list_books(
 	offset: int = Query(default=0, ge=0),
 	payload: dict[str, Any] = Depends(get_current_user_payload),
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
 ) -> list[OwnedBook]:
-	return await ListOwnedBooksUseCase(book_repo).execute(UUID(payload["family_id"]), limit=limit, offset=offset)
+	return await ListOwnedBooksUseCase(book_repo, read_repo).execute(
+		UUID(payload["family_id"]), viewer_id=UUID(payload["sub"]), limit=limit, offset=offset
+	)
 
 
 # Static literal routes must be declared before /{book_id} so FastAPI does not consume
@@ -120,16 +125,20 @@ async def add_book(
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
 	cache_repo: IsbnLookupCacheRepository = Depends(get_isbn_lookup_cache_repository),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
 	room_repo: RoomRepository = Depends(get_room_repository),
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 	section_repo: SectionRepository = Depends(get_section_repository),
 	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
 	http_client: httpx.AsyncClient = Depends(get_http_client),
+	dedup_judge: DuplicateJudge = Depends(get_duplicate_judge),
 ) -> OwnedBook:
 	# DuplicateBookError propagates to the global handler in
 	# app/core/exception_handlers.py (same pattern as LookupError/ValueError
 	# elsewhere); get_db() rolls back automatically when an exception escapes.
-	book = await AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, http_client).execute(
+	book = await AddBookUseCase(
+		record_repo, book_repo, history_repo, cache_repo, read_repo, http_client, dedup_judge
+	).execute(
 		AddBookInput(family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]), **request.model_dump())
 	)
 	await db.commit()
@@ -142,8 +151,11 @@ async def get_book(
 	payload: dict[str, Any] = Depends(get_current_user_payload),
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
 ) -> OwnedBook:
-	result = await GetOwnedBookUseCase(book_repo, record_repo).execute(book_id, UUID(payload["family_id"]))
+	result = await GetOwnedBookUseCase(book_repo, record_repo, read_repo).execute(
+		book_id, UUID(payload["family_id"]), viewer_id=UUID(payload["sub"])
+	)
 	return result.book
 
 
@@ -155,8 +167,9 @@ async def update_book(
 	db: AsyncSession = Depends(get_db),
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
 ) -> OwnedBook:
-	updated = await UpdateBookMetadataUseCase(book_repo, history_repo).execute(
+	updated = await UpdateBookMetadataUseCase(book_repo, read_repo, history_repo).execute(
 		UpdateBookMetadataInput(
 			book_id=book_id,
 			family_id=UUID(payload["family_id"]),
@@ -206,8 +219,9 @@ async def update_reading_status(
 	db: AsyncSession = Depends(get_db),
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
 ) -> OwnedBook:
-	updated = await UpdateReadingStatusUseCase(book_repo, history_repo).execute(
+	updated = await UpdateReadingStatusUseCase(book_repo, read_repo, history_repo).execute(
 		UpdateReadingStatusInput(
 			book_id=book_id,
 			family_id=UUID(payload["family_id"]),

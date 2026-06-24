@@ -6,6 +6,7 @@ from app.domain.entities import Bookcase, Section, Shelf
 from app.domain.repositories import (
 	BibliographicRecordRepository,
 	BookcaseRepository,
+	BookReadRepository,
 	OwnedBookRepository,
 	SectionRepository,
 	ShelfRepository,
@@ -32,14 +33,18 @@ class GetBookcaseMapUseCase:
 		shelf_repo: ShelfRepository,
 		book_repo: OwnedBookRepository,
 		record_repo: BibliographicRecordRepository,
+		read_repo: BookReadRepository,
 	) -> None:
 		self._bookcase_repo = bookcase_repo
 		self._section_repo = section_repo
 		self._shelf_repo = shelf_repo
 		self._book_repo = book_repo
 		self._record_repo = record_repo
+		self._read_repo = read_repo
 
-	async def execute(self, family_id: UUID, bookcase_id: UUID) -> tuple[Bookcase, list[MapSectionData]]:
+	async def execute(
+		self, family_id: UUID, bookcase_id: UUID, viewer_id: UUID
+	) -> tuple[Bookcase, list[MapSectionData]]:
 		bookcase = await self._bookcase_repo.find_by_id(bookcase_id)
 		if bookcase is None:
 			raise LookupError("Bookcase not found")
@@ -55,6 +60,9 @@ class GetBookcaseMapUseCase:
 			shelf_ids.extend(shelf.id for shelf in section_shelves)
 
 		books = await self._book_repo.find_all_by_shelf_ids(shelf_ids)
+		read_ids = await self._read_repo.list_read_book_ids([book.id for book in books], viewer_id)
+		for book in books:
+			book.reading_status = book.reading_status_for(viewer_id, book.id in read_ids)
 		records = await self._record_repo.find_all_by_ids([book.bibliographic_record_id for book in books])
 		record_map = {record.id: record for record in records}
 		books_by_shelf: dict[UUID, list[ExportBookItem]] = {}
