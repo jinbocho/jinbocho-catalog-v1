@@ -29,11 +29,11 @@ class ExplodingDuplicateJudge(DuplicateJudge):
 
 @pytest.mark.asyncio
 async def test_no_judge_means_no_fuzzy_check(
-	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, book_read_repo, test_family_id, test_user_id
 ):
 	"""Existing behaviour is preserved when dedup_judge is omitted (default
 	None) — exact checks only, identical to before this feature existed."""
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, book_read_repo)
 	await use_case.execute(
 		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", main_author="Frank Herbert")
 	)
@@ -47,10 +47,10 @@ async def test_no_judge_means_no_fuzzy_check(
 
 @pytest.mark.asyncio
 async def test_clearly_distinct_titles_never_call_the_judge(
-	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, book_read_repo, test_family_id, test_user_id
 ):
 	judge = ExplodingDuplicateJudge()
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo, dedup_judge=judge)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, book_read_repo, dedup_judge=judge)
 	await use_case.execute(
 		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", main_author="Frank Herbert")
 	)
@@ -65,12 +65,12 @@ async def test_clearly_distinct_titles_never_call_the_judge(
 
 @pytest.mark.asyncio
 async def test_ambiguous_band_calls_judge_and_flags_when_duplicate(
-	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, book_read_repo, test_family_id, test_user_id
 ):
 	judge = FakeDuplicateJudge(
 		DuplicateJudgement(is_duplicate=True, confidence=0.8, reason="Same novel, different printing")
 	)
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo, dedup_judge=judge)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, book_read_repo, dedup_judge=judge)
 	await use_case.execute(
 		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", main_author="Frank Herbert")
 	)
@@ -94,10 +94,10 @@ async def test_ambiguous_band_calls_judge_and_flags_when_duplicate(
 
 @pytest.mark.asyncio
 async def test_ambiguous_band_proceeds_when_judge_says_not_duplicate(
-	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, book_read_repo, test_family_id, test_user_id
 ):
 	judge = FakeDuplicateJudge(DuplicateJudgement(is_duplicate=False, confidence=0.2, reason="Different books"))
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo, dedup_judge=judge)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, book_read_repo, dedup_judge=judge)
 	await use_case.execute(
 		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", main_author="Frank Herbert")
 	)
@@ -116,12 +116,12 @@ async def test_ambiguous_band_proceeds_when_judge_says_not_duplicate(
 
 @pytest.mark.asyncio
 async def test_high_confidence_fuzzy_match_skips_the_judge_entirely(
-	record_repo, book_repo, history_repo, cache_repo, book_read_repo, test_family_id, test_user_id
+	record_repo, book_repo, history_repo, book_read_repo, test_family_id, test_user_id
 ):
 	"""A near-identical title/author (above the high threshold) is confident
 	enough on its own — no network round-trip to ai-service needed."""
 	judge = ExplodingDuplicateJudge()
-	use_case = AddBookUseCase(record_repo, book_repo, history_repo, cache_repo, book_read_repo, dedup_judge=judge)
+	use_case = AddBookUseCase(record_repo, book_repo, history_repo, book_read_repo, dedup_judge=judge)
 	await use_case.execute(
 		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", main_author="Frank Herbert")
 	)

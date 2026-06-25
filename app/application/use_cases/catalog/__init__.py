@@ -1,5 +1,11 @@
 from .add_book import AddBookInput, AddBookUseCase, DuplicateBookConflict, DuplicateBookError
-from .book_loans import LendBookUseCase, ListActiveFamilyLoansUseCase, ListBookLoansUseCase, ReturnBookUseCase
+from .book_loans import (
+	LendBookUseCase,
+	ListActiveFamilyLoansUseCase,
+	ListAllFamilyLoansUseCase,
+	ListBookLoansUseCase,
+	ReturnBookUseCase,
+)
 from .book_reads import ListBookReadsUseCase, ListFamilyReadsUseCase, MarkBookReadUseCase, UnmarkBookReadUseCase
 from .create_bibliographic_record import CreateBibliographicRecordInput, CreateBibliographicRecordUseCase
 from .delete_bibliographic_record import DeleteBibliographicRecordUseCase
@@ -29,6 +35,7 @@ __all__ = [
 	"ReturnBookUseCase",
 	"ListBookLoansUseCase",
 	"ListActiveFamilyLoansUseCase",
+	"ListAllFamilyLoansUseCase",
 	"SendLoanRemindersUseCase",
 	# Book reads (per-member reading history)
 	"MarkBookReadUseCase",

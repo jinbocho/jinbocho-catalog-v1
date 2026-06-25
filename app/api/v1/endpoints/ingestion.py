@@ -2,6 +2,7 @@ from typing import Any
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import (
 	get_current_user_payload,
@@ -12,6 +13,7 @@ from app.api.dependencies import (
 from app.api.v1.schemas.ingestion_schemas import BookSearchResponse, BulkLookupRequest, IsbnLookupResponse
 from app.application.use_cases import BulkLookupIsbnUseCase, LookupIsbnUseCase, SearchBooksUseCase
 from app.domain.repositories import IsbnLookupCacheRepository
+from app.infrastructure.database.session import get_db
 
 router = APIRouter(tags=["ingestion"])
 
@@ -20,10 +22,12 @@ router = APIRouter(tags=["ingestion"])
 async def lookup_isbn(
 	isbn: str,
 	payload: dict[str, Any] = Depends(get_current_user_payload),
+	db: AsyncSession = Depends(get_db),
 	cache_repo: IsbnLookupCacheRepository = Depends(get_isbn_lookup_cache_repository),
 	http_client: httpx.AsyncClient = Depends(get_http_client),
 ) -> IsbnLookupResponse:
 	result = await LookupIsbnUseCase(cache_repo, http_client).execute(isbn)
+	await db.commit()
 	return IsbnLookupResponse(source=result.source, metadata=result.metadata, cached=result.cached)
 
 
@@ -44,8 +48,10 @@ async def search_books(
 async def bulk_lookup(
 	request: BulkLookupRequest,
 	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
+	db: AsyncSession = Depends(get_db),
 	cache_repo: IsbnLookupCacheRepository = Depends(get_isbn_lookup_cache_repository),
 	http_client: httpx.AsyncClient = Depends(get_http_client),
 ) -> dict[str, Any]:
 	results = await BulkLookupIsbnUseCase(cache_repo, http_client).execute(request.isbns)
+	await db.commit()
 	return {"results": results}

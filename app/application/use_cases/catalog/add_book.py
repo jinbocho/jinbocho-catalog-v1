@@ -6,7 +6,6 @@ from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
-import httpx
 from rapidfuzz import fuzz
 
 from app.application.services import normalize_isbn
@@ -26,7 +25,6 @@ from app.domain.repositories import (
 	BookReadRepository,
 	DuplicateCandidate,
 	DuplicateJudge,
-	IsbnLookupCacheRepository,
 	OwnedBookRepository,
 )
 from app.utils import utcnow
@@ -117,17 +115,13 @@ class AddBookUseCase:
 		record_repo: BibliographicRecordRepository,
 		book_repo: OwnedBookRepository,
 		history_repo: BookHistoryRepository,
-		cache_repo: IsbnLookupCacheRepository,
 		read_repo: BookReadRepository,
-		http_client: httpx.AsyncClient | None = None,
 		dedup_judge: DuplicateJudge | None = None,
 	) -> None:
 		self._record_repo = record_repo
 		self._book_repo = book_repo
 		self._history_repo = history_repo
-		self._cache_repo = cache_repo
 		self._read_repo = read_repo
-		self._http_client = http_client
 		self._dedup_judge = dedup_judge
 
 	async def execute(self, inp: AddBookInput) -> OwnedBook:

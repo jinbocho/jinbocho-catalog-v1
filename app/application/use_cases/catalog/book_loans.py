@@ -69,3 +69,11 @@ class ListActiveFamilyLoansUseCase:
 
     async def execute(self, family_id: UUID) -> list[BookLoan]:
         return await self._loan_repo.list_active_by_family(family_id)
+
+
+class ListAllFamilyLoansUseCase:
+    def __init__(self, loan_repo: BookLoanRepository) -> None:
+        self._loan_repo = loan_repo
+
+    async def execute(self, family_id: UUID) -> list[BookLoan]:
+        return await self._loan_repo.find_all_by_family(family_id)

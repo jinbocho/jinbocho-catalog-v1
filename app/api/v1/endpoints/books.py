@@ -1,7 +1,6 @@
 from typing import Any
 from uuid import UUID
 
-import httpx
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,8 +12,6 @@ from app.api.dependencies import (
 	get_bookcase_repository,
 	get_current_user_payload,
 	get_duplicate_judge,
-	get_http_client,
-	get_isbn_lookup_cache_repository,
 	get_owned_book_repository,
 	get_room_repository,
 	get_section_repository,
@@ -40,6 +37,7 @@ from app.application.use_cases import (
 	GetOwnedBookUseCase,
 	LendBookUseCase,
 	ListActiveFamilyLoansUseCase,
+	ListAllFamilyLoansUseCase,
 	ListBookLoansUseCase,
 	ListBookReadsUseCase,
 	ListFamilyReadsUseCase,
@@ -62,7 +60,6 @@ from app.domain.repositories import (
 	BookLoanRepository,
 	BookReadRepository,
 	DuplicateJudge,
-	IsbnLookupCacheRepository,
 	OwnedBookRepository,
 	RoomRepository,
 	SectionRepository,
@@ -104,6 +101,18 @@ async def list_active_loans(
 	return await ListActiveFamilyLoansUseCase(loan_repo).execute(UUID(payload["family_id"]))
 
 
+@router.get(
+	"/loans/all",
+	response_model=list[BookLoanResponse],
+	summary="List all loans for the family, active and returned",
+)
+async def list_all_loans(
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
+) -> list[BookLoan]:
+	return await ListAllFamilyLoansUseCase(loan_repo).execute(UUID(payload["family_id"]))
+
+
 @router.post(
 	"/",
 	response_model=OwnedBookResponse,
@@ -124,21 +133,17 @@ async def add_book(
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
-	cache_repo: IsbnLookupCacheRepository = Depends(get_isbn_lookup_cache_repository),
 	read_repo: BookReadRepository = Depends(get_book_read_repository),
 	room_repo: RoomRepository = Depends(get_room_repository),
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 	section_repo: SectionRepository = Depends(get_section_repository),
 	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
-	http_client: httpx.AsyncClient = Depends(get_http_client),
 	dedup_judge: DuplicateJudge = Depends(get_duplicate_judge),
 ) -> OwnedBook:
 	# DuplicateBookError propagates to the global handler in
 	# app/core/exception_handlers.py (same pattern as LookupError/ValueError
 	# elsewhere); get_db() rolls back automatically when an exception escapes.
-	book = await AddBookUseCase(
-		record_repo, book_repo, history_repo, cache_repo, read_repo, http_client, dedup_judge
-	).execute(
+	book = await AddBookUseCase(record_repo, book_repo, history_repo, read_repo, dedup_judge).execute(
 		AddBookInput(family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]), **request.model_dump())
 	)
 	await db.commit()
