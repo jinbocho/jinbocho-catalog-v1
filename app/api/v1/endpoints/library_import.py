@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import (
@@ -42,6 +42,7 @@ from app.domain.repositories import (
 	ShelfRepository,
 )
 from app.infrastructure.database.session import get_db
+from app.limiter import limiter
 
 router = APIRouter(tags=["import"])
 
@@ -56,8 +57,10 @@ router = APIRouter(tags=["import"])
 	"inserted as new (merging into an existing library duplicates rooms/bookcases/books rather "
 	"than guessing what should be reused). Requires admin role.",
 )
+@limiter.limit("3/minute")
 async def import_full_library(
-	request: ImportFullLibraryRequest,
+	body: ImportFullLibraryRequest,
+	request: Request,
 	payload: dict[str, Any] = Depends(require_role("admin")),
 	db: AsyncSession = Depends(get_db),
 	room_repo: RoomRepository = Depends(get_room_repository),
@@ -88,16 +91,16 @@ async def import_full_library(
 	result = await use_case.execute(
 		ImportFullLibraryInput(
 			family_id=UUID(payload["family_id"]),
-			user_id_map={UUID(k): UUID(v) for k, v in request.user_id_map.items()},
-			rooms=[ImportRoomItem(**r.model_dump()) for r in request.rooms],
-			bookcases=[ImportBookcaseItem(**b.model_dump()) for b in request.bookcases],
-			sections=[ImportSectionItem(**s.model_dump()) for s in request.sections],
-			shelves=[ImportShelfItem(**s.model_dump()) for s in request.shelves],
-			bibliographic_records=[ImportRecordItem(**r.model_dump()) for r in request.bibliographic_records],
-			owned_books=[ImportOwnedBookItem(**b.model_dump()) for b in request.owned_books],
-			book_reads=[ImportBookReadItem(**r.model_dump()) for r in request.book_reads],
-			book_loans=[ImportBookLoanItem(**loan.model_dump()) for loan in request.book_loans],
-			book_history=[ImportBookHistoryItem(**h.model_dump()) for h in request.book_history],
+			user_id_map={UUID(k): UUID(v) for k, v in body.user_id_map.items()},
+			rooms=[ImportRoomItem(**r.model_dump()) for r in body.rooms],
+			bookcases=[ImportBookcaseItem(**b.model_dump()) for b in body.bookcases],
+			sections=[ImportSectionItem(**s.model_dump()) for s in body.sections],
+			shelves=[ImportShelfItem(**s.model_dump()) for s in body.shelves],
+			bibliographic_records=[ImportRecordItem(**r.model_dump()) for r in body.bibliographic_records],
+			owned_books=[ImportOwnedBookItem(**b.model_dump()) for b in body.owned_books],
+			book_reads=[ImportBookReadItem(**r.model_dump()) for r in body.book_reads],
+			book_loans=[ImportBookLoanItem(**loan.model_dump()) for loan in body.book_loans],
+			book_history=[ImportBookHistoryItem(**h.model_dump()) for h in body.book_history],
 		)
 	)
 	await db.commit()

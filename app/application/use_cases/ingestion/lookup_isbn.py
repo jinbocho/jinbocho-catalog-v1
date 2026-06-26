@@ -6,12 +6,19 @@ from typing import Any
 import httpx
 
 from app.application.use_cases.ingestion.google_books_mapper import extract_year, volume_to_metadata
-from app.config import settings
 from app.domain.entities import IsbnLookupCache
 from app.domain.repositories import IsbnLookupCacheRepository
 from app.utils import utcnow
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class IsbnLookupConfig:
+	ttl_days: int = 30
+	google_books_url: str = "https://www.googleapis.com/books/v1"
+	google_books_api_key: str = ""
+	open_library_url: str = "https://openlibrary.org"
 
 
 @dataclass
@@ -22,13 +29,19 @@ class LookupIsbnOutput:
 
 
 class LookupIsbnUseCase:
-	def __init__(self, cache_repo: IsbnLookupCacheRepository, http_client: httpx.AsyncClient | None = None) -> None:
+	def __init__(
+		self,
+		cache_repo: IsbnLookupCacheRepository,
+		http_client: httpx.AsyncClient | None = None,
+		config: IsbnLookupConfig | None = None,
+	) -> None:
 		self._cache_repo = cache_repo
 		self._http_client = http_client
+		self._config = config if config is not None else IsbnLookupConfig()
 
 	async def execute(self, isbn: str) -> LookupIsbnOutput:
 		cached = await self._cache_repo.find_by_isbn(isbn)
-		if cached and cached.fetched_at >= utcnow() - timedelta(days=settings.isbn_cache_ttl_days):
+		if cached and cached.fetched_at >= utcnow() - timedelta(days=self._config.ttl_days):
 			return LookupIsbnOutput(source=cached.source, metadata=cached.metadata, cached=True)
 
 		if self._http_client is None:
@@ -60,12 +73,13 @@ class LookupIsbnUseCase:
 	async def _fetch_google_books(self, isbn: str) -> dict[str, Any] | None:
 		# Network/HTTP failures here must not abort the lookup — fall through to
 		# the Open Library fallback instead of surfacing a 500.
+		assert self._http_client is not None
 		try:
 			params: dict[str, str | int] = {"q": f"isbn:{isbn}", "maxResults": 1}
-			if settings.google_books_api_key:
-				params["key"] = settings.google_books_api_key
+			if self._config.google_books_api_key:
+				params["key"] = self._config.google_books_api_key
 			response = await self._http_client.get(
-				f"{settings.google_books_url}/volumes",
+				f"{self._config.google_books_url}/volumes",
 				params=params,
 			)
 			if response.status_code in (429, 503):
@@ -80,9 +94,10 @@ class LookupIsbnUseCase:
 		return volume_to_metadata(volume, isbn=isbn)
 
 	async def _fetch_open_library(self, isbn: str) -> dict[str, Any] | None:
+		assert self._http_client is not None
 		try:
 			response = await self._http_client.get(
-				f"{settings.open_library_url}/api/books",
+				f"{self._config.open_library_url}/api/books",
 				params={"bibkeys": f"ISBN:{isbn}", "format": "json", "jscmd": "data"},
 			)
 			response.raise_for_status()
@@ -109,9 +124,10 @@ class LookupIsbnUseCase:
 
 	async def _fetch_open_library_search(self, isbn: str) -> dict[str, Any] | None:
 		"""Fallback using Open Library /search.json — broader index than /api/books."""
+		assert self._http_client is not None
 		try:
 			response = await self._http_client.get(
-				f"{settings.open_library_url}/search.json",
+				f"{self._config.open_library_url}/search.json",
 				params={"isbn": isbn, "fields": "title,author_name,publisher,first_publish_year,language,cover_i"},
 			)
 			response.raise_for_status()

@@ -12,6 +12,7 @@ from app.api.dependencies import (
 	get_bookcase_repository,
 	get_current_user_payload,
 	get_duplicate_judge,
+	get_fuzzy_dedup_config,
 	get_owned_book_repository,
 	get_room_repository,
 	get_section_repository,
@@ -31,6 +32,7 @@ from app.api.v1.schemas.book_schemas import (
 from app.application.use_cases import (
 	AddBookInput,
 	AddBookUseCase,
+	FuzzyDedupConfig,
 	DeleteBookInput,
 	DeleteBookUseCase,
 	GetBookHistoryUseCase,
@@ -139,11 +141,12 @@ async def add_book(
 	section_repo: SectionRepository = Depends(get_section_repository),
 	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
 	dedup_judge: DuplicateJudge = Depends(get_duplicate_judge),
+	fuzzy_config: FuzzyDedupConfig = Depends(get_fuzzy_dedup_config),
 ) -> OwnedBook:
 	# DuplicateBookError propagates to the global handler in
 	# app/core/exception_handlers.py (same pattern as LookupError/ValueError
 	# elsewhere); get_db() rolls back automatically when an exception escapes.
-	book = await AddBookUseCase(record_repo, book_repo, history_repo, read_repo, dedup_judge).execute(
+	book = await AddBookUseCase(record_repo, book_repo, history_repo, read_repo, dedup_judge, fuzzy_config).execute(
 		AddBookInput(family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"]), **request.model_dump())
 	)
 	await db.commit()

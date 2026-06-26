@@ -7,6 +7,8 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.application.use_cases.catalog.add_book import FuzzyDedupConfig
+from app.application.use_cases.ingestion.lookup_isbn import IsbnLookupConfig
 from app.config import settings
 from app.domain.repositories import (
     BibliographicRecordRepository,
@@ -73,11 +75,27 @@ async def get_current_user_payload(
 
 
 def get_http_client(request: Request) -> httpx.AsyncClient:
-    return request.app.state.http_client
+    return request.app.state.http_client  # type: ignore[no-any-return]
 
 
 def get_duplicate_judge(http_client: httpx.AsyncClient = Depends(get_http_client)) -> DuplicateJudge:
     return HttpDuplicateJudge(http_client)
+
+
+def get_isbn_lookup_config() -> IsbnLookupConfig:
+    return IsbnLookupConfig(
+        ttl_days=settings.isbn_cache_ttl_days,
+        google_books_url=settings.google_books_url,
+        google_books_api_key=settings.google_books_api_key,
+        open_library_url=settings.open_library_url,
+    )
+
+
+def get_fuzzy_dedup_config() -> FuzzyDedupConfig:
+    return FuzzyDedupConfig(
+        high_threshold=settings.fuzzy_dedup_high_threshold,
+        low_threshold=settings.fuzzy_dedup_low_threshold,
+    )
 
 
 def require_role(*roles: str) -> Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]:

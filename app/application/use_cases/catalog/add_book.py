@@ -9,7 +9,6 @@ from uuid import UUID
 from rapidfuzz import fuzz
 
 from app.application.services import normalize_isbn
-from app.config import settings
 from app.domain.entities import (
 	BibliographicRecord,
 	BookCondition,
@@ -19,6 +18,7 @@ from app.domain.entities import (
 	OwnedBook,
 	ReadingStatus,
 )
+from app.domain.errors import DuplicateBookConflict, DuplicateBookError
 from app.domain.repositories import (
 	BibliographicRecordRepository,
 	BookHistoryRepository,
@@ -42,38 +42,6 @@ def _normalize_for_fuzzy_match(text: str) -> str:
 	the Rose!" and "the name of the rose" score as identical rather than
 	merely similar."""
 	return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", text.lower())).strip()
-
-
-@dataclass
-class DuplicateBookConflict:
-	conflict_type: Literal["isbn_match", "title_author_match", "fuzzy_match"]
-	existing_book_id: UUID
-	existing_record_id: UUID
-	title: str
-	main_author: str | None
-	isbn: str | None
-	# Who already has it and where — the check is family-wide, not owner-scoped
-	# (two members can each legitimately own a copy), so the caller needs this
-	# to decide whether adding a separate copy makes sense.
-	existing_owner_id: UUID | None
-	existing_room_id: UUID | None
-	existing_bookcase_id: UUID | None
-	existing_section_id: UUID | None
-	existing_shelf_id: UUID | None
-	# Only set for conflict_type="fuzzy_match" when the ambiguous-band LLM
-	# judge ran — None for isbn_match/title_author_match (no judgement needed)
-	# and for a fuzzy_match confident enough to skip the LLM call entirely.
-	match_reason: str | None = None
-
-
-class DuplicateBookError(Exception):
-	"""Raised instead of creating the book when it looks like the caller
-	already owns this exact book and hasn't confirmed they want a second copy
-	anyway (see AddBookInput.is_intentional_duplicate)."""
-
-	def __init__(self, conflict: DuplicateBookConflict) -> None:
-		self.conflict = conflict
-		super().__init__(f"Duplicate book detected: {conflict.conflict_type}")
 
 
 @dataclass
@@ -109,6 +77,12 @@ class AddBookInput:
 	duplicate_notes: str | None = None
 
 
+@dataclass
+class FuzzyDedupConfig:
+	high_threshold: float = 0.92
+	low_threshold: float = 0.60
+
+
 class AddBookUseCase:
 	def __init__(
 		self,
@@ -117,12 +91,14 @@ class AddBookUseCase:
 		history_repo: BookHistoryRepository,
 		read_repo: BookReadRepository,
 		dedup_judge: DuplicateJudge | None = None,
+		fuzzy_config: FuzzyDedupConfig | None = None,
 	) -> None:
 		self._record_repo = record_repo
 		self._book_repo = book_repo
 		self._history_repo = history_repo
 		self._read_repo = read_repo
 		self._dedup_judge = dedup_judge
+		self._fuzzy_config = fuzzy_config if fuzzy_config is not None else FuzzyDedupConfig()
 
 	async def execute(self, inp: AddBookInput) -> OwnedBook:
 		record = await self._resolve_bibliographic_record(inp)
@@ -248,14 +224,14 @@ class AddBookUseCase:
 				best_strict_score = strict_score
 				best_record = other
 
-		if best_record is None or best_loose_score < settings.fuzzy_dedup_low_threshold:
+		if best_record is None or best_loose_score < self._fuzzy_config.low_threshold:
 			return None
 
 		existing = await self._book_repo.find_one_by_record(best_record.id)
 		if not existing:
 			return None
 
-		if best_strict_score >= settings.fuzzy_dedup_high_threshold:
+		if best_strict_score >= self._fuzzy_config.high_threshold:
 			return self._to_conflict("fuzzy_match", existing, best_record)
 
 		judgement = await self._dedup_judge.judge(

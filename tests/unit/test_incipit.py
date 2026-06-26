@@ -3,7 +3,8 @@ import pytest
 from app.application.use_cases import (
 	CreateBibliographicRecordInput,
 	CreateBibliographicRecordUseCase,
-	GetOrFetchIncipitUseCase,
+	DeriveIncipitUseCase,
+	GetIncipitUseCase,
 	SetIncipitUseCase,
 )
 from app.domain.entities import IsbnLookupCache
@@ -37,12 +38,13 @@ async def test_incipit_derived_from_isbn_description(record_repo, cache_repo, te
 		isbn="978000", metadata={"notes": "  A gripping opening.  "}, source="google_books", fetched_at=utcnow()
 	)
 
-	result = await GetOrFetchIncipitUseCase(record_repo, cache_repo).execute(record.id, test_family_id)
+	# DeriveIncipitUseCase finds the cache description and saves it.
+	result = await DeriveIncipitUseCase(record_repo, cache_repo).execute(record.id, test_family_id)
 	assert result.text == "A gripping opening."
 	assert result.source == "google_books"
 
-	# Second call returns the now-stored value.
-	stored = await GetOrFetchIncipitUseCase(record_repo, cache_repo).execute(record.id, test_family_id)
+	# GetIncipitUseCase returns the now-stored value without touching the cache.
+	stored = await GetIncipitUseCase(record_repo).execute(record.id, test_family_id)
 	assert stored.text == "A gripping opening."
 
 
@@ -51,7 +53,7 @@ async def test_incipit_absent_without_source(record_repo, cache_repo, test_famil
 	record = await CreateBibliographicRecordUseCase(record_repo).execute(
 		CreateBibliographicRecordInput(family_id=test_family_id, title="No ISBN")
 	)
-	result = await GetOrFetchIncipitUseCase(record_repo, cache_repo).execute(record.id, test_family_id)
+	result = await DeriveIncipitUseCase(record_repo, cache_repo).execute(record.id, test_family_id)
 	assert result.text is None
 	assert result.source is None
 

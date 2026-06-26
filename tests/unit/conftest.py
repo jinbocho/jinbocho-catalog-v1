@@ -229,6 +229,9 @@ class MockShelfRepository(ShelfRepository):
 		items = [s for s in self.shelves.values() if s.section_id == section_id]
 		return items[offset:offset+limit]
 
+	async def find_all_by_section_ids(self, section_ids: list[UUID]) -> list[Shelf]:
+		return [s for s in self.shelves.values() if s.section_id in section_ids]
+
 	async def find_by_index(self, section_id: UUID, shelf_index: int) -> Shelf | None:
 		return next(
 			(s for s in self.shelves.values() if s.section_id == section_id and s.shelf_index == shelf_index), None

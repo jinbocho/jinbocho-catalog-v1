@@ -31,6 +31,11 @@ disallow_untyped_defs = false
 module = "apscheduler.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# rapidfuzz ships no py.typed marker or bundled stubs.
+module = "rapidfuzz.*"
+ignore_missing_imports = true
+
 [tool.ruff]
 target-version = "py312"
 line-length = 120

@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
@@ -10,6 +11,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database.session import Base
 from app.infrastructure.models.enums import book_condition_enum, book_source_enum, reading_status_enum
+
+if TYPE_CHECKING:
+    from app.infrastructure.models.bibliographic_record_model import BibliographicRecordModel
+    from app.infrastructure.models.shelf_model import ShelfModel
 
 
 class OwnedBookModel(Base):

@@ -1,4 +1,5 @@
-from .add_book import AddBookInput, AddBookUseCase, DuplicateBookConflict, DuplicateBookError
+from .add_book import AddBookInput, AddBookUseCase, FuzzyDedupConfig
+from app.domain.errors import DuplicateBookConflict, DuplicateBookError
 from .book_loans import (
 	LendBookUseCase,
 	ListActiveFamilyLoansUseCase,
@@ -12,7 +13,7 @@ from .delete_bibliographic_record import DeleteBibliographicRecordUseCase
 from .delete_book import DeleteBookInput, DeleteBookUseCase
 from .get_bibliographic_record import GetBibliographicRecordUseCase
 from .get_book_history import GetBookHistoryUseCase
-from .get_or_fetch_incipit import GetOrFetchIncipitUseCase, IncipitOutput
+from .get_or_fetch_incipit import DeriveIncipitUseCase, GetIncipitUseCase, IncipitOutput
 from .get_owned_book import GetOwnedBookOutput, GetOwnedBookUseCase
 from .list_bibliographic_records import ListBibliographicRecordsUseCase
 from .list_genres import GenreCount, ListGenresUseCase
@@ -30,6 +31,7 @@ __all__ = [
 	"AddBookUseCase",
 	"DuplicateBookConflict",
 	"DuplicateBookError",
+	"FuzzyDedupConfig",
 	# Book loans (external lending)
 	"LendBookUseCase",
 	"ReturnBookUseCase",
@@ -56,7 +58,8 @@ __all__ = [
 	"ListBibliographicRecordsUseCase",
 	"ListGenresUseCase",
 	"GenreCount",
-	"GetOrFetchIncipitUseCase",
+	"DeriveIncipitUseCase",
+	"GetIncipitUseCase",
 	"SetIncipitUseCase",
 	"IncipitOutput",
 	"UpdateBibliographicRecordInput",

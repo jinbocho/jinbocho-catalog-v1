@@ -52,12 +52,12 @@ class GetBookcaseMapUseCase:
 			raise PermissionError("Access denied")
 
 		sections = await self._section_repo.find_all_by_bookcase(bookcase_id, limit=200, offset=0)
+		section_ids = [section.id for section in sections]
+		all_shelves = await self._shelf_repo.find_all_by_section_ids(section_ids)
 		shelves_by_section: dict[UUID, list[Shelf]] = {}
-		shelf_ids: list[UUID] = []
-		for section in sections:
-			section_shelves = await self._shelf_repo.find_all_by_section(section.id, limit=500, offset=0)
-			shelves_by_section[section.id] = section_shelves
-			shelf_ids.extend(shelf.id for shelf in section_shelves)
+		for shelf in all_shelves:
+			shelves_by_section.setdefault(shelf.section_id, []).append(shelf)
+		shelf_ids = [shelf.id for shelf in all_shelves]
 
 		books = await self._book_repo.find_all_by_shelf_ids(shelf_ids)
 		read_ids = await self._read_repo.list_read_book_ids([book.id for book in books], viewer_id)

@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.infrastructure.database.session import Base
+
+if TYPE_CHECKING:
+    from app.infrastructure.models.owned_book_model import OwnedBookModel
+    from app.infrastructure.models.section_model import SectionModel
 
 
 class ShelfModel(Base):

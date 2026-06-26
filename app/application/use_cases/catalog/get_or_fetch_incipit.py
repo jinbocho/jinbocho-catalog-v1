@@ -13,12 +13,27 @@ class IncipitOutput:
 	generated_at: datetime | None
 
 
-class GetOrFetchIncipitUseCase:
-	"""Resolve a book's "presentation" text without any AI dependency.
+class GetIncipitUseCase:
+	"""Pure read: returns whatever incipit is already stored on the record.
+	Never writes — callers can call this without a db.commit()."""
 
-	Order: stored value → free editorial description cached at ISBN lookup. When neither
-	is available it returns an empty result so the AI layer (optional) can step in later.
-	"""
+	def __init__(self, record_repo: BibliographicRecordRepository) -> None:
+		self._record_repo = record_repo
+
+	async def execute(self, record_id: UUID, family_id: UUID) -> IncipitOutput:
+		record = await self._record_repo.find_by_id(record_id)
+		if not record or record.family_id != family_id:
+			raise LookupError("Bibliographic record not found")
+		return IncipitOutput(record.incipit, record.incipit_source, record.incipit_generated_at)
+
+
+class DeriveIncipitUseCase:
+	"""Write path: looks up the ISBN cache for a free editorial description
+	and, if found, persists it on the record.  Callers must commit after
+	receiving a non-None result.text.
+
+	Separated from GetIncipitUseCase to honour CQS — a GET endpoint should not
+	commit to the database when the record already has an incipit."""
 
 	def __init__(
 		self,
@@ -32,9 +47,6 @@ class GetOrFetchIncipitUseCase:
 		record = await self._record_repo.find_by_id(record_id)
 		if not record or record.family_id != family_id:
 			raise LookupError("Bibliographic record not found")
-
-		if record.incipit:
-			return IncipitOutput(record.incipit, record.incipit_source, record.incipit_generated_at)
 
 		if record.isbn:
 			cached = await self._cache_repo.find_by_isbn(record.isbn)

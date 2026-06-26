@@ -27,6 +27,12 @@ class ShelfRepository(ABC):
 		...
 
 	@abstractmethod
+	async def find_all_by_section_ids(self, section_ids: list[UUID]) -> list[Shelf]:
+		"""Batch query — returns all shelves for the given section IDs in a single
+		round-trip, ordered by section_id then shelf_index."""
+		...
+
+	@abstractmethod
 	async def save(self, shelf: Shelf) -> Shelf: ...
 
 	@abstractmethod

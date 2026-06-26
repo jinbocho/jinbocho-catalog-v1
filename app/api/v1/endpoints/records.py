@@ -23,9 +23,10 @@ from app.application.use_cases import (
 	CreateBibliographicRecordInput,
 	CreateBibliographicRecordUseCase,
 	DeleteBibliographicRecordUseCase,
+	DeriveIncipitUseCase,
 	GenreCount,
 	GetBibliographicRecordUseCase,
-	GetOrFetchIncipitUseCase,
+	GetIncipitUseCase,
 	ListBibliographicRecordsUseCase,
 	ListGenresUseCase,
 	SetIncipitUseCase,
@@ -97,8 +98,12 @@ async def get_incipit(
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 	cache_repo: IsbnLookupCacheRepository = Depends(get_isbn_lookup_cache_repository),
 ) -> IncipitResponse:
-	result = await GetOrFetchIncipitUseCase(record_repo, cache_repo).execute(record_id, UUID(payload["family_id"]))
-	await db.commit()
+	family_id = UUID(payload["family_id"])
+	result = await GetIncipitUseCase(record_repo).execute(record_id, family_id)
+	if result.text is None:
+		result = await DeriveIncipitUseCase(record_repo, cache_repo).execute(record_id, family_id)
+		if result.text is not None:
+			await db.commit()
 	return IncipitResponse(text=result.text, source=result.source, generated_at=result.generated_at)
 
 

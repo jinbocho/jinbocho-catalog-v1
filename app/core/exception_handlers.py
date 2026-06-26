@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 
-from app.application.use_cases.catalog.add_book import DuplicateBookError
+from app.domain.errors import DuplicateBookError
 
 
 def configure_exception_handlers(app: FastAPI) -> None:

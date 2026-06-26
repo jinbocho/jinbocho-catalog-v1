@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "jinbocho-auth"
     jwt_audience: str = "jinbocho"
-    allowed_origins: list[str] = ["*"]
+    allowed_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
     auth_service_url: str = "http://localhost:8001"
     internal_service_token: str = ""
     loan_reminder_lead_days: int = 1
@@ -34,4 +34,4 @@ class Settings(BaseSettings):
         return "ai" in [f.strip() for f in self.jinbocho_features.split(",")]
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]

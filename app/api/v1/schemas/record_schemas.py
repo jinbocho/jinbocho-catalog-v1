@@ -1,7 +1,13 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _validate_http_url(v: str | None) -> str | None:
+	if v is not None and not v.startswith(("http://", "https://")):
+		raise ValueError("must use http or https scheme")
+	return v
 
 
 class BibliographicRecordCreate(BaseModel):
@@ -16,6 +22,11 @@ class BibliographicRecordCreate(BaseModel):
 	cover_url: str | None = Field(None, description="Cover image URL")
 	notes: str | None = Field(None, description="Notes")
 
+	@field_validator("cover_url")
+	@classmethod
+	def validate_cover_url(cls, v: str | None) -> str | None:
+		return _validate_http_url(v)
+
 
 class BibliographicRecordUpdate(BaseModel):
 	title: str | None = Field(None, description="Book title")
@@ -28,6 +39,11 @@ class BibliographicRecordUpdate(BaseModel):
 	genre: str | None = Field(None, description="Genre")
 	cover_url: str | None = Field(None, description="Cover image URL")
 	notes: str | None = Field(None, description="Notes")
+
+	@field_validator("cover_url")
+	@classmethod
+	def validate_cover_url(cls, v: str | None) -> str | None:
+		return _validate_http_url(v)
 
 
 class BibliographicRecordResponse(BaseModel):
