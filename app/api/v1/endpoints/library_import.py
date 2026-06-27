@@ -14,6 +14,7 @@ from app.api.dependencies import (
 	get_room_repository,
 	get_section_repository,
 	get_shelf_repository,
+	get_wishlist_repository,
 	require_role,
 )
 from app.api.v1.schemas.export_schemas import ImportFullLibraryRequest, ImportFullLibraryResponse
@@ -29,6 +30,7 @@ from app.application.use_cases import (
 	ImportRoomItem,
 	ImportSectionItem,
 	ImportShelfItem,
+	ImportWishlistItem,
 )
 from app.domain.repositories import (
 	BibliographicRecordRepository,
@@ -40,6 +42,7 @@ from app.domain.repositories import (
 	RoomRepository,
 	SectionRepository,
 	ShelfRepository,
+	WishlistRepository,
 )
 from app.infrastructure.database.session import get_db
 from app.limiter import limiter
@@ -72,6 +75,7 @@ async def import_full_library(
 	book_read_repo: BookReadRepository = Depends(get_book_read_repository),
 	book_loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
 	book_history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+	wishlist_repo: WishlistRepository = Depends(get_wishlist_repository),
 ) -> ImportFullLibraryResponse:
 	use_case = ImportFullLibraryUseCase(
 		room_repo=room_repo,
@@ -83,6 +87,7 @@ async def import_full_library(
 		book_read_repo=book_read_repo,
 		book_loan_repo=book_loan_repo,
 		book_history_repo=book_history_repo,
+		wishlist_repo=wishlist_repo,
 	)
 
 	# ValueError propagates to the global handler in app/core/exception_handlers.py
@@ -101,6 +106,7 @@ async def import_full_library(
 			book_reads=[ImportBookReadItem(**r.model_dump()) for r in body.book_reads],
 			book_loans=[ImportBookLoanItem(**loan.model_dump()) for loan in body.book_loans],
 			book_history=[ImportBookHistoryItem(**h.model_dump()) for h in body.book_history],
+			wishlist_items=[ImportWishlistItem(**w.model_dump()) for w in body.wishlist_items],
 		)
 	)
 	await db.commit()

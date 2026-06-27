@@ -11,6 +11,7 @@ from .removed_member_repository import RemovedMemberRepository
 from .room_repository import RoomRepository
 from .section_repository import SectionRepository
 from .shelf_repository import ShelfRepository
+from .wishlist_repository import WishlistRepository
 
 __all__ = [
 	"RoomRepository",
@@ -28,4 +29,5 @@ __all__ = [
 	"DuplicateJudge",
 	"DuplicateCandidate",
 	"DuplicateJudgement",
+	"WishlistRepository",
 ]

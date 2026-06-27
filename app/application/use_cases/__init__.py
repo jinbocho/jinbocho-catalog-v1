@@ -15,6 +15,7 @@ from app.application.use_cases.backup import (
 	ImportRoomItem,
 	ImportSectionItem,
 	ImportShelfItem,
+	ImportWishlistItem,
 	RecordRemovedMemberInput,
 	RecordRemovedMemberUseCase,
 )
@@ -58,6 +59,9 @@ from app.application.use_cases.catalog import (
 	UpdateBookPositionUseCase,
 	UpdateReadingStatusInput,
 	UpdateReadingStatusUseCase,
+	AddToWishlistUseCase,
+	RemoveFromWishlistUseCase,
+	ListFamilyWishlistUseCase,
 )
 from app.application.use_cases.export import ExportBookItem, ExportBooksUseCase
 from app.application.use_cases.ingestion import (
@@ -159,6 +163,7 @@ __all__ = [
 	"ImportBookReadItem",
 	"ImportBookLoanItem",
 	"ImportBookHistoryItem",
+	"ImportWishlistItem",
 	"RecordRemovedMemberUseCase",
 	"RecordRemovedMemberInput",
 	"DeleteFamilyDataUseCase",
@@ -198,6 +203,10 @@ __all__ = [
 	"UpdateSectionUseCase",
 	"UpdateShelfInput",
 	"UpdateShelfUseCase",
+	# Wishlist
+	"AddToWishlistUseCase",
+	"RemoveFromWishlistUseCase",
+	"ListFamilyWishlistUseCase",
 	# Map
 	"GetBookcaseMapUseCase",
 	"MapSectionData",

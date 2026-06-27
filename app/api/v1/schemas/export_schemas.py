@@ -170,6 +170,15 @@ class BookHistoryExportItem(BaseModel):
 	created_at: datetime
 
 
+class WishlistItemExportItem(BaseModel):
+	id: UUID
+	user_id: UUID
+	bibliographic_record_id: UUID
+	added_at: datetime
+	notes: str | None = None
+	priority: int | None = None
+
+
 class RemovedMemberExportItem(BaseModel):
 	"""A former family member's identity, snapshotted when they were removed
 	from the family (see POST /v1/members/removed) — so a future import can
@@ -200,6 +209,7 @@ class FullLibraryExportResponse(BaseModel):
 	book_reads: list[BookReadExportItem]
 	book_loans: list[BookLoanExportItem]
 	book_history: list[BookHistoryExportItem]
+	wishlist_items: list[WishlistItemExportItem] = Field(default_factory=list)
 	removed_members: list[RemovedMemberExportItem] = Field(default_factory=list)
 
 
@@ -213,6 +223,7 @@ class ImportFullLibraryRequest(BaseModel):
 	book_reads: list[BookReadExportItem] = Field(default_factory=list)
 	book_loans: list[BookLoanExportItem] = Field(default_factory=list)
 	book_history: list[BookHistoryExportItem] = Field(default_factory=list)
+	wishlist_items: list[WishlistItemExportItem] = Field(default_factory=list)
 	user_id_map: dict[str, str] = Field(
 		default_factory=dict,
 		description="Original user id -> matched-or-created user id, from POST /v1/users/import on the auth service",
@@ -237,6 +248,7 @@ class ImportFullLibraryResponse(BaseModel):
 	book_reads_imported: int
 	book_loans_imported: int
 	book_history_imported: int
+	wishlist_items_imported: int = 0
 
 
 class DeleteFamilyDataResponse(BaseModel):

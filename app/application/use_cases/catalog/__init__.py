@@ -24,6 +24,7 @@ from .update_bibliographic_record import UpdateBibliographicRecordInput, UpdateB
 from .update_book_metadata import UpdateBookMetadataInput, UpdateBookMetadataUseCase
 from .update_book_position import UpdateBookPositionInput, UpdateBookPositionUseCase
 from .update_reading_status import UpdateReadingStatusInput, UpdateReadingStatusUseCase
+from .wishlist import AddToWishlistUseCase, ListFamilyWishlistUseCase, RemoveFromWishlistUseCase
 
 __all__ = [
 	# Add/Delete/Update Books
@@ -71,4 +72,8 @@ __all__ = [
 	"ListOwnedBooksUseCase",
 	"UpdateBookMetadataInput",
 	"UpdateBookMetadataUseCase",
+	# Wishlist
+	"AddToWishlistUseCase",
+	"RemoveFromWishlistUseCase",
+	"ListFamilyWishlistUseCase",
 ]

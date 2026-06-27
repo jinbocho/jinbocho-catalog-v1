@@ -10,6 +10,7 @@ from .removed_member import FamilyRole, RemovedMember
 from .room import Room
 from .section import Section
 from .shelf import Shelf
+from .wishlist_item import WishlistItem
 
 __all__ = [
 	"Room",
@@ -30,4 +31,5 @@ __all__ = [
 	"IsbnLookupCache",
 	"RemovedMember",
 	"FamilyRole",
+	"WishlistItem",
 ]

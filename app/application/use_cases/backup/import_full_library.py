@@ -18,6 +18,7 @@ from app.domain.entities import (
 	Room,
 	Section,
 	Shelf,
+	WishlistItem,
 )
 from app.domain.repositories import (
 	BibliographicRecordRepository,
@@ -29,6 +30,7 @@ from app.domain.repositories import (
 	RoomRepository,
 	SectionRepository,
 	ShelfRepository,
+	WishlistRepository,
 )
 from app.utils import utcnow
 
@@ -156,6 +158,16 @@ class ImportBookHistoryItem:
 
 
 @dataclass
+class ImportWishlistItem:
+	id: UUID
+	user_id: UUID
+	bibliographic_record_id: UUID
+	added_at: datetime
+	notes: str | None = None
+	priority: int | None = None
+
+
+@dataclass
 class ImportFullLibraryInput:
 	family_id: UUID
 	user_id_map: dict[UUID, UUID] = field(default_factory=dict)
@@ -168,6 +180,7 @@ class ImportFullLibraryInput:
 	book_reads: list[ImportBookReadItem] = field(default_factory=list)
 	book_loans: list[ImportBookLoanItem] = field(default_factory=list)
 	book_history: list[ImportBookHistoryItem] = field(default_factory=list)
+	wishlist_items: list[ImportWishlistItem] = field(default_factory=list)
 
 
 @dataclass
@@ -187,6 +200,7 @@ class ImportFullLibraryOutput:
 	book_reads_imported: int = 0
 	book_loans_imported: int = 0
 	book_history_imported: int = 0
+	wishlist_items_imported: int = 0
 
 
 class ImportFullLibraryUseCase:
@@ -244,6 +258,7 @@ class ImportFullLibraryUseCase:
 		book_read_repo: BookReadRepository,
 		book_loan_repo: BookLoanRepository,
 		book_history_repo: BookHistoryRepository,
+		wishlist_repo: WishlistRepository,
 	) -> None:
 		self._room_repo = room_repo
 		self._bookcase_repo = bookcase_repo
@@ -254,6 +269,7 @@ class ImportFullLibraryUseCase:
 		self._book_read_repo = book_read_repo
 		self._book_loan_repo = book_loan_repo
 		self._book_history_repo = book_history_repo
+		self._wishlist_repo = wishlist_repo
 
 	async def execute(self, input: ImportFullLibraryInput) -> ImportFullLibraryOutput:
 		self._validate_referential_integrity(input)
@@ -483,6 +499,27 @@ class ImportFullLibraryUseCase:
 				)
 			)
 			out.book_history_imported += 1
+
+		for wish_item in input.wishlist_items:
+			resolved_record_id = record_id_map.get(wish_item.bibliographic_record_id)
+			if not resolved_record_id:
+				continue
+			resolved_user_id = input.user_id_map.get(wish_item.user_id, wish_item.user_id)
+			already = await self._wishlist_repo.exists_for_user_and_record(resolved_user_id, resolved_record_id)
+			if already:
+				continue
+			await self._wishlist_repo.restore(
+				WishlistItem(
+					id=uuid4(),
+					family_id=input.family_id,
+					user_id=resolved_user_id,
+					bibliographic_record_id=resolved_record_id,
+					added_at=wish_item.added_at,
+					notes=wish_item.notes,
+					priority=wish_item.priority,
+				)
+			)
+			out.wishlist_items_imported += 1
 
 		return out
 

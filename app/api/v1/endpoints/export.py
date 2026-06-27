@@ -19,6 +19,7 @@ from app.api.dependencies import (
 	get_room_repository,
 	get_section_repository,
 	get_shelf_repository,
+	get_wishlist_repository,
 	require_role,
 )
 from app.api.v1.schemas.export_schemas import (
@@ -33,6 +34,7 @@ from app.api.v1.schemas.export_schemas import (
 	RoomExportItem,
 	SectionExportItem,
 	ShelfExportItem,
+	WishlistItemExportItem,
 )
 from app.application.use_cases import ExportBooksUseCase, ExportFullLibraryUseCase
 from app.application.use_cases.export.export_books import ExportBookItem
@@ -47,6 +49,7 @@ from app.domain.repositories import (
 	RoomRepository,
 	SectionRepository,
 	ShelfRepository,
+	WishlistRepository,
 )
 
 router = APIRouter(tags=["export"])
@@ -293,6 +296,7 @@ async def export_full_library(
 	book_loan_repo: BookLoanRepository = Depends(get_book_loan_repository),
 	book_history_repo: BookHistoryRepository = Depends(get_book_history_repository),
 	removed_member_repo: RemovedMemberRepository = Depends(get_removed_member_repository),
+	wishlist_repo: WishlistRepository = Depends(get_wishlist_repository),
 ) -> FullLibraryExportResponse:
 	use_case = ExportFullLibraryUseCase(
 		room_repo=room_repo,
@@ -305,6 +309,7 @@ async def export_full_library(
 		book_loan_repo=book_loan_repo,
 		book_history_repo=book_history_repo,
 		removed_member_repo=removed_member_repo,
+		wishlist_repo=wishlist_repo,
 	)
 	data = await use_case.execute(UUID(payload["family_id"]))
 
@@ -369,6 +374,13 @@ async def export_full_library(
 				changed_by=h.changed_by, old_data=h.old_data, new_data=h.new_data, created_at=h.created_at,
 			)
 			for h in data.book_history
+		],
+		wishlist_items=[
+			WishlistItemExportItem(
+				id=w.id, user_id=w.user_id, bibliographic_record_id=w.bibliographic_record_id,
+				added_at=w.added_at, notes=w.notes, priority=w.priority,
+			)
+			for w in data.wishlist_items
 		],
 		removed_members=[
 			RemovedMemberExportItem(

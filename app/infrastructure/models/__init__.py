@@ -15,6 +15,7 @@ from app.infrastructure.models.removed_member_model import RemovedMemberModel
 from app.infrastructure.models.room_model import RoomModel
 from app.infrastructure.models.section_model import SectionModel
 from app.infrastructure.models.shelf_model import ShelfModel
+from app.infrastructure.models.wishlist_item_model import WishlistItemModel
 
 __all__ = [
 	"RoomModel",
@@ -28,6 +29,7 @@ __all__ = [
 	"BookReadModel",
 	"IsbnLookupCacheModel",
 	"RemovedMemberModel",
+	"WishlistItemModel",
 	"reading_status_enum",
 	"book_condition_enum",
 	"book_source_enum",

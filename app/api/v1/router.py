@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
 	rooms,
 	sections,
 	shelves,
+	wishlist,
 )
 
 router = APIRouter()
@@ -28,4 +29,5 @@ router.include_router(library_import.router, prefix="/import")
 router.include_router(map.router, prefix="/map")
 router.include_router(members.router, prefix="/members")
 router.include_router(account.router, prefix="/account")
+router.include_router(wishlist.router, prefix="/wishlist")
 

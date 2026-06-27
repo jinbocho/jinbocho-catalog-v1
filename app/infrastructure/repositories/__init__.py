@@ -9,6 +9,7 @@ from app.infrastructure.repositories.removed_member_repository import SQLAlchemy
 from app.infrastructure.repositories.room_repository import SQLAlchemyRoomRepository
 from app.infrastructure.repositories.section_repository import SQLAlchemySectionRepository
 from app.infrastructure.repositories.shelf_repository import SQLAlchemyShelfRepository
+from app.infrastructure.repositories.wishlist_repository import SQLAlchemyWishlistRepository
 
 __all__ = [
 	"SQLAlchemyRoomRepository",
@@ -22,4 +23,5 @@ __all__ = [
 	"SQLAlchemyBookReadRepository",
 	"SQLAlchemyIsbnLookupCacheRepository",
 	"SQLAlchemyRemovedMemberRepository",
+	"SQLAlchemyWishlistRepository",
 ]

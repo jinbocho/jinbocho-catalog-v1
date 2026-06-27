@@ -12,6 +12,7 @@ from app.domain.entities import (
 	Room,
 	Section,
 	Shelf,
+	WishlistItem,
 )
 from app.domain.repositories import (
 	BibliographicRecordRepository,
@@ -25,6 +26,7 @@ from app.domain.repositories import (
 	RoomRepository,
 	SectionRepository,
 	ShelfRepository,
+	WishlistRepository,
 )
 
 
@@ -396,6 +398,47 @@ class MockIsbnLookupCacheRepository(IsbnLookupCacheRepository):
 		return self.cache.get(isbn)
 
 
+class MockWishlistRepository(WishlistRepository):
+	def __init__(self) -> None:
+		self.items: dict[UUID, WishlistItem] = {}
+
+	async def get(self, item_id: UUID, family_id: UUID) -> WishlistItem | None:
+		item = self.items.get(item_id)
+		return item if item and item.family_id == family_id else None
+
+	async def list_by_family(self, family_id: UUID) -> list[WishlistItem]:
+		return [i for i in self.items.values() if i.family_id == family_id]
+
+	async def list_by_user(self, user_id: UUID) -> list[WishlistItem]:
+		return [i for i in self.items.values() if i.user_id == user_id]
+
+	async def add(self, item: WishlistItem) -> WishlistItem:
+		self.items[item.id] = item
+		return item
+
+	async def delete(self, item_id: UUID, family_id: UUID) -> None:
+		self.items.pop(item_id, None)
+
+	async def exists_for_user_and_record(self, user_id: UUID, record_id: UUID) -> bool:
+		return any(
+			i.user_id == user_id and i.bibliographic_record_id == record_id
+			for i in self.items.values()
+		)
+
+	async def restore(self, item: WishlistItem) -> WishlistItem:
+		existing = next(
+			(
+				i for i in self.items.values()
+				if i.user_id == item.user_id and i.bibliographic_record_id == item.bibliographic_record_id
+			),
+			None,
+		)
+		if existing:
+			return existing
+		self.items[item.id] = item
+		return item
+
+
 class MockRemovedMemberRepository(RemovedMemberRepository):
 	def __init__(self):
 		self.members = {}
@@ -474,3 +517,8 @@ def cache_repo() -> IsbnLookupCacheRepository:
 @pytest.fixture
 def removed_member_repo() -> RemovedMemberRepository:
 	return MockRemovedMemberRepository()
+
+
+@pytest.fixture
+def wishlist_repo() -> WishlistRepository:
+	return MockWishlistRepository()

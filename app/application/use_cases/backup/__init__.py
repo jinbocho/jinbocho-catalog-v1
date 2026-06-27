@@ -13,6 +13,7 @@ from .import_full_library import (
 	ImportRoomItem,
 	ImportSectionItem,
 	ImportShelfItem,
+	ImportWishlistItem,
 )
 from .record_removed_member import RecordRemovedMemberInput, RecordRemovedMemberUseCase
 
@@ -31,6 +32,7 @@ __all__ = [
 	"ImportBookReadItem",
 	"ImportBookLoanItem",
 	"ImportBookHistoryItem",
+	"ImportWishlistItem",
 	"RecordRemovedMemberUseCase",
 	"RecordRemovedMemberInput",
 	"DeleteFamilyDataUseCase",

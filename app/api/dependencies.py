@@ -23,6 +23,7 @@ from app.domain.repositories import (
     RoomRepository,
     SectionRepository,
     ShelfRepository,
+    WishlistRepository,
 )
 from app.infrastructure.database.session import get_db
 from app.infrastructure.external import HttpDuplicateJudge
@@ -38,6 +39,7 @@ from app.infrastructure.repositories import (
     SQLAlchemyRoomRepository,
     SQLAlchemySectionRepository,
     SQLAlchemyShelfRepository,
+    SQLAlchemyWishlistRepository,
 )
 
 security = HTTPBearer()
@@ -153,3 +155,7 @@ async def get_book_read_repository(db: AsyncSession = Depends(get_db)) -> BookRe
 
 async def get_book_loan_repository(db: AsyncSession = Depends(get_db)) -> BookLoanRepository:
     return SQLAlchemyBookLoanRepository(db)
+
+
+async def get_wishlist_repository(db: AsyncSession = Depends(get_db)) -> WishlistRepository:
+    return SQLAlchemyWishlistRepository(db)

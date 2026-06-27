@@ -15,13 +15,14 @@ from app.application.use_cases import (
 	ImportRoomItem,
 	ImportSectionItem,
 	ImportShelfItem,
+	ImportWishlistItem,
 	RecordRemovedMemberInput,
 	RecordRemovedMemberUseCase,
 )
 from app.domain.entities import BibliographicRecord, BookLoan, FamilyRole, OwnedBook, Room
 
 
-def _export_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, removed_member_repo):
+def _export_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, removed_member_repo, wishlist_repo):
 	return ExportFullLibraryUseCase(
 		room_repo=room_repo,
 		bookcase_repo=bookcase_repo,
@@ -33,10 +34,11 @@ def _export_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_
 		book_loan_repo=book_loan_repo,
 		book_history_repo=history_repo,
 		removed_member_repo=removed_member_repo,
+		wishlist_repo=wishlist_repo,
 	)
 
 
-def _import_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo):
+def _import_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, wishlist_repo):
 	return ImportFullLibraryUseCase(
 		room_repo=room_repo,
 		bookcase_repo=bookcase_repo,
@@ -47,13 +49,14 @@ def _import_use_case(room_repo, bookcase_repo, section_repo, shelf_repo, record_
 		book_read_repo=book_read_repo,
 		book_loan_repo=book_loan_repo,
 		book_history_repo=history_repo,
+		wishlist_repo=wishlist_repo,
 	)
 
 
 @pytest.mark.asyncio
 async def test_export_full_library_includes_empty_locations_and_all_loans(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	removed_member_repo, test_family_id,
+	removed_member_repo, wishlist_repo, test_family_id,
 ):
 	# An empty room with no books — the books-only export drops this entirely.
 	await room_repo.save(Room(family_id=test_family_id, name="Empty attic"))
@@ -68,7 +71,7 @@ async def test_export_full_library_includes_empty_locations_and_all_loans(
 
 	use_case = _export_use_case(
 		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-		removed_member_repo,
+		removed_member_repo, wishlist_repo,
 	)
 	result = await use_case.execute(test_family_id)
 
@@ -81,7 +84,7 @@ async def test_export_full_library_includes_empty_locations_and_all_loans(
 @pytest.mark.asyncio
 async def test_export_full_library_pagination_loop_fetches_everything(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	removed_member_repo, test_family_id, monkeypatch,
+	removed_member_repo, wishlist_repo, test_family_id, monkeypatch,
 ):
 	"""Regression: the books-only export silently caps at the FE's default page
 	size. Shrink the internal page size so a handful of rooms already exercises
@@ -94,7 +97,7 @@ async def test_export_full_library_pagination_loop_fetches_everything(
 
 	use_case = _export_use_case(
 		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-		removed_member_repo,
+		removed_member_repo, wishlist_repo,
 	)
 	result = await use_case.execute(test_family_id)
 
@@ -104,7 +107,7 @@ async def test_export_full_library_pagination_loop_fetches_everything(
 @pytest.mark.asyncio
 async def test_record_removed_member_snapshot_is_included_in_export(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	removed_member_repo, test_family_id,
+	removed_member_repo, wishlist_repo, test_family_id,
 ):
 	"""A member removed from auth-service must show up in the full-library
 	export, so a future import can recreate their real account by email
@@ -119,7 +122,7 @@ async def test_record_removed_member_snapshot_is_included_in_export(
 
 	use_case = _export_use_case(
 		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-		removed_member_repo,
+		removed_member_repo, wishlist_repo,
 	)
 	result = await use_case.execute(test_family_id)
 
@@ -157,12 +160,12 @@ async def test_record_removed_member_upserts_by_id(removed_member_repo, test_fam
 @pytest.mark.asyncio
 async def test_import_full_library_into_empty_family_resolves_relationships(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	test_family_id, test_user_id,
+	wishlist_repo, test_family_id, test_user_id,
 ):
 	room_id, bookcase_id, section_id, shelf_id, record_id, book_id = (uuid4() for _ in range(6))
 
 	use_case = _import_use_case(
-		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo
+		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, wishlist_repo
 	)
 	result = await use_case.execute(
 		ImportFullLibraryInput(
@@ -210,7 +213,7 @@ async def test_import_full_library_into_empty_family_resolves_relationships(
 @pytest.mark.asyncio
 async def test_import_full_library_does_not_clobber_an_existing_row_sharing_the_export_id(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	test_family_id,
+	wishlist_repo, test_family_id,
 ):
 	"""Regression: a previous version of this use case preserved the
 	exported id and upserted by it. If that same id already existed —
@@ -223,7 +226,7 @@ async def test_import_full_library_does_not_clobber_an_existing_row_sharing_the_
 	original_room = await room_repo.save(Room(id=shared_id, family_id=other_family_id, name="Original family's room"))
 
 	use_case = _import_use_case(
-		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo
+		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, wishlist_repo
 	)
 	await use_case.execute(
 		ImportFullLibraryInput(
@@ -247,7 +250,7 @@ async def test_import_full_library_does_not_clobber_an_existing_row_sharing_the_
 @pytest.mark.asyncio
 async def test_import_full_library_dedupes_record_by_isbn_on_merge(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	test_family_id,
+	wishlist_repo, test_family_id,
 ):
 	"""Merge case: the family already owns this ISBN — re-importing it must
 	reuse the existing record rather than violate the (family_id, isbn) unique
@@ -259,7 +262,7 @@ async def test_import_full_library_dedupes_record_by_isbn_on_merge(
 	incoming_record_id = uuid4()
 	book_id = uuid4()
 	use_case = _import_use_case(
-		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo
+		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, wishlist_repo
 	)
 	result = await use_case.execute(
 		ImportFullLibraryInput(
@@ -283,7 +286,7 @@ async def test_import_full_library_dedupes_record_by_isbn_on_merge(
 @pytest.mark.asyncio
 async def test_import_full_library_twice_does_not_duplicate_anything(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	test_family_id, test_user_id,
+	wishlist_repo, test_family_id, test_user_id,
 ):
 	"""The exact scenario the user asked for: importing the same backup a
 	second time (or merging an overlapping one) must not pile up duplicate
@@ -316,7 +319,7 @@ async def test_import_full_library_twice_does_not_duplicate_anything(
 		)
 
 	use_case = _import_use_case(
-		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo
+		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, wishlist_repo
 	)
 	first = await use_case.execute(build_payload())
 	assert first.rooms_imported == 1
@@ -351,14 +354,14 @@ async def test_import_full_library_twice_does_not_duplicate_anything(
 @pytest.mark.asyncio
 async def test_import_full_library_rewrites_user_ids_via_map(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	test_family_id,
+	wishlist_repo, test_family_id,
 ):
 	old_owner_id = uuid4()
 	new_owner_id = uuid4()
 	record_id, book_id = uuid4(), uuid4()
 
 	use_case = _import_use_case(
-		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo
+		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, wishlist_repo
 	)
 	await use_case.execute(
 		ImportFullLibraryInput(
@@ -377,10 +380,10 @@ async def test_import_full_library_rewrites_user_ids_via_map(
 @pytest.mark.asyncio
 async def test_import_full_library_rejects_structurally_broken_payload(
 	room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo,
-	test_family_id,
+	wishlist_repo, test_family_id,
 ):
 	use_case = _import_use_case(
-		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo
+		room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo, book_read_repo, book_loan_repo, history_repo, wishlist_repo
 	)
 	with pytest.raises(ValueError):
 		await use_case.execute(
