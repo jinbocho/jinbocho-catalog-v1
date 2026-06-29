@@ -7,12 +7,24 @@ from .book_loans import (
 	ListBookLoansUseCase,
 	ReturnBookUseCase,
 )
+from .book_ratings import (
+	CreateBookRatingInput,
+	CreateBookRatingUseCase,
+	DeleteBookRatingUseCase,
+	GetBookRatingStatsUseCase,
+	ListBookRatingsUseCase,
+	ListFamilyRatingsUseCase,
+	UpdateBookRatingInput,
+	UpdateBookRatingUseCase,
+)
 from .book_reads import ListBookReadsUseCase, ListFamilyReadsUseCase, MarkBookReadUseCase, UnmarkBookReadUseCase
 from .create_bibliographic_record import CreateBibliographicRecordInput, CreateBibliographicRecordUseCase
 from .delete_bibliographic_record import DeleteBibliographicRecordUseCase
 from .delete_book import DeleteBookInput, DeleteBookUseCase
 from .get_bibliographic_record import GetBibliographicRecordUseCase
 from .get_book_history import GetBookHistoryUseCase
+from .generate_ai_incipit import GenerateAiIncipitOutput, GenerateAiIncipitUseCase
+from .suggest_tags import SuggestTagsOutput, SuggestTagsUseCase
 from .get_or_fetch_incipit import DeriveIncipitUseCase, GetIncipitUseCase, IncipitOutput
 from .get_owned_book import GetOwnedBookOutput, GetOwnedBookUseCase
 from .list_bibliographic_records import ListBibliographicRecordsUseCase
@@ -40,6 +52,15 @@ __all__ = [
 	"ListActiveFamilyLoansUseCase",
 	"ListAllFamilyLoansUseCase",
 	"SendLoanRemindersUseCase",
+	# Book ratings (per-member star rating + review)
+	"CreateBookRatingInput",
+	"CreateBookRatingUseCase",
+	"UpdateBookRatingInput",
+	"UpdateBookRatingUseCase",
+	"DeleteBookRatingUseCase",
+	"ListBookRatingsUseCase",
+	"ListFamilyRatingsUseCase",
+	"GetBookRatingStatsUseCase",
 	# Book reads (per-member reading history)
 	"MarkBookReadUseCase",
 	"UnmarkBookReadUseCase",
@@ -59,6 +80,10 @@ __all__ = [
 	"ListBibliographicRecordsUseCase",
 	"ListGenresUseCase",
 	"GenreCount",
+	"GenerateAiIncipitOutput",
+	"GenerateAiIncipitUseCase",
+	"SuggestTagsOutput",
+	"SuggestTagsUseCase",
 	"DeriveIncipitUseCase",
 	"GetIncipitUseCase",
 	"SetIncipitUseCase",

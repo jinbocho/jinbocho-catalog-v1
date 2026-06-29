@@ -1,6 +1,7 @@
 from app.infrastructure.repositories.bibliographic_record_repository import SQLAlchemyBibliographicRecordRepository
 from app.infrastructure.repositories.book_history_repository import SQLAlchemyBookHistoryRepository
 from app.infrastructure.repositories.book_loan_repository import SQLAlchemyBookLoanRepository
+from app.infrastructure.repositories.book_rating_repository import SQLAlchemyBookRatingRepository
 from app.infrastructure.repositories.book_read_repository import SQLAlchemyBookReadRepository
 from app.infrastructure.repositories.bookcase_repository import SQLAlchemyBookcaseRepository
 from app.infrastructure.repositories.isbn_lookup_cache_repository import SQLAlchemyIsbnLookupCacheRepository
@@ -20,6 +21,7 @@ __all__ = [
 	"SQLAlchemyOwnedBookRepository",
 	"SQLAlchemyBookHistoryRepository",
 	"SQLAlchemyBookLoanRepository",
+	"SQLAlchemyBookRatingRepository",
 	"SQLAlchemyBookReadRepository",
 	"SQLAlchemyIsbnLookupCacheRepository",
 	"SQLAlchemyRemovedMemberRepository",

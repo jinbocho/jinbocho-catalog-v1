@@ -8,16 +8,18 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.use_cases.catalog.add_book import FuzzyDedupConfig
-from app.application.use_cases.ingestion.lookup_isbn import IsbnLookupConfig
 from app.config import settings
 from app.domain.repositories import (
     BibliographicRecordRepository,
+    BookRatingRepository,
+    BookSearchProvider,
     BookcaseRepository,
     BookHistoryRepository,
     BookLoanRepository,
     BookReadRepository,
     DuplicateJudge,
     IsbnLookupCacheRepository,
+    IsbnMetadataFetcher,
     OwnedBookRepository,
     RemovedMemberRepository,
     RoomRepository,
@@ -26,12 +28,22 @@ from app.domain.repositories import (
     WishlistRepository,
 )
 from app.infrastructure.database.session import get_db
-from app.infrastructure.external import HttpDuplicateJudge
+from app.infrastructure.external import (
+    AiIncipitClient,
+    AiTagsClient,
+    BookSearchConfig,
+    HttpBookSearchProvider,
+    HttpDuplicateJudge,
+    HttpIsbnMetadataFetcher,
+    IsbnLookupConfig,
+    OpenLibraryDescriptionFetcher,
+)
 from app.infrastructure.repositories import (
     SQLAlchemyBibliographicRecordRepository,
     SQLAlchemyBookcaseRepository,
     SQLAlchemyBookHistoryRepository,
     SQLAlchemyBookLoanRepository,
+    SQLAlchemyBookRatingRepository,
     SQLAlchemyBookReadRepository,
     SQLAlchemyIsbnLookupCacheRepository,
     SQLAlchemyOwnedBookRepository,
@@ -84,12 +96,39 @@ def get_duplicate_judge(http_client: httpx.AsyncClient = Depends(get_http_client
     return HttpDuplicateJudge(http_client)
 
 
-def get_isbn_lookup_config() -> IsbnLookupConfig:
-    return IsbnLookupConfig(
-        ttl_days=settings.isbn_cache_ttl_days,
-        google_books_url=settings.google_books_url,
-        google_books_api_key=settings.google_books_api_key,
-        open_library_url=settings.open_library_url,
+def get_ai_incipit_client(http_client: httpx.AsyncClient = Depends(get_http_client)) -> AiIncipitClient:
+    return AiIncipitClient(http_client, settings.ai_service_url)
+
+
+def get_editorial_description_provider(
+    http_client: httpx.AsyncClient = Depends(get_http_client),
+) -> OpenLibraryDescriptionFetcher:
+    return OpenLibraryDescriptionFetcher(http_client, settings.open_library_url)
+
+
+def get_tag_suggester(http_client: httpx.AsyncClient = Depends(get_http_client)) -> AiTagsClient:
+    return AiTagsClient(http_client, settings.ai_service_url)
+
+
+def get_isbn_metadata_fetcher(http_client: httpx.AsyncClient = Depends(get_http_client)) -> IsbnMetadataFetcher:
+    return HttpIsbnMetadataFetcher(
+        http_client,
+        IsbnLookupConfig(
+            google_books_url=settings.google_books_url,
+            google_books_api_key=settings.google_books_api_key,
+            open_library_url=settings.open_library_url,
+        ),
+    )
+
+
+def get_book_search_provider(http_client: httpx.AsyncClient = Depends(get_http_client)) -> BookSearchProvider:
+    return HttpBookSearchProvider(
+        http_client,
+        BookSearchConfig(
+            google_books_url=settings.google_books_url,
+            google_books_api_key=settings.google_books_api_key,
+            open_library_url=settings.open_library_url,
+        ),
     )
 
 
@@ -159,3 +198,7 @@ async def get_book_loan_repository(db: AsyncSession = Depends(get_db)) -> BookLo
 
 async def get_wishlist_repository(db: AsyncSession = Depends(get_db)) -> WishlistRepository:
     return SQLAlchemyWishlistRepository(db)
+
+
+async def get_book_rating_repository(db: AsyncSession = Depends(get_db)) -> BookRatingRepository:
+    return SQLAlchemyBookRatingRepository(db)

@@ -1,20 +1,18 @@
 from typing import Any
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import (
+	get_book_search_provider,
 	get_current_user_payload,
-	get_http_client,
 	get_isbn_lookup_cache_repository,
-	get_isbn_lookup_config,
+	get_isbn_metadata_fetcher,
 	require_role,
 )
 from app.api.v1.schemas.ingestion_schemas import BookSearchResponse, BulkLookupRequest, IsbnLookupResponse
 from app.application.use_cases import BulkLookupIsbnUseCase, LookupIsbnUseCase, SearchBooksUseCase
-from app.application.use_cases.ingestion.lookup_isbn import IsbnLookupConfig
-from app.domain.repositories import IsbnLookupCacheRepository
+from app.domain.repositories import BookSearchProvider, IsbnLookupCacheRepository, IsbnMetadataFetcher
 from app.infrastructure.database.session import get_db
 from app.limiter import limiter
 
@@ -29,10 +27,9 @@ async def lookup_isbn(
 	payload: dict[str, Any] = Depends(get_current_user_payload),
 	db: AsyncSession = Depends(get_db),
 	cache_repo: IsbnLookupCacheRepository = Depends(get_isbn_lookup_cache_repository),
-	http_client: httpx.AsyncClient = Depends(get_http_client),
-	config: IsbnLookupConfig = Depends(get_isbn_lookup_config),
+	fetcher: IsbnMetadataFetcher = Depends(get_isbn_metadata_fetcher),
 ) -> IsbnLookupResponse:
-	result = await LookupIsbnUseCase(cache_repo, http_client, config).execute(isbn)
+	result = await LookupIsbnUseCase(cache_repo, fetcher).execute(isbn)
 	await db.commit()
 	return IsbnLookupResponse(source=result.source, metadata=result.metadata, cached=result.cached)
 
@@ -44,11 +41,11 @@ async def search_books(
 	title: str | None = Query(default=None, min_length=1, max_length=200),
 	author: str | None = Query(default=None, min_length=1, max_length=200),
 	payload: dict[str, Any] = Depends(get_current_user_payload),
-	http_client: httpx.AsyncClient = Depends(get_http_client),
+	provider: BookSearchProvider = Depends(get_book_search_provider),
 ) -> BookSearchResponse:
 	if not title and not author:
 		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide at least a title or an author")
-	results = await SearchBooksUseCase(http_client).execute(title, author)
+	results = await SearchBooksUseCase(provider).execute(title, author)
 	return BookSearchResponse(results=results)
 
 
@@ -60,9 +57,8 @@ async def bulk_lookup(
 	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
 	db: AsyncSession = Depends(get_db),
 	cache_repo: IsbnLookupCacheRepository = Depends(get_isbn_lookup_cache_repository),
-	http_client: httpx.AsyncClient = Depends(get_http_client),
-	config: IsbnLookupConfig = Depends(get_isbn_lookup_config),
+	fetcher: IsbnMetadataFetcher = Depends(get_isbn_metadata_fetcher),
 ) -> dict[str, Any]:
-	results = await BulkLookupIsbnUseCase(cache_repo, http_client, config).execute(body.isbns)
+	results = await BulkLookupIsbnUseCase(cache_repo, fetcher).execute(body.isbns)
 	await db.commit()
 	return {"results": results}

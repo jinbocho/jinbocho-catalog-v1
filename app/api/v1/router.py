@@ -9,12 +9,14 @@ from app.api.v1.endpoints import (
 	library_import,
 	map,
 	members,
+	ratings,
 	records,
 	rooms,
 	sections,
 	shelves,
 	wishlist,
 )
+from app.api.v1.endpoints.ratings import family_router as ratings_family_router
 
 router = APIRouter()
 router.include_router(rooms.router, prefix="/rooms")
@@ -23,6 +25,8 @@ router.include_router(sections.router, prefix="/sections")
 router.include_router(shelves.router, prefix="/shelves")
 router.include_router(records.router, prefix="/bibliographic-records")
 router.include_router(books.router, prefix="/books")
+router.include_router(ratings.router, prefix="/books")
+router.include_router(ratings_family_router, prefix="/ratings")
 router.include_router(ingestion.router, prefix="/ingestion")
 router.include_router(export.router, prefix="/export")
 router.include_router(library_import.router, prefix="/import")

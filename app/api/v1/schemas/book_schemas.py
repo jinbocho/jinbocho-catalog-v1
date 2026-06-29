@@ -109,6 +109,36 @@ class BookReadResponse(BaseModel):
 		from_attributes = True
 
 
+class BookRatingCreate(BaseModel):
+	rating: int = Field(..., ge=1, le=5, description="Star rating from 1 (lowest) to 5 (highest)")
+	review: str | None = Field(None, max_length=4000, description="Optional textual review")
+
+
+class BookRatingUpdate(BaseModel):
+	rating: int | None = Field(None, ge=1, le=5, description="Updated star rating")
+	review: str | None = Field(None, max_length=4000, description="Updated review text")
+
+
+class BookRatingResponse(BaseModel):
+	id: UUID = Field(..., description="Rating ID")
+	owned_book_id: UUID = Field(..., description="Book copy ID")
+	user_id: UUID = Field(..., description="User who submitted the rating")
+	rating: int = Field(..., description="Star rating (1-5)")
+	review: str | None = Field(None, description="Optional review text")
+	created_at: datetime = Field(..., description="When the rating was created")
+	updated_at: datetime = Field(..., description="When the rating was last updated")
+
+	class Config:
+		from_attributes = True
+
+
+class FamilyRatingStatsResponse(BaseModel):
+	owned_book_id: UUID = Field(..., description="Book copy ID")
+	total: int = Field(..., description="Total number of ratings")
+	average: float | None = Field(None, description="Average star rating, null when no ratings exist")
+	distribution: dict[int, int] = Field(..., description="Count of ratings per star value (1-5)")
+
+
 class BookLoanCreate(BaseModel):
 	borrower_name: str = Field(..., min_length=1, max_length=255, description="Name of the person borrowing the book")
 	due_date: datetime | None = Field(None, description="Expected return date")

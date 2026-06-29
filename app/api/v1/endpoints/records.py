@@ -1,14 +1,18 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import (
+	get_ai_incipit_client,
 	get_bibliographic_record_repository,
 	get_current_user_payload,
+	get_editorial_description_provider,
 	get_isbn_lookup_cache_repository,
 	get_owned_book_repository,
+	get_tag_suggester,
 	require_role,
 )
 from app.api.v1.schemas.record_schemas import (
@@ -24,18 +28,27 @@ from app.application.use_cases import (
 	CreateBibliographicRecordUseCase,
 	DeleteBibliographicRecordUseCase,
 	DeriveIncipitUseCase,
+	GenerateAiIncipitUseCase,
 	GenreCount,
 	GetBibliographicRecordUseCase,
 	GetIncipitUseCase,
 	ListBibliographicRecordsUseCase,
 	ListGenresUseCase,
 	SetIncipitUseCase,
+	SuggestTagsUseCase,
 	UpdateBibliographicRecordInput,
 	UpdateBibliographicRecordUseCase,
 )
 from app.domain.entities import BibliographicRecord, Genre
-from app.domain.repositories import BibliographicRecordRepository, IsbnLookupCacheRepository, OwnedBookRepository
+from app.domain.repositories import (
+	BibliographicRecordRepository,
+	EditorialDescriptionProvider,
+	IsbnLookupCacheRepository,
+	OwnedBookRepository,
+	TagSuggester,
+)
 from app.infrastructure.database.session import get_db
+from app.infrastructure.external import AiIncipitClient
 
 router = APIRouter(tags=["records"])
 
@@ -120,6 +133,54 @@ async def set_incipit(
 	)
 	await db.commit()
 	return IncipitResponse(text=result.text, source=result.source, generated_at=result.generated_at)
+
+
+@router.post(
+	"/{record_id}/incipit/generate",
+	response_model=IncipitResponse,
+	summary="Generate and persist an AI book presentation",
+)
+async def generate_incipit_ai(
+	record_id: UUID,
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
+	db: AsyncSession = Depends(get_db),
+	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+	ai_client: AiIncipitClient = Depends(get_ai_incipit_client),
+	description_provider: EditorialDescriptionProvider = Depends(get_editorial_description_provider),
+) -> IncipitResponse:
+	try:
+		result = await GenerateAiIncipitUseCase(record_repo, ai_client, description_provider).execute(
+			record_id, UUID(payload["family_id"])
+		)
+	except LookupError:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found") from None
+	if result.text is not None:
+		await db.commit()
+	return IncipitResponse(text=result.text, source=result.source, generated_at=result.generated_at)
+
+
+class TagSuggestionResponse(BaseModel):
+	tags: list[str]
+
+
+@router.post(
+	"/{record_id}/tags/suggest",
+	response_model=TagSuggestionResponse,
+	summary="Suggest tags for a bibliographic record via AI",
+)
+async def suggest_tags(
+	record_id: UUID,
+	payload: dict[str, Any] = Depends(get_current_user_payload),
+	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+	tag_suggester: TagSuggester = Depends(get_tag_suggester),
+) -> TagSuggestionResponse:
+	try:
+		result = await SuggestTagsUseCase(record_repo, tag_suggester).execute(
+			record_id, UUID(payload["family_id"])
+		)
+	except LookupError:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found") from None
+	return TagSuggestionResponse(tags=result.tags)
 
 
 @router.patch("/{record_id}", response_model=BibliographicRecordResponse, summary="Update bibliographic record")

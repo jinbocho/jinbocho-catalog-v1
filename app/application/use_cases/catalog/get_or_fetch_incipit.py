@@ -50,7 +50,9 @@ class DeriveIncipitUseCase:
 
 		if record.isbn:
 			cached = await self._cache_repo.find_by_isbn(record.isbn)
-			description = cached.metadata.get("notes") if cached else None
+			# "description" is the canonical key (Open Library); "notes" is the
+			# legacy key used by Google Books via volume_to_metadata.
+			description = (cached.metadata.get("description") or cached.metadata.get("notes")) if cached else None
 			if isinstance(description, str) and description.strip():
 				record.incipit = description.strip()
 				record.incipit_source = cached.source if cached else "isbn_lookup"

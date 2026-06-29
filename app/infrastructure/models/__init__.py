@@ -1,6 +1,7 @@
 from app.infrastructure.models.bibliographic_record_model import BibliographicRecordModel
 from app.infrastructure.models.book_history_model import BookHistoryModel
 from app.infrastructure.models.book_loan_model import BookLoanModel
+from app.infrastructure.models.book_rating_model import BookRatingModel
 from app.infrastructure.models.book_read_model import BookReadModel
 from app.infrastructure.models.bookcase_model import BookcaseModel
 from app.infrastructure.models.enums import (
@@ -26,6 +27,7 @@ __all__ = [
 	"OwnedBookModel",
 	"BookHistoryModel",
 	"BookLoanModel",
+	"BookRatingModel",
 	"BookReadModel",
 	"IsbnLookupCacheModel",
 	"RemovedMemberModel",

@@ -1,8 +1,10 @@
 from .bibliographic_record import BibliographicRecord
 from .book_history import BookEventType, BookHistory
 from .book_loan import BookLoan
+from .book_rating import BookRating
 from .book_read import BookRead
 from .bookcase import Bookcase
+from .family_rating_stats import FamilyRatingStats
 from .genre import Genre, map_to_genre
 from .isbn_lookup_cache import IsbnLookupCache
 from .owned_book import BookCondition, BookSource, OwnedBook, ReadingStatus
@@ -27,7 +29,9 @@ __all__ = [
 	"BookHistory",
 	"BookEventType",
 	"BookLoan",
+	"BookRating",
 	"BookRead",
+	"FamilyRatingStats",
 	"IsbnLookupCache",
 	"RemovedMember",
 	"FamilyRole",
