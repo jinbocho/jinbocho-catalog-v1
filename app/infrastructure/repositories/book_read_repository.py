@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import select
@@ -22,7 +23,7 @@ class SQLAlchemyBookReadRepository(BookReadRepository):
             read_at=model.read_at,
         )
 
-    async def add(self, owned_book_id: UUID, user_id: UUID) -> BookRead:
+    async def add(self, owned_book_id: UUID, user_id: UUID, read_at: datetime | None = None) -> BookRead:
         result = await self._session.execute(
             select(BookReadModel).where(
                 BookReadModel.owned_book_id == owned_book_id,
@@ -31,8 +32,14 @@ class SQLAlchemyBookReadRepository(BookReadRepository):
         )
         existing = result.scalar_one_or_none()
         if existing:
+            if read_at is not None:
+                existing.read_at = read_at
+                await self._session.flush()
+                await self._session.refresh(existing)
             return self._to_entity(existing)
         model = BookReadModel(owned_book_id=owned_book_id, user_id=user_id)
+        if read_at is not None:
+            model.read_at = read_at
         self._session.add(model)
         await self._session.flush()
         await self._session.refresh(model)

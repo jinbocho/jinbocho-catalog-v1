@@ -98,6 +98,7 @@ class OwnedBookResponse(BaseModel):
 
 class BookReadCreate(BaseModel):
 	user_id: UUID = Field(..., description="User ID to mark as having read the book")
+	read_at: datetime | None = Field(None, description="Month-precision read date; defaults to now if omitted")
 
 
 class BookReadResponse(BaseModel):

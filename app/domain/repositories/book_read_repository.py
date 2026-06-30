@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from uuid import UUID
 
 from app.domain.entities import BookRead
@@ -6,7 +7,7 @@ from app.domain.entities import BookRead
 
 class BookReadRepository(ABC):
     @abstractmethod
-    async def add(self, owned_book_id: UUID, user_id: UUID) -> BookRead: ...
+    async def add(self, owned_book_id: UUID, user_id: UUID, read_at: datetime | None = None) -> BookRead: ...
 
     @abstractmethod
     async def remove(self, owned_book_id: UUID, user_id: UUID) -> None: ...

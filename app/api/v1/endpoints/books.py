@@ -289,7 +289,7 @@ async def mark_book_read(
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	read_repo: BookReadRepository = Depends(get_book_read_repository),
 ) -> BookRead:
-	result = await MarkBookReadUseCase(book_repo, read_repo).execute(book_id, UUID(payload["family_id"]), request.user_id)
+	result = await MarkBookReadUseCase(book_repo, read_repo).execute(book_id, UUID(payload["family_id"]), request.user_id, request.read_at)
 	await db.commit()
 	return result
 
