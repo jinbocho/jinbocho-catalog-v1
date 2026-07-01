@@ -29,6 +29,7 @@ class ShelfScanCandidateResponse(BaseModel):
 
 class ShelfScanResponse(BaseModel):
 	available: bool = Field(..., description="False when the vision LLM is disabled or unreachable")
+	reason: str = Field(default="ok", description="ok | disabled | unsupported | error — why unavailable")
 	candidates: list[ShelfScanCandidateResponse] = Field(..., description="One entry per legible spine")
 
 
@@ -75,6 +76,7 @@ class AuditUnexpectedResponse(BaseModel):
 
 class ShelfAuditResponse(BaseModel):
 	available: bool = Field(..., description="False when the vision LLM is disabled or unreachable")
+	reason: str = Field(default="ok", description="ok | disabled | unsupported | error — why unavailable")
 	present: list[AuditBookResponse] = Field(..., description="Catalogued here and seen in the photo")
 	missing: list[AuditBookResponse] = Field(..., description="Catalogued here but not seen — moved/lent/lost")
 	unexpected: list[AuditUnexpectedResponse] = Field(..., description="Seen in the photo but not catalogued here")

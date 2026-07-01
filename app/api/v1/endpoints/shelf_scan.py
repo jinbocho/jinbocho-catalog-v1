@@ -92,6 +92,7 @@ async def scan_shelf(
 	)
 	return ShelfScanResponse(
 		available=result.available,
+		reason=result.reason,
 		candidates=[
 			ShelfScanCandidateResponse(
 				spine_title=c.spine_title,
@@ -183,6 +184,7 @@ async def audit_shelf(
 
 	return ShelfAuditResponse(
 		available=result.available,
+		reason=result.reason,
 		present=[_book(b) for b in result.present],
 		missing=[_book(b) for b in result.missing],
 		unexpected=[

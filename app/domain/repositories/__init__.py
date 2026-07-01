@@ -15,7 +15,7 @@ from .removed_member_repository import RemovedMemberRepository
 from .room_repository import RoomRepository
 from .section_repository import SectionRepository
 from .shelf_repository import ShelfRepository
-from .shelf_spine_reader import ShelfSpineReader, SpineReading
+from .shelf_spine_reader import ShelfSpineReader, SpineReading, SpineReadResult
 from .tag_suggester import TagSuggester, TagSuggestion
 from .wishlist_repository import WishlistRepository
 
@@ -43,6 +43,7 @@ __all__ = [
 	"TagSuggestion",
 	"ShelfSpineReader",
 	"SpineReading",
+	"SpineReadResult",
 	"BookRatingRepository",
 	"WishlistRepository",
 ]

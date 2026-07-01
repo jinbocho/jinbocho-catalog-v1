@@ -3,24 +3,24 @@ import logging
 import httpx
 
 from app.config import settings
-from app.domain.repositories.shelf_spine_reader import ShelfSpineReader, SpineReading
+from app.domain.repositories.shelf_spine_reader import ShelfSpineReader, SpineReading, SpineReadResult
 
 logger = logging.getLogger(__name__)
 
 
 class AiShelfScanClient(ShelfSpineReader):
 	"""Asks ai-service's vision LLM to read book spines from a shelf photo.
-	Server-to-server only, like HttpDuplicateJudge — degrades to "vision
-	unavailable" (None) on any network/LLM problem so the caller can tell the
-	user to retry, rather than silently returning an empty shelf."""
+	Server-to-server only, like HttpDuplicateJudge. Propagates the AI service's
+	``reason`` so the caller can distinguish a disabled module, a model that
+	can't read images, and a transient failure — and never blocks on a problem."""
 
 	def __init__(self, http_client: httpx.AsyncClient, ai_service_url: str) -> None:
 		self._http_client = http_client
 		self._ai_service_url = ai_service_url
 
-	async def read_spines(self, image_base64: str, media_type: str) -> list[SpineReading] | None:
+	async def read_spines(self, image_base64: str, media_type: str) -> SpineReadResult:
 		if not settings.ai_module_enabled:
-			return None
+			return SpineReadResult(available=False, reason="disabled")
 
 		try:
 			response = await self._http_client.post(
@@ -33,11 +33,11 @@ class AiShelfScanClient(ShelfSpineReader):
 			data = response.json()
 		except (httpx.HTTPError, ValueError) as exc:
 			logger.warning("ai-service shelf scan failed: %s", exc)
-			return None
+			return SpineReadResult(available=False, reason="error")
 
 		if not data.get("available", False):
-			return None
-		return [
+			return SpineReadResult(available=False, reason=str(data.get("reason", "error")))
+		spines = [
 			SpineReading(
 				title=str(spine.get("title", "")),
 				author=spine.get("author"),
@@ -46,3 +46,4 @@ class AiShelfScanClient(ShelfSpineReader):
 			for index, spine in enumerate(data.get("spines", []))
 			if spine.get("title")
 		]
+		return SpineReadResult(available=True, reason="ok", spines=spines)

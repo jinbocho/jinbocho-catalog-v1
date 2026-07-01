@@ -47,6 +47,7 @@ class ShelfScanCandidate:
 class ScanShelfOutput:
 	available: bool
 	candidates: list[ShelfScanCandidate]
+	reason: str = "ok"  # mirrors the AI service SpineReadStatus when unavailable
 
 
 class ScanShelfUseCase:
@@ -73,14 +74,14 @@ class ScanShelfUseCase:
 			inp.family_id, inp.shelf_id, self._shelf_repo, self._section_repo, self._bookcase_repo
 		)
 
-		spines = await self._spine_reader.read_spines(inp.image_base64, inp.media_type)
-		if spines is None:
-			return ScanShelfOutput(available=False, candidates=[])
+		read = await self._spine_reader.read_spines(inp.image_base64, inp.media_type)
+		if not read.available:
+			return ScanShelfOutput(available=False, candidates=[], reason=read.reason)
 
 		# Provider lookups run concurrently: a full shelf is ~25 spines and the
 		# whole scan must stay well inside the gateway's 30s upstream timeout.
 		candidates = list(
-			await asyncio.gather(*(self._match_spine(inp.family_id, spine) for spine in spines))
+			await asyncio.gather(*(self._match_spine(inp.family_id, spine) for spine in read.spines))
 		)
 		return ScanShelfOutput(available=True, candidates=candidates)
 

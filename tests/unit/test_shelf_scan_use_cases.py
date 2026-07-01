@@ -14,14 +14,18 @@ from app.application.use_cases import (
 	ScanShelfUseCase,
 )
 from app.domain.entities import BibliographicRecord, Bookcase, OwnedBook, Room, Section, Shelf
-from app.domain.repositories import BookSearchProvider, ShelfSpineReader, SpineReading
+from app.domain.repositories import BookSearchProvider, ShelfSpineReader, SpineReading, SpineReadResult
 
 
 class StubSpineReader(ShelfSpineReader):
-	def __init__(self, result: list[SpineReading] | None) -> None:
-		self._result = result
+	def __init__(self, spines: list[SpineReading] | None, reason: str = "ok") -> None:
+		# spines=None models an unavailable read carrying the given reason.
+		if spines is None:
+			self._result = SpineReadResult(available=False, reason=reason)
+		else:
+			self._result = SpineReadResult(available=True, reason="ok", spines=spines)
 
-	async def read_spines(self, image_base64: str, media_type: str) -> list[SpineReading] | None:
+	async def read_spines(self, image_base64: str, media_type: str) -> SpineReadResult:
 		return self._result
 
 
@@ -50,7 +54,8 @@ async def test_scan_reports_unavailable_when_vision_is_off(
 ):
 	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	use_case = _scan_use_case(
-		shelf_repo, section_repo, bookcase_repo, StubSpineReader(None), StubSearchProvider([]), record_repo, book_repo
+		shelf_repo, section_repo, bookcase_repo, StubSpineReader(None, reason="unsupported"),
+		StubSearchProvider([]), record_repo, book_repo
 	)
 
 	result = await use_case.execute(
@@ -59,6 +64,7 @@ async def test_scan_reports_unavailable_when_vision_is_off(
 
 	assert result.available is False
 	assert result.candidates == []
+	assert result.reason == "unsupported"  # propagated from the reader for an accurate FE message
 
 
 @pytest.mark.asyncio
@@ -339,13 +345,16 @@ async def test_audit_reports_unavailable_when_vision_is_off(
 	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
 	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
-	use_case = _audit_use_case(shelf_repo, section_repo, bookcase_repo, StubSpineReader(None), book_repo, record_repo)
+	use_case = _audit_use_case(
+		shelf_repo, section_repo, bookcase_repo, StubSpineReader(None, reason="unsupported"), book_repo, record_repo
+	)
 
 	result = await use_case.execute(
 		AuditShelfInput(family_id=test_family_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
 	)
 
 	assert result.available is False
+	assert result.reason == "unsupported"
 
 
 @pytest.mark.asyncio

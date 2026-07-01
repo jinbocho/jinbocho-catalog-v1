@@ -49,6 +49,7 @@ class AuditShelfOutput:
 	missing: list[AuditBook]
 	# Seen in the photo but NOT catalogued here — likely misfiled or uncatalogued.
 	unexpected: list[AuditUnexpectedSpine]
+	reason: str = "ok"  # mirrors the AI service SpineReadStatus when unavailable
 
 
 class AuditShelfUseCase:
@@ -78,9 +79,10 @@ class AuditShelfUseCase:
 			inp.family_id, inp.shelf_id, self._shelf_repo, self._section_repo, self._bookcase_repo
 		)
 
-		spines = await self._spine_reader.read_spines(inp.image_base64, inp.media_type)
-		if spines is None:
-			return AuditShelfOutput(available=False, present=[], missing=[], unexpected=[])
+		read = await self._spine_reader.read_spines(inp.image_base64, inp.media_type)
+		if not read.available:
+			return AuditShelfOutput(available=False, present=[], missing=[], unexpected=[], reason=read.reason)
+		spines = read.spines
 
 		books = await self._book_repo.find_all_by_shelf_ids([inp.shelf_id])
 		records = await self._record_repo.find_all_by_ids([b.bibliographic_record_id for b in books])
