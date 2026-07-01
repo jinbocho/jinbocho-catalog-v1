@@ -1,5 +1,6 @@
 from .ai_dedup_client import HttpDuplicateJudge
 from .ai_incipit_client import AiIncipitClient
+from .ai_shelf_scan_client import AiShelfScanClient
 from .ai_tags_client import AiTagsClient
 from .auth_notification_client import HttpLoanReminderNotifier
 from .http_book_search_provider import BookSearchConfig, HttpBookSearchProvider
@@ -10,6 +11,7 @@ __all__ = [
     "HttpLoanReminderNotifier",
     "HttpDuplicateJudge",
     "AiIncipitClient",
+    "AiShelfScanClient",
     "AiTagsClient",
     "OpenLibraryDescriptionFetcher",
     "HttpIsbnMetadataFetcher",

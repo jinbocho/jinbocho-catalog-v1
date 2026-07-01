@@ -76,5 +76,6 @@ async def get_bookcase_map(
 	return BookcaseMapResponse(
 		bookcase_id=bookcase.id,
 		bookcase_name=bookcase.name,
+		room_id=bookcase.room_id,
 		sections=sections
 	)

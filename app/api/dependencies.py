@@ -25,11 +25,13 @@ from app.domain.repositories import (
     RoomRepository,
     SectionRepository,
     ShelfRepository,
+    ShelfSpineReader,
     WishlistRepository,
 )
 from app.infrastructure.database.session import get_db
 from app.infrastructure.external import (
     AiIncipitClient,
+    AiShelfScanClient,
     AiTagsClient,
     BookSearchConfig,
     HttpBookSearchProvider,
@@ -108,6 +110,10 @@ def get_editorial_description_provider(
 
 def get_tag_suggester(http_client: httpx.AsyncClient = Depends(get_http_client)) -> AiTagsClient:
     return AiTagsClient(http_client, settings.ai_service_url)
+
+
+def get_shelf_spine_reader(http_client: httpx.AsyncClient = Depends(get_http_client)) -> ShelfSpineReader:
+    return AiShelfScanClient(http_client, settings.ai_service_url)
 
 
 def get_isbn_metadata_fetcher(http_client: httpx.AsyncClient = Depends(get_http_client)) -> IsbnMetadataFetcher:

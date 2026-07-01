@@ -26,4 +26,5 @@ class SectionMapResponse(BaseModel):
 class BookcaseMapResponse(BaseModel):
 	bookcase_id: UUID = Field(..., description="Bookcase ID")
 	bookcase_name: str = Field(..., description="Bookcase name")
+	room_id: UUID = Field(..., description="Room the bookcase belongs to")
 	sections: list[SectionMapResponse] = Field(..., description="Sections in this bookcase")

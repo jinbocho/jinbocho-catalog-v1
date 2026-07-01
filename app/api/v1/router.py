@@ -13,6 +13,7 @@ from app.api.v1.endpoints import (
 	records,
 	rooms,
 	sections,
+	shelf_scan,
 	shelves,
 	wishlist,
 )
@@ -28,6 +29,7 @@ router.include_router(books.router, prefix="/books")
 router.include_router(ratings.router, prefix="/books")
 router.include_router(ratings_family_router, prefix="/ratings")
 router.include_router(ingestion.router, prefix="/ingestion")
+router.include_router(shelf_scan.router, prefix="/ingestion")
 router.include_router(export.router, prefix="/export")
 router.include_router(library_import.router, prefix="/import")
 router.include_router(map.router, prefix="/map")
