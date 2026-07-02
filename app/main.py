@@ -13,10 +13,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.router import router as v1_router
 from app.config import settings
-from app.core import OPENAPI_CONFIG, SECURITY_SCHEME, configure_exception_handlers, lifespan
+from app.core import (
+	OPENAPI_CONFIG,
+	SECURITY_SCHEME,
+	configure_exception_handlers,
+	configure_logging,
+	lifespan,
+)
 from app.infrastructure import models  # noqa: F401 - Register ORM models
 from app.infrastructure.database.session import get_db
 from app.limiter import limiter
+
+configure_logging(debug=settings.debug)
 
 logger = logging.getLogger(__name__)
 

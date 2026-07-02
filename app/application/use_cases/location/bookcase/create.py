@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -6,6 +7,8 @@ from app.domain.repositories import BookcaseRepository, RoomRepository
 from app.utils import utcnow
 
 from ..room.read import _get_room_for_family
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -26,7 +29,7 @@ class CreateBookcaseUseCase:
 
 	async def execute(self, inp: CreateBookcaseInput) -> Bookcase:
 		await _get_room_for_family(self._room_repo, inp.room_id, inp.family_id)
-		return await self._bookcase_repo.save(
+		saved = await self._bookcase_repo.save(
 			Bookcase(
 				family_id=inp.family_id,
 				room_id=inp.room_id,
@@ -39,3 +42,5 @@ class CreateBookcaseUseCase:
 				updated_at=utcnow(),
 			)
 		)
+		logger.info("Bookcase %s created in family %s", saved.id, inp.family_id)
+		return saved

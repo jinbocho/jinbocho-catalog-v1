@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -6,6 +7,8 @@ from app.domain.repositories import BookcaseRepository, SectionRepository, Shelf
 from app.utils import utcnow
 
 from .read import _get_shelf_for_family
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -32,4 +35,6 @@ class UpdateShelfUseCase:
 		if inp.notes is not None:
 			shelf.notes = inp.notes
 		shelf.updated_at = utcnow()
-		return await self._shelf_repo.save(shelf)
+		saved = await self._shelf_repo.save(shelf)
+		logger.info("Shelf %s updated in family %s", saved.id, inp.family_id)
+		return saved

@@ -1,8 +1,11 @@
+import logging
 from dataclasses import dataclass, field
 from uuid import UUID
 
 from app.domain.entities import BibliographicRecord, WishlistItem
 from app.domain.repositories import BibliographicRecordRepository, WishlistRepository
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -59,7 +62,7 @@ class AddToWishlistUseCase:
         if await self._wishlist_repo.exists_for_user_and_record(inp.user_id, bibliographic_record_id):
             raise ValueError("This book is already in your wishlist")
 
-        return await self._wishlist_repo.add(
+        saved = await self._wishlist_repo.add(
             WishlistItem(
                 family_id=inp.family_id,
                 user_id=inp.user_id,
@@ -68,6 +71,8 @@ class AddToWishlistUseCase:
                 priority=inp.priority,
             )
         )
+        logger.info("Wishlist item %s added by user %s in family %s", saved.id, inp.user_id, inp.family_id)
+        return saved
 
 
 class RemoveFromWishlistUseCase:
@@ -81,6 +86,7 @@ class RemoveFromWishlistUseCase:
         if item.user_id != user_id and role != "admin":
             raise PermissionError("Cannot remove another user's wishlist item")
         await self._wishlist_repo.delete(item_id, family_id)
+        logger.info("Wishlist item %s removed by user %s in family %s", item_id, user_id, family_id)
 
 
 class ListFamilyWishlistUseCase:

@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -7,6 +8,8 @@ from app.utils import utcnow
 
 from ..bookcase.read import _get_bookcase_for_family
 from .read import _get_section_for_family
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -33,4 +36,6 @@ class UpdateSectionUseCase:
 		if inp.label is not None:
 			section.label = inp.label
 		section.updated_at = utcnow()
-		return await self._section_repo.save(section)
+		saved = await self._section_repo.save(section)
+		logger.info("Section %s updated in family %s", saved.id, inp.family_id)
+		return saved

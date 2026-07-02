@@ -150,6 +150,7 @@ class AddBookUseCase:
 				created_at=utcnow(),
 			)
 		)
+		logger.info("Book %s added to family %s", book.id, inp.family_id)
 		return book
 
 	async def _check_for_duplicate(self, inp: AddBookInput, record: BibliographicRecord) -> DuplicateBookConflict | None:

@@ -1,8 +1,11 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
 from app.domain.entities import FamilyRole, RemovedMember
 from app.domain.repositories import RemovedMemberRepository
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -26,7 +29,7 @@ class RecordRemovedMemberUseCase:
 		self._removed_member_repo = removed_member_repo
 
 	async def execute(self, input: RecordRemovedMemberInput) -> RemovedMember:
-		return await self._removed_member_repo.save(
+		saved = await self._removed_member_repo.save(
 			RemovedMember(
 				id=input.id,
 				family_id=input.family_id,
@@ -35,3 +38,5 @@ class RecordRemovedMemberUseCase:
 				role=input.role,
 			)
 		)
+		logger.info("Removed member %s recorded for family %s", input.id, input.family_id)
+		return saved

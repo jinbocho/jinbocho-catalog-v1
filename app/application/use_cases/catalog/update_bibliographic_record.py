@@ -1,9 +1,12 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
 from app.domain.entities import BibliographicRecord, map_to_genre
 from app.domain.repositories import BibliographicRecordRepository
 from app.utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -56,4 +59,6 @@ class UpdateBibliographicRecordUseCase:
 		if inp.notes is not None:
 			record.notes = inp.notes
 		record.updated_at = utcnow()
-		return await self._record_repo.save(record)
+		saved = await self._record_repo.save(record)
+		logger.info("Bibliographic record %s updated in family %s", saved.id, inp.family_id)
+		return saved

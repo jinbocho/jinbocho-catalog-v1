@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
@@ -5,6 +6,8 @@ from uuid import UUID
 from app.domain.repositories import BibliographicRecordRepository, EditorialDescriptionProvider
 from app.infrastructure.external.ai_incipit_client import AiIncipitClient
 from app.utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -52,6 +55,7 @@ class GenerateAiIncipitUseCase:
         record.incipit_generated_at = utcnow()
         record.updated_at = utcnow()
         saved = await self._record_repo.save(record)
+        logger.info("AI incipit generated for record %s in family %s", record_id, family_id)
         return GenerateAiIncipitOutput(
             text=saved.incipit,
             source=saved.incipit_source,

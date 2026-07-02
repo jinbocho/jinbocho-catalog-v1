@@ -1,9 +1,12 @@
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
 from app.domain.repositories import BibliographicRecordRepository, IsbnLookupCacheRepository
 from app.utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -59,6 +62,12 @@ class DeriveIncipitUseCase:
 				record.incipit_generated_at = utcnow()
 				record.updated_at = utcnow()
 				saved = await self._record_repo.save(record)
+				logger.info(
+					"Incipit derived from ISBN cache (source=%s) for record %s in family %s",
+					saved.incipit_source,
+					record_id,
+					family_id,
+				)
 				return IncipitOutput(saved.incipit, saved.incipit_source, saved.incipit_generated_at)
 
 		return IncipitOutput(None, None, None)

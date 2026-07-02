@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -6,6 +7,8 @@ from app.domain.repositories import RoomRepository
 from app.utils import utcnow
 
 from .read import _get_room_for_family
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -27,4 +30,6 @@ class UpdateRoomUseCase:
 		if inp.description is not None:
 			room.description = inp.description
 		room.updated_at = utcnow()
-		return await self._room_repo.save(room)
+		saved = await self._room_repo.save(room)
+		logger.info("Room %s updated in family %s", saved.id, inp.family_id)
+		return saved

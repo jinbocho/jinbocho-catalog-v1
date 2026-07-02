@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -7,6 +8,8 @@ from app.utils import utcnow
 
 from ..room.read import _get_room_for_family
 from .read import _get_bookcase_for_family
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -42,4 +45,6 @@ class UpdateBookcaseUseCase:
 		if inp.image_url is not None:
 			bookcase.image_url = inp.image_url
 		bookcase.updated_at = utcnow()
-		return await self._bookcase_repo.save(bookcase)
+		saved = await self._bookcase_repo.save(bookcase)
+		logger.info("Bookcase %s updated in family %s", saved.id, inp.family_id)
+		return saved

@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -10,6 +11,8 @@ from app.domain.repositories import (
 	SectionRepository,
 	ShelfRepository,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -104,4 +107,11 @@ class ConfirmShelfScanUseCase:
 			created.append(book.id)
 			next_position += 1
 
+		logger.info(
+			"Shelf scan confirmed for shelf %s in family %s: %d book(s) added, %d skipped",
+			inp.shelf_id,
+			inp.family_id,
+			len(created),
+			len(skipped),
+		)
 		return ConfirmShelfScanOutput(created_book_ids=created, skipped_titles=skipped)

@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
@@ -13,6 +14,8 @@ from app.domain.entities import (
 )
 from app.domain.repositories import BookHistoryRepository, BookReadRepository, OwnedBookRepository
 from app.utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -86,4 +89,5 @@ class UpdateBookMetadataUseCase:
 					created_at=utcnow(),
 			)
 		)
+		logger.info("Book %s metadata updated by family %s", book.id, inp.family_id)
 		return updated

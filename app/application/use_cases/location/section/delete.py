@@ -1,8 +1,11 @@
+import logging
 from uuid import UUID
 
 from app.domain.repositories import BookcaseRepository, SectionRepository
 
 from .read import _get_section_for_family
+
+logger = logging.getLogger(__name__)
 
 
 class DeleteSectionUseCase:
@@ -13,3 +16,4 @@ class DeleteSectionUseCase:
 	async def execute(self, section_id: UUID, family_id: UUID) -> None:
 		await _get_section_for_family(self._section_repo, self._bookcase_repo, section_id, family_id)
 		await self._section_repo.delete(section_id)
+		logger.info("Section %s deleted from family %s", section_id, family_id)

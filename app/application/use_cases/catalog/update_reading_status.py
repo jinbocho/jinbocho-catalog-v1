@@ -1,9 +1,12 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
 from app.domain.entities import BookEventType, BookHistory, OwnedBook, ReadingStatus
 from app.domain.repositories import BookHistoryRepository, BookReadRepository, OwnedBookRepository
 from app.utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -63,4 +66,5 @@ class UpdateReadingStatusUseCase:
 				created_at=utcnow(),
 			)
 		)
+		logger.info("Book %s reading status set to %s by family %s", saved.id, new_status, inp.family_id)
 		return saved

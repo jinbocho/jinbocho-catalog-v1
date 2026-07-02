@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass, field
 from uuid import UUID
 
@@ -28,6 +29,8 @@ from app.domain.repositories import (
 	ShelfRepository,
 	WishlistRepository,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -100,7 +103,7 @@ class ExportFullLibraryUseCase:
 			lambda limit, offset: self._book_repo.find_all_by_family(family_id, limit=limit, offset=offset)
 		)
 
-		return FullLibraryExport(
+		export = FullLibraryExport(
 			rooms=rooms,
 			bookcases=bookcases,
 			sections=sections,
@@ -113,3 +116,10 @@ class ExportFullLibraryUseCase:
 			wishlist_items=await self._wishlist_repo.list_by_family(family_id),
 			removed_members=await self._removed_member_repo.find_all_by_family(family_id),
 		)
+		logger.info(
+			"Full library exported for family %s: %d owned book(s), %d bibliographic record(s)",
+			family_id,
+			len(export.owned_books),
+			len(export.bibliographic_records),
+		)
+		return export

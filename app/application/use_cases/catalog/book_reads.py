@@ -1,8 +1,11 @@
+import logging
 from datetime import datetime
 from uuid import UUID
 
 from app.domain.entities import BookRead
 from app.domain.repositories import BookReadRepository, OwnedBookRepository
+
+logger = logging.getLogger(__name__)
 
 
 class MarkBookReadUseCase:
@@ -14,7 +17,9 @@ class MarkBookReadUseCase:
         book = await self._book_repo.find_by_id(book_id)
         if not book or book.family_id != family_id:
             raise LookupError("Book not found")
-        return await self._read_repo.add(book_id, user_id, read_at)
+        saved = await self._read_repo.add(book_id, user_id, read_at)
+        logger.info("Book %s marked read by user %s in family %s", book_id, user_id, family_id)
+        return saved
 
 
 class UnmarkBookReadUseCase:
@@ -27,6 +32,7 @@ class UnmarkBookReadUseCase:
         if not book or book.family_id != family_id:
             raise LookupError("Book not found")
         await self._read_repo.remove(book_id, user_id)
+        logger.info("Book %s unmarked read by user %s in family %s", book_id, user_id, family_id)
 
 
 class ListBookReadsUseCase:

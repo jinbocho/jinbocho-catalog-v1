@@ -1,8 +1,11 @@
+import logging
 from datetime import UTC, datetime
 from uuid import UUID
 
 from app.domain.entities import BookLoan
 from app.domain.repositories import BookLoanRepository, OwnedBookRepository
+
+logger = logging.getLogger(__name__)
 
 
 class LendBookUseCase:
@@ -24,7 +27,9 @@ class LendBookUseCase:
         if active:
             raise ValueError("Book is already on loan")
         loan = BookLoan(owned_book_id=book_id, borrower_name=borrower_name, due_date=due_date)
-        return await self._loan_repo.add(loan)
+        saved = await self._loan_repo.add(loan)
+        logger.info("Book %s lent to %r by family %s", book_id, borrower_name, family_id)
+        return saved
 
 
 class ReturnBookUseCase:
@@ -41,6 +46,7 @@ class ReturnBookUseCase:
             raise LookupError("No active loan for this book")
         returned_at = datetime.now(UTC)
         await self._loan_repo.mark_returned(active.id, returned_at)
+        logger.info("Book %s loan %s returned in family %s", book_id, active.id, family_id)
         return BookLoan(
             id=active.id,
             owned_book_id=active.owned_book_id,

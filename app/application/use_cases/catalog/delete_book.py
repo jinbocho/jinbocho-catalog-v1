@@ -1,9 +1,12 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
 from app.domain.entities import BookEventType, BookHistory
 from app.domain.repositories import BookHistoryRepository, OwnedBookRepository
 from app.utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -34,3 +37,4 @@ class DeleteBookUseCase:
 			)
 		)
 		await self._book_repo.delete(book.id)
+		logger.info("Book %s deleted from family %s", book.id, inp.family_id)

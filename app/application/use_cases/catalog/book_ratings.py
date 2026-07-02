@@ -1,9 +1,12 @@
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
 from app.domain.entities import BookRating, FamilyRatingStats
 from app.domain.repositories import BookRatingRepository, OwnedBookRepository
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -37,7 +40,7 @@ class CreateBookRatingUseCase:
         existing = await self._rating_repo.find_by_book_and_user(inp.book_id, inp.user_id)
         if existing is not None:
             raise ValueError("You have already rated this book")
-        return await self._rating_repo.add(
+        saved = await self._rating_repo.add(
             BookRating(
                 owned_book_id=inp.book_id,
                 user_id=inp.user_id,
@@ -45,6 +48,8 @@ class CreateBookRatingUseCase:
                 review=inp.review,
             )
         )
+        logger.info("Book %s rated by family %s", inp.book_id, inp.family_id)
+        return saved
 
 
 class UpdateBookRatingUseCase:
@@ -68,7 +73,9 @@ class UpdateBookRatingUseCase:
         if inp.review is not None:
             rating.review = inp.review
         rating.updated_at = datetime.now(UTC)
-        return await self._rating_repo.save(rating)
+        saved = await self._rating_repo.save(rating)
+        logger.info("Book %s rating %s updated by family %s", inp.book_id, inp.rating_id, inp.family_id)
+        return saved
 
 
 class DeleteBookRatingUseCase:
@@ -86,6 +93,7 @@ class DeleteBookRatingUseCase:
         if rating.user_id != user_id:
             raise PermissionError("Cannot delete another user's rating")
         await self._rating_repo.delete(rating)
+        logger.info("Book %s rating %s deleted from family %s", rating.owned_book_id, rating_id, family_id)
 
 
 class ListBookRatingsUseCase:

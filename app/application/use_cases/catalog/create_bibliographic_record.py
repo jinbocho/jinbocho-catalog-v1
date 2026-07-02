@@ -1,9 +1,12 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
 from app.domain.entities import BibliographicRecord, map_to_genre
 from app.domain.repositories import BibliographicRecordRepository
 from app.utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -41,7 +44,7 @@ class CreateBibliographicRecordUseCase:
 				return existing
 
 		genre = map_to_genre(inp.genre)
-		return await self._record_repo.save(
+		saved = await self._record_repo.save(
 			BibliographicRecord(
 				family_id=inp.family_id,
 				title=inp.title,
@@ -59,3 +62,5 @@ class CreateBibliographicRecordUseCase:
 				updated_at=utcnow(),
 			)
 		)
+		logger.info("Bibliographic record %s created in family %s", saved.id, inp.family_id)
+		return saved

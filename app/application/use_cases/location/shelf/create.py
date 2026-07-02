@@ -1,9 +1,12 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
 from app.domain.entities import Shelf
 from app.domain.repositories import SectionRepository, ShelfRepository
 from app.utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -24,6 +27,8 @@ class CreateShelfUseCase:
 		if section is None:
 			raise LookupError("Section not found")
 		# Verify family_id matches through bookcase
-		return await self._shelf_repo.save(
+		saved = await self._shelf_repo.save(
 			Shelf(section_id=inp.section_id, shelf_index=inp.shelf_index, notes=inp.notes, created_at=utcnow(), updated_at=utcnow())
 		)
+		logger.info("Shelf %s created in family %s", saved.id, inp.family_id)
+		return saved

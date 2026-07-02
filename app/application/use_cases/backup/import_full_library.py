@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal
@@ -33,6 +34,8 @@ from app.domain.repositories import (
 	WishlistRepository,
 )
 from app.utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 # --- Input items -------------------------------------------------------------
 # Deliberately separate from the domain entities (which require family_id /
@@ -521,6 +524,18 @@ class ImportFullLibraryUseCase:
 			)
 			out.wishlist_items_imported += 1
 
+		logger.info(
+			"Library import completed for family %s: %d room(s), %d bookcase(s), %d section(s), "
+			"%d shelf/shelves, %d record(s), %d owned book(s) (%d deduped)",
+			input.family_id,
+			out.rooms_imported,
+			out.bookcases_imported,
+			out.sections_imported,
+			out.shelves_imported,
+			out.records_imported,
+			out.owned_books_imported,
+			out.owned_books_deduped,
+		)
 		return out
 
 	@staticmethod

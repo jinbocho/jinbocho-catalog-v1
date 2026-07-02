@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -10,6 +11,8 @@ from app.domain.repositories import (
 	RemovedMemberRepository,
 	RoomRepository,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -84,6 +87,16 @@ class DeleteFamilyDataUseCase:
 		removed_members_deleted = len(await self._removed_member_repo.find_all_by_family(family_id))
 		await self._removed_member_repo.delete_all_by_family(family_id)
 
+		logger.info(
+			"GDPR wipe completed for family %s: %d room(s), %d bookcase(s), %d record(s), "
+			"%d owned book(s), %d removed member(s)",
+			family_id,
+			rooms_deleted,
+			bookcases_deleted,
+			records_deleted,
+			owned_books_deleted,
+			removed_members_deleted,
+		)
 		return DeleteFamilyDataOutput(
 			rooms_deleted=rooms_deleted,
 			bookcases_deleted=bookcases_deleted,

@@ -1,8 +1,11 @@
+import logging
 from uuid import UUID
 
 from app.application.use_cases.catalog.get_or_fetch_incipit import IncipitOutput
 from app.domain.repositories import BibliographicRecordRepository
 from app.utils import utcnow
+
+logger = logging.getLogger(__name__)
 
 _ALLOWED_SOURCES = {"manual", "ai"}
 
@@ -26,4 +29,5 @@ class SetIncipitUseCase:
 		record.incipit_generated_at = utcnow()
 		record.updated_at = utcnow()
 		saved = await self._record_repo.save(record)
+		logger.info("Incipit set (source=%s) for record %s in family %s", source, record_id, family_id)
 		return IncipitOutput(saved.incipit, saved.incipit_source, saved.incipit_generated_at)
