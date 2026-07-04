@@ -5,6 +5,7 @@ from app.api.v1.endpoints import (
 	bookcases,
 	books,
 	export,
+	goodreads_import,
 	ingestion,
 	library_import,
 	map,
@@ -32,6 +33,7 @@ router.include_router(ingestion.router, prefix="/ingestion")
 router.include_router(shelf_scan.router, prefix="/ingestion")
 router.include_router(export.router, prefix="/export")
 router.include_router(library_import.router, prefix="/import")
+router.include_router(goodreads_import.router, prefix="/import")
 router.include_router(map.router, prefix="/map")
 router.include_router(members.router, prefix="/members")
 router.include_router(account.router, prefix="/account")

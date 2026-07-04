@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import delete as sa_delete
@@ -55,3 +56,10 @@ class SQLAlchemyRemovedMemberRepository(RemovedMemberRepository):
 	async def delete_all_by_family(self, family_id: UUID) -> None:
 		await self._session.execute(sa_delete(RemovedMemberModel).where(RemovedMemberModel.family_id == family_id))
 		await self._session.flush()
+
+	async def delete_expired(self, older_than: datetime) -> int:
+		result = await self._session.execute(
+			sa_delete(RemovedMemberModel).where(RemovedMemberModel.removed_at < older_than)
+		)
+		await self._session.flush()
+		return result.rowcount or 0

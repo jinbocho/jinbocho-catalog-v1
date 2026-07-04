@@ -24,6 +24,8 @@ from app.api.v1.schemas.book_schemas import (
 	BookLoanResponse,
 	BookReadCreate,
 	BookReadResponse,
+	BulkDeleteBooksRequest,
+	BulkDeleteBooksResponse,
 	DuplicateBookConflictResponse,
 	OwnedBookCreate,
 	OwnedBookResponse,
@@ -33,6 +35,8 @@ from app.application.use_cases import (
 	AddBookInput,
 	AddBookUseCase,
 	FuzzyDedupConfig,
+	BulkDeleteBooksInput,
+	BulkDeleteBooksUseCase,
 	DeleteBookInput,
 	DeleteBookUseCase,
 	GetBookHistoryUseCase,
@@ -151,6 +155,31 @@ async def add_book(
 	)
 	await db.commit()
 	return book
+
+
+@router.post(
+	"/bulk-delete",
+	response_model=BulkDeleteBooksResponse,
+	summary="Bulk-delete books",
+	responses={
+		404: {"description": "One or more book IDs were not found — nothing was deleted."},
+		403: {"description": "One or more book IDs belong to another family — nothing was deleted."},
+	},
+)
+async def bulk_delete_books(
+	request: BulkDeleteBooksRequest,
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
+	db: AsyncSession = Depends(get_db),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+) -> BulkDeleteBooksResponse:
+	deleted = await BulkDeleteBooksUseCase(book_repo, history_repo).execute(
+		BulkDeleteBooksInput(
+			book_ids=request.book_ids, family_id=UUID(payload["family_id"]), changed_by=UUID(payload["sub"])
+		)
+	)
+	await db.commit()
+	return BulkDeleteBooksResponse(deleted=deleted)
 
 
 @router.get("/{book_id}", response_model=OwnedBookResponse, summary="Get book")

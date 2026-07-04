@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     auth_service_url: str = "http://localhost:8001"
     internal_service_token: str = ""
     loan_reminder_lead_days: int = 1
+    # GDPR Art. 5(1)(e) storage limitation — unified retention window for
+    # removed_members snapshots and returned-loan borrower names (see
+    # PurgeExpiredPersonalDataUseCase). Declared to users in the Privacy Policy;
+    # keep the two in sync if this changes.
+    retention_months: int = 12
     ai_service_url: str = "http://jinbocho-ai:8003"
     ai_internal_service_token: str = ""
     fuzzy_dedup_high_threshold: float = 0.92

@@ -140,6 +140,20 @@ class FamilyRatingStatsResponse(BaseModel):
 	distribution: dict[int, int] = Field(..., description="Count of ratings per star value (1-5)")
 
 
+class BulkDeleteBooksRequest(BaseModel):
+	book_ids: list[UUID] = Field(
+		...,
+		min_length=1,
+		max_length=200,
+		description="Book IDs to delete. All-or-nothing: if any ID is missing or belongs to another family, "
+		"none are deleted.",
+	)
+
+
+class BulkDeleteBooksResponse(BaseModel):
+	deleted: int = Field(..., description="Number of books deleted")
+
+
 class BookLoanCreate(BaseModel):
 	borrower_name: str = Field(..., min_length=1, max_length=255, description="Name of the person borrowing the book")
 	due_date: datetime | None = Field(None, description="Expected return date")

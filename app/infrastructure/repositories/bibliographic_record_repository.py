@@ -2,6 +2,7 @@ from uuid import UUID
 
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities import BibliographicRecord
@@ -114,6 +115,7 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 
 	async def save(self, record: BibliographicRecord) -> BibliographicRecord:
 		model = await self._session.get(BibliographicRecordModel, record.id)
+		is_new = model is None
 		if model is None:
 			model = BibliographicRecordModel(
 				id=record.id,
@@ -152,7 +154,24 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 			model.incipit_source = record.incipit_source
 			model.incipit_generated_at = record.incipit_generated_at
 			model.updated_at = record.updated_at
-		await self._session.flush()
+
+		if is_new and record.isbn:
+			# A brand-new row with an ISBN can race a concurrent insert for the
+			# same (family_id, isbn) — e.g. a double-submitted confirm, or two
+			# devices cataloging the same book at once. A savepoint keeps that
+			# failure local instead of poisoning the whole request's transaction,
+			# and we fall back to whichever row won the race.
+			try:
+				async with self._session.begin_nested():
+					await self._session.flush()
+			except IntegrityError:
+				self._session.expunge(model)
+				existing = await self.find_by_isbn(record.family_id, record.isbn)
+				if existing is None:
+					raise
+				return existing
+		else:
+			await self._session.flush()
 		await self._session.refresh(model)
 		return self._to_entity(model)
 

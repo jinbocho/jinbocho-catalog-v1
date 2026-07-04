@@ -42,6 +42,12 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 			updated_at=model.updated_at,
 		)
 
+	async def find_by_ids(self, book_ids: list[UUID]) -> list[OwnedBook]:
+		if not book_ids:
+			return []
+		result = await self._session.execute(select(OwnedBookModel).where(OwnedBookModel.id.in_(book_ids)))
+		return [self._to_entity(model) for model in result.scalars().all()]
+
 	async def find_by_id(self, book_id: UUID) -> OwnedBook | None:
 		model = await self._session.get(OwnedBookModel, book_id)
 		return self._to_entity(model) if model else None
@@ -172,6 +178,12 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 		if model is not None:
 			await self._session.delete(model)
 			await self._session.flush()
+
+	async def delete_by_ids(self, book_ids: list[UUID]) -> None:
+		if not book_ids:
+			return
+		await self._session.execute(sa_delete(OwnedBookModel).where(OwnedBookModel.id.in_(book_ids)))
+		await self._session.flush()
 
 	async def delete_all_by_family(self, family_id: UUID) -> None:
 		await self._session.execute(sa_delete(OwnedBookModel).where(OwnedBookModel.family_id == family_id))

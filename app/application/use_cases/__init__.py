@@ -22,6 +22,8 @@ from app.application.use_cases.backup import (
 from app.application.use_cases.catalog import (
 	AddBookInput,
 	AddBookUseCase,
+	BulkDeleteBooksInput,
+	BulkDeleteBooksUseCase,
 	CreateBibliographicRecordInput,
 	CreateBibliographicRecordUseCase,
 	CreateBookRatingInput,
@@ -84,12 +86,22 @@ from app.application.use_cases.ingestion import (
 	AuditUnexpectedSpine,
 	BulkLookupIsbnResult,
 	BulkLookupIsbnUseCase,
+	ConfirmGoodreadsImportInput,
+	ConfirmGoodreadsImportItem,
+	ConfirmGoodreadsImportOutput,
+	ConfirmGoodreadsImportSkip,
+	ConfirmGoodreadsImportUseCase,
 	ConfirmShelfScanInput,
 	ConfirmShelfScanItem,
 	ConfirmShelfScanOutput,
+	ConfirmShelfScanSkip,
 	ConfirmShelfScanUseCase,
+	GoodreadsPreviewRow,
 	LookupIsbnOutput,
 	LookupIsbnUseCase,
+	PreviewGoodreadsImportInput,
+	PreviewGoodreadsImportOutput,
+	PreviewGoodreadsImportUseCase,
 	ScanShelfInput,
 	ScanShelfOutput,
 	ScanShelfUseCase,
@@ -127,6 +139,7 @@ from app.application.use_cases.location import (
 	UpdateShelfUseCase,
 )
 from app.application.use_cases.map import GetBookcaseMapUseCase, MapSectionData, MapShelfBooks
+from app.application.use_cases.retention import PurgeExpiredPersonalDataUseCase
 
 __all__ = [
 	# Catalog - Books
@@ -155,6 +168,8 @@ __all__ = [
 	"UnmarkBookReadUseCase",
 	"DeleteBookInput",
 	"DeleteBookUseCase",
+	"BulkDeleteBooksInput",
+	"BulkDeleteBooksUseCase",
 	"UpdateBookPositionInput",
 	"UpdateBookPositionUseCase",
 	"UpdateReadingStatusInput",
@@ -219,12 +234,22 @@ __all__ = [
 	"ConfirmShelfScanInput",
 	"ConfirmShelfScanItem",
 	"ConfirmShelfScanOutput",
+	"ConfirmShelfScanSkip",
 	"ConfirmShelfScanUseCase",
 	"AuditShelfInput",
 	"AuditShelfOutput",
 	"AuditShelfUseCase",
 	"AuditBook",
 	"AuditUnexpectedSpine",
+	"PreviewGoodreadsImportInput",
+	"PreviewGoodreadsImportOutput",
+	"PreviewGoodreadsImportUseCase",
+	"GoodreadsPreviewRow",
+	"ConfirmGoodreadsImportInput",
+	"ConfirmGoodreadsImportItem",
+	"ConfirmGoodreadsImportOutput",
+	"ConfirmGoodreadsImportSkip",
+	"ConfirmGoodreadsImportUseCase",
 	# Location
 	"CreateBookcaseInput",
 	"CreateBookcaseUseCase",
@@ -262,4 +287,6 @@ __all__ = [
 	"GetBookcaseMapUseCase",
 	"MapSectionData",
 	"MapShelfBooks",
+	# Retention
+	"PurgeExpiredPersonalDataUseCase",
 ]

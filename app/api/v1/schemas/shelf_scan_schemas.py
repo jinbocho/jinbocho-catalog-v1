@@ -51,9 +51,19 @@ class ShelfScanConfirmRequest(BaseModel):
 	items: list[ShelfScanConfirmItem] = Field(..., min_length=1, max_length=100)
 
 
+class ShelfScanSkippedItemResponse(BaseModel):
+	title: str = Field(..., description="Title of the item that was not created")
+	reason: Literal["already_owned", "duplicate_in_scan"] = Field(
+		...,
+		description="already_owned: the family already had this book. "
+		"duplicate_in_scan: the same book was matched twice in this photo.",
+	)
+	position: int = Field(..., description="Echoes the item's position, to match it back to what was sent")
+
+
 class ShelfScanConfirmResponse(BaseModel):
 	created_book_ids: list[UUID] = Field(..., description="Owned books created, in shelf order")
-	skipped_titles: list[str] = Field(..., description="Items skipped because already owned")
+	skipped: list[ShelfScanSkippedItemResponse] = Field(..., description="Items not created, with why")
 
 
 class ShelfAuditRequest(BaseModel):

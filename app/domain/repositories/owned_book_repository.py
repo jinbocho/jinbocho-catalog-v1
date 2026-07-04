@@ -23,6 +23,9 @@ class OwnedBookRepository(ABC):
 	async def find_all_by_shelf_ids(self, shelf_ids: list[UUID]) -> list[OwnedBook]: ...
 
 	@abstractmethod
+	async def find_by_ids(self, book_ids: list[UUID]) -> list[OwnedBook]: ...
+
+	@abstractmethod
 	async def exists_by_bibliographic_record_id(self, record_id: UUID) -> bool: ...
 
 	@abstractmethod
@@ -55,6 +58,9 @@ class OwnedBookRepository(ABC):
 
 	@abstractmethod
 	async def delete(self, book_id: UUID) -> None: ...
+
+	@abstractmethod
+	async def delete_by_ids(self, book_ids: list[UUID]) -> None: ...
 
 	@abstractmethod
 	async def delete_all_by_family(self, family_id: UUID) -> None:

@@ -28,6 +28,7 @@ from app.api.v1.schemas.shelf_scan_schemas import (
 	ShelfScanConfirmResponse,
 	ShelfScanRequest,
 	ShelfScanResponse,
+	ShelfScanSkippedItemResponse,
 )
 from app.application.use_cases import (
 	AddBookUseCase,
@@ -112,8 +113,8 @@ async def scan_shelf(
 	response_model=ShelfScanConfirmResponse,
 	summary="Create the books confirmed from a shelf scan",
 	description="Bulk-creates the reviewed books on the scanned shelf, positioned progressively "
-	"after any book already there, in a single transaction. Already-owned duplicates are skipped "
-	"per item (reported in skipped_titles) unless flagged as intentional.",
+	"after any book already there. Already-owned duplicates and books matched twice in the same "
+	"photo are skipped per item (reported in `skipped`, with why) unless flagged as intentional.",
 )
 @limiter.limit("10/minute")
 async def confirm_shelf_scan(
@@ -145,7 +146,10 @@ async def confirm_shelf_scan(
 	await db.commit()
 	return ShelfScanConfirmResponse(
 		created_book_ids=result.created_book_ids,
-		skipped_titles=result.skipped_titles,
+		skipped=[
+			ShelfScanSkippedItemResponse(title=s.title, reason=s.reason, position=s.position)
+			for s in result.skipped
+		],
 	)
 
 

@@ -9,6 +9,7 @@ from app.application.use_cases import (
 	AuditShelfUseCase,
 	ConfirmShelfScanInput,
 	ConfirmShelfScanItem,
+	ConfirmShelfScanSkip,
 	ConfirmShelfScanUseCase,
 	ScanShelfInput,
 	ScanShelfUseCase,
@@ -202,7 +203,7 @@ async def test_confirm_creates_books_positioned_on_the_scanned_shelf(
 	)
 
 	assert len(result.created_book_ids) == 2
-	assert result.skipped_titles == []
+	assert result.skipped == []
 	books = sorted(book_repo.books.values(), key=lambda b: b.shelf_position or 0)
 	assert [b.shelf_position for b in books] == [1, 2]
 	assert all(b.shelf_id == shelf.id for b in books)
@@ -302,8 +303,66 @@ async def test_confirm_skips_duplicates_without_failing_the_batch(
 		)
 	)
 
-	assert result.skipped_titles == ["Dune"]
+	assert result.skipped == [ConfirmShelfScanSkip(title="Dune", reason="already_owned", position=0)]
 	assert len(result.created_book_ids) == 1
+
+
+@pytest.mark.asyncio
+async def test_confirm_skips_the_same_book_matched_twice_in_one_scan(
+	test_family_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
+	record_repo, book_repo, history_repo, book_read_repo,
+):
+	"""Two spines resolving to the same not-yet-owned book (e.g. two copies
+	standing side by side) must not both be created — this is the case that
+	used to reach the DB as two inserts for the same family+ISBN."""
+	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	use_case = _confirm_use_case(
+		shelf_repo, section_repo, bookcase_repo, record_repo, book_repo, history_repo, book_read_repo
+	)
+
+	result = await use_case.execute(
+		ConfirmShelfScanInput(
+			family_id=test_family_id,
+			changed_by=test_user_id,
+			shelf_id=shelf.id,
+			items=[
+				ConfirmShelfScanItem(title="Dune", main_author="Frank Herbert", isbn="978-0441013593", position=0),
+				ConfirmShelfScanItem(title="Dune", main_author="Frank Herbert", isbn="9780441013593", position=1),
+			],
+		)
+	)
+
+	assert len(result.created_book_ids) == 1
+	assert result.skipped == [ConfirmShelfScanSkip(title="Dune", reason="duplicate_in_scan", position=1)]
+
+
+@pytest.mark.asyncio
+async def test_confirm_keeps_an_intentional_duplicate_matched_twice_in_one_scan(
+	test_family_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
+	record_repo, book_repo, history_repo, book_read_repo,
+):
+	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	use_case = _confirm_use_case(
+		shelf_repo, section_repo, bookcase_repo, record_repo, book_repo, history_repo, book_read_repo
+	)
+
+	result = await use_case.execute(
+		ConfirmShelfScanInput(
+			family_id=test_family_id,
+			changed_by=test_user_id,
+			shelf_id=shelf.id,
+			items=[
+				ConfirmShelfScanItem(title="Dune", main_author="Frank Herbert", isbn="9780441013593", position=0),
+				ConfirmShelfScanItem(
+					title="Dune", main_author="Frank Herbert", isbn="9780441013593", position=1,
+					is_intentional_duplicate=True,
+				),
+			],
+		)
+	)
+
+	assert len(result.created_book_ids) == 2
+	assert result.skipped == []
 
 
 @pytest.mark.asyncio

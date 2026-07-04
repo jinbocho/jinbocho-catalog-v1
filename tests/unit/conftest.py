@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID, uuid4
 
 import pytest
@@ -6,6 +7,7 @@ from app.domain.entities import (
 	BibliographicRecord,
 	Bookcase,
 	BookLoan,
+	BookRating,
 	BookRead,
 	OwnedBook,
 	RemovedMember,
@@ -19,6 +21,7 @@ from app.domain.repositories import (
 	BookcaseRepository,
 	BookHistoryRepository,
 	BookLoanRepository,
+	BookRatingRepository,
 	BookReadRepository,
 	IsbnLookupCacheRepository,
 	OwnedBookRepository,
@@ -147,6 +150,9 @@ class MockOwnedBookRepository(OwnedBookRepository):
 	async def find_all_by_shelf_ids(self, shelf_ids: list[UUID]) -> list[OwnedBook]:
 		return [b for b in self.books.values() if b.shelf_id in shelf_ids]
 
+	async def find_by_ids(self, book_ids: list[UUID]) -> list[OwnedBook]:
+		return [b for b in self.books.values() if b.id in set(book_ids)]
+
 	async def exists_by_bibliographic_record_id(self, record_id: UUID) -> bool:
 		return any(b.bibliographic_record_id == record_id for b in self.books.values())
 
@@ -175,6 +181,10 @@ class MockOwnedBookRepository(OwnedBookRepository):
 
 	async def delete(self, book_id: UUID) -> None:
 		self.books.pop(book_id, None)
+
+	async def delete_by_ids(self, book_ids: list[UUID]) -> None:
+		ids = set(book_ids)
+		self.books = {k: v for k, v in self.books.items() if k not in ids}
 
 	async def delete_all_by_family(self, family_id: UUID) -> None:
 		self.books = {k: v for k, v in self.books.items() if v.family_id != family_id}
@@ -285,11 +295,14 @@ class MockBookReadRepository(BookReadRepository):
 	def __init__(self):
 		self.reads = {}
 
-	async def add(self, owned_book_id: UUID, user_id: UUID) -> BookRead:
+	async def add(self, owned_book_id: UUID, user_id: UUID, read_at: datetime | None = None) -> BookRead:
 		for r in self.reads.values():
 			if r.owned_book_id == owned_book_id and r.user_id == user_id:
+				if read_at is not None:
+					r.read_at = read_at
 				return r
-		read = BookRead(owned_book_id=owned_book_id, user_id=user_id)
+		kwargs = {"read_at": read_at} if read_at is not None else {}
+		read = BookRead(owned_book_id=owned_book_id, user_id=user_id, **kwargs)
 		self.reads[read.id] = read
 		return read
 
@@ -439,6 +452,51 @@ class MockWishlistRepository(WishlistRepository):
 		return item
 
 
+class MockBookRatingRepository(BookRatingRepository):
+	def __init__(self) -> None:
+		self.ratings: dict[UUID, BookRating] = {}
+
+	async def add(self, rating: BookRating) -> BookRating:
+		self.ratings[rating.id] = rating
+		return rating
+
+	async def save(self, rating: BookRating) -> BookRating:
+		self.ratings[rating.id] = rating
+		return rating
+
+	async def find_by_id(self, rating_id: UUID) -> BookRating | None:
+		return self.ratings.get(rating_id)
+
+	async def find_by_book_and_user(self, owned_book_id: UUID, user_id: UUID) -> BookRating | None:
+		return next(
+			(r for r in self.ratings.values() if r.owned_book_id == owned_book_id and r.user_id == user_id), None
+		)
+
+	async def list_by_book(self, owned_book_id: UUID) -> list[BookRating]:
+		return [r for r in self.ratings.values() if r.owned_book_id == owned_book_id]
+
+	async def list_by_family(self, family_id: UUID) -> list[BookRating]:
+		# Like MockBookHistoryRepository, this mock doesn't model the
+		# owned_book -> family join; it returns everything stored.
+		return list(self.ratings.values())
+
+	async def delete(self, rating: BookRating) -> None:
+		self.ratings.pop(rating.id, None)
+
+	async def restore(self, rating: BookRating) -> BookRating:
+		existing = next(
+			(
+				r for r in self.ratings.values()
+				if r.owned_book_id == rating.owned_book_id and r.user_id == rating.user_id
+			),
+			None,
+		)
+		if existing:
+			return existing
+		self.ratings[rating.id] = rating
+		return rating
+
+
 class MockRemovedMemberRepository(RemovedMemberRepository):
 	def __init__(self):
 		self.members = {}
@@ -452,6 +510,12 @@ class MockRemovedMemberRepository(RemovedMemberRepository):
 
 	async def delete_all_by_family(self, family_id: UUID) -> None:
 		self.members = {k: v for k, v in self.members.items() if v.family_id != family_id}
+
+	async def delete_expired(self, older_than) -> int:
+		expired = [k for k, v in self.members.items() if v.removed_at < older_than]
+		for k in expired:
+			del self.members[k]
+		return len(expired)
 
 
 @pytest.fixture
@@ -522,3 +586,8 @@ def removed_member_repo() -> RemovedMemberRepository:
 @pytest.fixture
 def wishlist_repo() -> WishlistRepository:
 	return MockWishlistRepository()
+
+
+@pytest.fixture
+def book_rating_repo() -> BookRatingRepository:
+	return MockBookRatingRepository()
