@@ -55,8 +55,10 @@ class AddToWishlistUseCase:
             bibliographic_record_id = record.id
         else:
             fetched = await self._record_repo.find_by_id(inp.bibliographic_record_id)
-            if not fetched or fetched.family_id != inp.family_id:
+            if not fetched:
                 raise LookupError("Bibliographic record not found")
+            if fetched.family_id != inp.family_id:
+                raise PermissionError("Bibliographic record does not belong to this family")
             bibliographic_record_id = inp.bibliographic_record_id
 
         if await self._wishlist_repo.exists_for_user_and_record(inp.user_id, bibliographic_record_id):

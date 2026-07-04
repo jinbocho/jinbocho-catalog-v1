@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.entities import BookCondition, BookSource, ReadingStatus
 
@@ -92,8 +92,7 @@ class OwnedBookResponse(BaseModel):
 	created_at: datetime = Field(..., description="Creation timestamp")
 	updated_at: datetime = Field(..., description="Last update timestamp")
 
-	class Config:
-		from_attributes = True
+	model_config = ConfigDict(from_attributes=True)
 
 
 class BookReadCreate(BaseModel):
@@ -106,8 +105,7 @@ class BookReadResponse(BaseModel):
 	user_id: UUID = Field(..., description="User ID")
 	read_at: datetime = Field(..., description="When the member finished reading")
 
-	class Config:
-		from_attributes = True
+	model_config = ConfigDict(from_attributes=True)
 
 
 class BookRatingCreate(BaseModel):
@@ -129,8 +127,7 @@ class BookRatingResponse(BaseModel):
 	created_at: datetime = Field(..., description="When the rating was created")
 	updated_at: datetime = Field(..., description="When the rating was last updated")
 
-	class Config:
-		from_attributes = True
+	model_config = ConfigDict(from_attributes=True)
 
 
 class FamilyRatingStatsResponse(BaseModel):
@@ -167,5 +164,4 @@ class BookLoanResponse(BaseModel):
 	due_date: datetime | None = Field(None, description="Expected return date")
 	returned_at: datetime | None = Field(None, description="When the book was returned (null = still on loan)")
 
-	class Config:
-		from_attributes = True
+	model_config = ConfigDict(from_attributes=True)

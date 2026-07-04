@@ -274,17 +274,49 @@ class ImportFullLibraryUseCase:
 		self._book_history_repo = book_history_repo
 		self._wishlist_repo = wishlist_repo
 
-	async def execute(self, input: ImportFullLibraryInput) -> ImportFullLibraryOutput:
-		self._validate_referential_integrity(input)
+	async def execute(self, inp: ImportFullLibraryInput) -> ImportFullLibraryOutput:
+		self._validate_referential_integrity(inp)
 		out = ImportFullLibraryOutput()
 		now = utcnow()
 
+		record_id_map = await self._import_records(inp, out, now)
+		room_id_map = await self._import_rooms(inp, out, now)
+		bookcase_id_map = await self._import_bookcases(inp, out, now, room_id_map)
+		section_id_map = await self._import_sections(inp, out, now, bookcase_id_map)
+		shelf_id_map = await self._import_shelves(inp, out, now, section_id_map)
+		book_id_map = await self._import_books(
+			inp, out, now, record_id_map, room_id_map, bookcase_id_map, section_id_map, shelf_id_map
+		)
+		await self._import_reads(inp, out, book_id_map)
+		await self._import_loans(inp, out, book_id_map)
+		await self._import_history(inp, out, now, book_id_map)
+		await self._import_wishlist(inp, out, record_id_map)
+
+		logger.info(
+			"Library import completed for family %s: %d room(s), %d bookcase(s), %d section(s), "
+			"%d shelf/shelves, %d record(s), %d owned book(s) (%d deduped)",
+			inp.family_id,
+			out.rooms_imported,
+			out.bookcases_imported,
+			out.sections_imported,
+			out.shelves_imported,
+			out.records_imported,
+			out.owned_books_imported,
+			out.owned_books_deduped,
+		)
+		return out
+
+	async def _import_records(
+		self, inp: ImportFullLibraryInput, out: ImportFullLibraryOutput, now: datetime
+	) -> dict[UUID, UUID]:
 		record_id_map: dict[UUID, UUID] = {}
-		for record_item in input.bibliographic_records:
+		for record_item in inp.bibliographic_records:
 			existing = (
-				await self._record_repo.find_by_isbn(input.family_id, record_item.isbn)
+				await self._record_repo.find_by_isbn(inp.family_id, record_item.isbn)
 				if record_item.isbn
-				else await self._record_repo.find_by_title_author(input.family_id, record_item.title, record_item.main_author)
+				else await self._record_repo.find_by_title_author(
+					inp.family_id, record_item.title, record_item.main_author
+				)
 			)
 			if existing:
 				record_id_map[record_item.id] = existing.id
@@ -294,7 +326,7 @@ class ImportFullLibraryUseCase:
 			await self._record_repo.save(
 				BibliographicRecord(
 					id=new_id,
-					family_id=input.family_id,
+					family_id=inp.family_id,
 					title=record_item.title,
 					main_author=record_item.main_author,
 					other_authors=record_item.other_authors,
@@ -315,10 +347,14 @@ class ImportFullLibraryUseCase:
 			)
 			record_id_map[record_item.id] = new_id
 			out.records_imported += 1
+		return record_id_map
 
+	async def _import_rooms(
+		self, inp: ImportFullLibraryInput, out: ImportFullLibraryOutput, now: datetime
+	) -> dict[UUID, UUID]:
 		room_id_map: dict[UUID, UUID] = {}
-		for room_item in input.rooms:
-			existing_room = await self._room_repo.find_by_name(input.family_id, room_item.name)
+		for room_item in inp.rooms:
+			existing_room = await self._room_repo.find_by_name(inp.family_id, room_item.name)
 			if existing_room:
 				room_id_map[room_item.id] = existing_room.id
 				out.rooms_deduped += 1
@@ -327,7 +363,7 @@ class ImportFullLibraryUseCase:
 			await self._room_repo.save(
 				Room(
 					id=new_id,
-					family_id=input.family_id,
+					family_id=inp.family_id,
 					name=room_item.name,
 					description=room_item.description,
 					created_at=room_item.created_at or now,
@@ -336,9 +372,17 @@ class ImportFullLibraryUseCase:
 			)
 			room_id_map[room_item.id] = new_id
 			out.rooms_imported += 1
+		return room_id_map
 
+	async def _import_bookcases(
+		self,
+		inp: ImportFullLibraryInput,
+		out: ImportFullLibraryOutput,
+		now: datetime,
+		room_id_map: dict[UUID, UUID],
+	) -> dict[UUID, UUID]:
 		bookcase_id_map: dict[UUID, UUID] = {}
-		for bookcase_item in input.bookcases:
+		for bookcase_item in inp.bookcases:
 			resolved_room_id = room_id_map[bookcase_item.room_id]
 			existing_bookcase = await self._bookcase_repo.find_by_name(resolved_room_id, bookcase_item.name)
 			if existing_bookcase:
@@ -349,7 +393,7 @@ class ImportFullLibraryUseCase:
 			await self._bookcase_repo.save(
 				Bookcase(
 					id=new_id,
-					family_id=input.family_id,
+					family_id=inp.family_id,
 					room_id=resolved_room_id,
 					name=bookcase_item.name,
 					description=bookcase_item.description,
@@ -362,9 +406,17 @@ class ImportFullLibraryUseCase:
 			)
 			bookcase_id_map[bookcase_item.id] = new_id
 			out.bookcases_imported += 1
+		return bookcase_id_map
 
+	async def _import_sections(
+		self,
+		inp: ImportFullLibraryInput,
+		out: ImportFullLibraryOutput,
+		now: datetime,
+		bookcase_id_map: dict[UUID, UUID],
+	) -> dict[UUID, UUID]:
 		section_id_map: dict[UUID, UUID] = {}
-		for section_item in input.sections:
+		for section_item in inp.sections:
 			resolved_bookcase_id = bookcase_id_map[section_item.bookcase_id]
 			existing_section = await self._section_repo.find_by_index(resolved_bookcase_id, section_item.section_index)
 			if existing_section:
@@ -384,9 +436,17 @@ class ImportFullLibraryUseCase:
 			)
 			section_id_map[section_item.id] = new_id
 			out.sections_imported += 1
+		return section_id_map
 
+	async def _import_shelves(
+		self,
+		inp: ImportFullLibraryInput,
+		out: ImportFullLibraryOutput,
+		now: datetime,
+		section_id_map: dict[UUID, UUID],
+	) -> dict[UUID, UUID]:
 		shelf_id_map: dict[UUID, UUID] = {}
-		for shelf_item in input.shelves:
+		for shelf_item in inp.shelves:
 			resolved_section_id = section_id_map[shelf_item.section_id]
 			existing_shelf = await self._shelf_repo.find_by_index(resolved_section_id, shelf_item.shelf_index)
 			if existing_shelf:
@@ -406,9 +466,21 @@ class ImportFullLibraryUseCase:
 			)
 			shelf_id_map[shelf_item.id] = new_id
 			out.shelves_imported += 1
+		return shelf_id_map
 
+	async def _import_books(
+		self,
+		inp: ImportFullLibraryInput,
+		out: ImportFullLibraryOutput,
+		now: datetime,
+		record_id_map: dict[UUID, UUID],
+		room_id_map: dict[UUID, UUID],
+		bookcase_id_map: dict[UUID, UUID],
+		section_id_map: dict[UUID, UUID],
+		shelf_id_map: dict[UUID, UUID],
+	) -> dict[UUID, UUID]:
 		book_id_map: dict[UUID, UUID] = {}
-		for book_item in input.owned_books:
+		for book_item in inp.owned_books:
 			book_record_id = record_id_map[book_item.bibliographic_record_id]
 			book_room_id = room_id_map.get(book_item.room_id) if book_item.room_id else None
 			book_bookcase_id = bookcase_id_map.get(book_item.bookcase_id) if book_item.bookcase_id else None
@@ -416,7 +488,7 @@ class ImportFullLibraryUseCase:
 			book_shelf_id = shelf_id_map.get(book_item.shelf_id) if book_item.shelf_id else None
 
 			existing_book = await self._book_repo.find_duplicate(
-				family_id=input.family_id,
+				family_id=inp.family_id,
 				bibliographic_record_id=book_record_id,
 				room_id=book_room_id,
 				bookcase_id=book_bookcase_id,
@@ -430,10 +502,13 @@ class ImportFullLibraryUseCase:
 				continue
 
 			new_id = uuid4()
+			resolved_current_reader_id = (
+				inp.user_id_map.get(book_item.current_reader_id) if book_item.current_reader_id else None
+			)
 			await self._book_repo.save(
 				OwnedBook(
 					id=new_id,
-					family_id=input.family_id,
+					family_id=inp.family_id,
 					bibliographic_record_id=book_record_id,
 					room_id=book_room_id,
 					bookcase_id=book_bookcase_id,
@@ -446,8 +521,8 @@ class ImportFullLibraryUseCase:
 					purchase_price=book_item.purchase_price,
 					source=BookSource(book_item.source) if book_item.source else None,
 					reading_status=ReadingStatus(book_item.reading_status),
-					current_reader_id=input.user_id_map.get(book_item.current_reader_id) if book_item.current_reader_id else None,
-					owner_id=input.user_id_map.get(book_item.owner_id) if book_item.owner_id else None,
+					current_reader_id=resolved_current_reader_id,
+					owner_id=inp.user_id_map.get(book_item.owner_id) if book_item.owner_id else None,
 					tags=book_item.tags,
 					notes=book_item.notes,
 					is_intentional_duplicate=book_item.is_intentional_duplicate,
@@ -458,21 +533,28 @@ class ImportFullLibraryUseCase:
 			)
 			book_id_map[book_item.id] = new_id
 			out.owned_books_imported += 1
+		return book_id_map
 
-		for read_item in input.book_reads:
+	async def _import_reads(
+		self, inp: ImportFullLibraryInput, out: ImportFullLibraryOutput, book_id_map: dict[UUID, UUID]
+	) -> None:
+		for read_item in inp.book_reads:
 			if read_item.owned_book_id not in book_id_map:
 				continue
 			await self._book_read_repo.restore(
 				BookRead(
 					id=uuid4(),
 					owned_book_id=book_id_map[read_item.owned_book_id],
-					user_id=input.user_id_map.get(read_item.user_id, read_item.user_id),
+					user_id=inp.user_id_map.get(read_item.user_id, read_item.user_id),
 					read_at=read_item.read_at,
 				)
 			)
 			out.book_reads_imported += 1
 
-		for loan_item in input.book_loans:
+	async def _import_loans(
+		self, inp: ImportFullLibraryInput, out: ImportFullLibraryOutput, book_id_map: dict[UUID, UUID]
+	) -> None:
+		for loan_item in inp.book_loans:
 			if loan_item.owned_book_id not in book_id_map:
 				continue
 			await self._book_loan_repo.restore(
@@ -487,7 +569,14 @@ class ImportFullLibraryUseCase:
 			)
 			out.book_loans_imported += 1
 
-		for history_item in input.book_history:
+	async def _import_history(
+		self,
+		inp: ImportFullLibraryInput,
+		out: ImportFullLibraryOutput,
+		now: datetime,
+		book_id_map: dict[UUID, UUID],
+	) -> None:
+		for history_item in inp.book_history:
 			if history_item.owned_book_id not in book_id_map:
 				continue
 			await self._book_history_repo.restore(
@@ -495,7 +584,7 @@ class ImportFullLibraryUseCase:
 					id=uuid4(),
 					owned_book_id=book_id_map[history_item.owned_book_id],
 					event_type=BookEventType(history_item.event_type),
-					changed_by=input.user_id_map.get(history_item.changed_by, history_item.changed_by),
+					changed_by=inp.user_id_map.get(history_item.changed_by, history_item.changed_by),
 					old_data=history_item.old_data,
 					new_data=history_item.new_data,
 					created_at=history_item.created_at or now,
@@ -503,18 +592,21 @@ class ImportFullLibraryUseCase:
 			)
 			out.book_history_imported += 1
 
-		for wish_item in input.wishlist_items:
+	async def _import_wishlist(
+		self, inp: ImportFullLibraryInput, out: ImportFullLibraryOutput, record_id_map: dict[UUID, UUID]
+	) -> None:
+		for wish_item in inp.wishlist_items:
 			resolved_record_id = record_id_map.get(wish_item.bibliographic_record_id)
 			if not resolved_record_id:
 				continue
-			resolved_user_id = input.user_id_map.get(wish_item.user_id, wish_item.user_id)
+			resolved_user_id = inp.user_id_map.get(wish_item.user_id, wish_item.user_id)
 			already = await self._wishlist_repo.exists_for_user_and_record(resolved_user_id, resolved_record_id)
 			if already:
 				continue
 			await self._wishlist_repo.restore(
 				WishlistItem(
 					id=uuid4(),
-					family_id=input.family_id,
+					family_id=inp.family_id,
 					user_id=resolved_user_id,
 					bibliographic_record_id=resolved_record_id,
 					added_at=wish_item.added_at,
@@ -524,42 +616,30 @@ class ImportFullLibraryUseCase:
 			)
 			out.wishlist_items_imported += 1
 
-		logger.info(
-			"Library import completed for family %s: %d room(s), %d bookcase(s), %d section(s), "
-			"%d shelf/shelves, %d record(s), %d owned book(s) (%d deduped)",
-			input.family_id,
-			out.rooms_imported,
-			out.bookcases_imported,
-			out.sections_imported,
-			out.shelves_imported,
-			out.records_imported,
-			out.owned_books_imported,
-			out.owned_books_deduped,
-		)
-		return out
-
 	@staticmethod
-	def _validate_referential_integrity(input: ImportFullLibraryInput) -> None:
+	def _validate_referential_integrity(inp: ImportFullLibraryInput) -> None:
 		"""Rejects a structurally broken payload before writing anything."""
-		room_ids = {r.id for r in input.rooms}
-		bookcase_ids = {b.id for b in input.bookcases}
-		section_ids = {s.id for s in input.sections}
-		shelf_ids = {s.id for s in input.shelves}
-		record_ids = {r.id for r in input.bibliographic_records}
-		book_ids = {b.id for b in input.owned_books}
+		room_ids = {r.id for r in inp.rooms}
+		bookcase_ids = {b.id for b in inp.bookcases}
+		section_ids = {s.id for s in inp.sections}
+		shelf_ids = {s.id for s in inp.shelves}
+		record_ids = {r.id for r in inp.bibliographic_records}
+		book_ids = {b.id for b in inp.owned_books}
 
-		for bc in input.bookcases:
+		for bc in inp.bookcases:
 			if bc.room_id not in room_ids:
 				raise ValueError(f"Bookcase {bc.id} references room {bc.room_id}, not present in this export")
-		for s in input.sections:
+		for s in inp.sections:
 			if s.bookcase_id not in bookcase_ids:
 				raise ValueError(f"Section {s.id} references bookcase {s.bookcase_id}, not present in this export")
-		for sh in input.shelves:
+		for sh in inp.shelves:
 			if sh.section_id not in section_ids:
 				raise ValueError(f"Shelf {sh.id} references section {sh.section_id}, not present in this export")
-		for b in input.owned_books:
+		for b in inp.owned_books:
 			if b.bibliographic_record_id not in record_ids:
-				raise ValueError(f"Owned book {b.id} references record {b.bibliographic_record_id}, not present in this export")
+				raise ValueError(
+					f"Owned book {b.id} references record {b.bibliographic_record_id}, not present in this export"
+				)
 			for field_name, value, valid_ids in (
 				("room_id", b.room_id, room_ids),
 				("bookcase_id", b.bookcase_id, bookcase_ids),
@@ -567,13 +647,21 @@ class ImportFullLibraryUseCase:
 				("shelf_id", b.shelf_id, shelf_ids),
 			):
 				if value is not None and value not in valid_ids:
-					raise ValueError(f"Owned book {b.id} references {field_name} {value}, not present in this export")
-		for r in input.book_reads:
+					raise ValueError(
+						f"Owned book {b.id} references {field_name} {value}, not present in this export"
+					)
+		for r in inp.book_reads:
 			if r.owned_book_id not in book_ids:
-				raise ValueError(f"Book read {r.id} references owned book {r.owned_book_id}, not present in this export")
-		for loan in input.book_loans:
+				raise ValueError(
+					f"Book read {r.id} references owned book {r.owned_book_id}, not present in this export"
+				)
+		for loan in inp.book_loans:
 			if loan.owned_book_id not in book_ids:
-				raise ValueError(f"Book loan {loan.id} references owned book {loan.owned_book_id}, not present in this export")
-		for h in input.book_history:
+				raise ValueError(
+					f"Book loan {loan.id} references owned book {loan.owned_book_id}, not present in this export"
+				)
+		for h in inp.book_history:
 			if h.owned_book_id not in book_ids:
-				raise ValueError(f"Book history {h.id} references owned book {h.owned_book_id}, not present in this export")
+				raise ValueError(
+					f"Book history {h.id} references owned book {h.owned_book_id}, not present in this export"
+				)

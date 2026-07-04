@@ -1,20 +1,21 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class RoomCreate(BaseModel):
 	name: str = Field(..., description="Name of the room")
 	description: str | None = Field(None, description="Room description")
 
-	class Config:
-		json_schema_extra = {
+	model_config = ConfigDict(
+		json_schema_extra={
 			"example": {
 				"name": "Living Room",
 				"description": "Main bookcase in the living room"
 			}
 		}
+	)
 
 
 class RoomUpdate(BaseModel):
@@ -30,5 +31,4 @@ class RoomResponse(BaseModel):
 	created_at: datetime = Field(..., description="Creation timestamp")
 	updated_at: datetime = Field(..., description="Last update timestamp")
 
-	class Config:
-		from_attributes = True
+	model_config = ConfigDict(from_attributes=True)

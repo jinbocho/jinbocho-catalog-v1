@@ -31,7 +31,9 @@ async def list_bookcases(
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 	room_repo: RoomRepository = Depends(get_room_repository),
 ) -> list[Bookcase]:
-	return await ListBookcasesUseCase(bookcase_repo, room_repo).execute(UUID(payload["family_id"]), room_id, limit, offset)
+	return await ListBookcasesUseCase(bookcase_repo, room_repo).execute(
+		UUID(payload["family_id"]), room_id, limit, offset
+	)
 
 
 @router.post("/", response_model=BookcaseResponse, status_code=status.HTTP_201_CREATED, summary="Create bookcase")

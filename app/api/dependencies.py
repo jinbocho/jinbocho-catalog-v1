@@ -7,16 +7,16 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.application.use_cases.catalog.add_book import FuzzyDedupConfig
+from app.application.use_cases import FuzzyDedupConfig
 from app.config import settings
 from app.domain.repositories import (
     BibliographicRecordRepository,
-    BookRatingRepository,
-    BookSearchProvider,
     BookcaseRepository,
     BookHistoryRepository,
     BookLoanRepository,
+    BookRatingRepository,
     BookReadRepository,
+    BookSearchProvider,
     DuplicateJudge,
     IsbnLookupCacheRepository,
     IsbnMetadataFetcher,
@@ -31,6 +31,7 @@ from app.domain.repositories import (
 from app.infrastructure.database.session import get_db
 from app.infrastructure.external import (
     AiIncipitClient,
+    AiServiceConfig,
     AiShelfScanClient,
     AiTagsClient,
     BookSearchConfig,
@@ -94,8 +95,19 @@ def get_http_client(request: Request) -> httpx.AsyncClient:
     return request.app.state.http_client  # type: ignore[no-any-return]
 
 
-def get_duplicate_judge(http_client: httpx.AsyncClient = Depends(get_http_client)) -> DuplicateJudge:
-    return HttpDuplicateJudge(http_client)
+def get_ai_service_config() -> AiServiceConfig:
+    return AiServiceConfig(
+        enabled=settings.ai_module_enabled,
+        url=settings.ai_service_url,
+        internal_token=settings.ai_internal_service_token,
+    )
+
+
+def get_duplicate_judge(
+    http_client: httpx.AsyncClient = Depends(get_http_client),
+    config: AiServiceConfig = Depends(get_ai_service_config),
+) -> DuplicateJudge:
+    return HttpDuplicateJudge(http_client, config)
 
 
 def get_ai_incipit_client(http_client: httpx.AsyncClient = Depends(get_http_client)) -> AiIncipitClient:
@@ -123,6 +135,8 @@ def get_isbn_metadata_fetcher(http_client: httpx.AsyncClient = Depends(get_http_
             google_books_url=settings.google_books_url,
             google_books_api_key=settings.google_books_api_key,
             open_library_url=settings.open_library_url,
+            open_library_covers_url=settings.open_library_covers_url,
+            cover_size=settings.open_library_cover_size,
         ),
     )
 
@@ -134,6 +148,8 @@ def get_book_search_provider(http_client: httpx.AsyncClient = Depends(get_http_c
             google_books_url=settings.google_books_url,
             google_books_api_key=settings.google_books_api_key,
             open_library_url=settings.open_library_url,
+            open_library_covers_url=settings.open_library_covers_url,
+            cover_size=settings.open_library_cover_size,
         ),
     )
 

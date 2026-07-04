@@ -146,14 +146,19 @@ class AddBookUseCase:
 				owned_book_id=book.id,
 				event_type=BookEventType.CREATED,
 				changed_by=inp.changed_by,
-				new_data={"reading_status": book.reading_status, "shelf_id": str(book.shelf_id) if book.shelf_id else None},
+				new_data={
+					"reading_status": book.reading_status,
+					"shelf_id": str(book.shelf_id) if book.shelf_id else None,
+				},
 				created_at=utcnow(),
 			)
 		)
 		logger.info("Book %s added to family %s", book.id, inp.family_id)
 		return book
 
-	async def _check_for_duplicate(self, inp: AddBookInput, record: BibliographicRecord) -> DuplicateBookConflict | None:
+	async def _check_for_duplicate(
+		self, inp: AddBookInput, record: BibliographicRecord
+	) -> DuplicateBookConflict | None:
 		"""Two ways a new book can look like one the family already has — this
 		is a family-wide check, not scoped to an owner: two different members
 		can legitimately each own a copy, so this never blocks that, it just

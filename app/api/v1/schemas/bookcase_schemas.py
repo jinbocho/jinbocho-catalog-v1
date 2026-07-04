@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 def _validate_http_url(v: str | None) -> str | None:
@@ -50,5 +50,4 @@ class BookcaseResponse(BaseModel):
 	created_at: datetime = Field(..., description="Creation timestamp")
 	updated_at: datetime = Field(..., description="Last update timestamp")
 
-	class Config:
-		from_attributes = True
+	model_config = ConfigDict(from_attributes=True)

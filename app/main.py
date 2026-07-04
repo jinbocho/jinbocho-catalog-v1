@@ -18,13 +18,16 @@ from app.core import (
 	SECURITY_SCHEME,
 	configure_exception_handlers,
 	configure_logging,
+	configure_telemetry,
+	instrument_logging,
 	lifespan,
 )
 from app.infrastructure import models  # noqa: F401 - Register ORM models
-from app.infrastructure.database.session import get_db
+from app.infrastructure.database.session import engine, get_db
 from app.limiter import limiter
 
-configure_logging(debug=settings.debug)
+instrument_logging()
+configure_logging(debug=settings.debug, otel_enabled=settings.otel_enabled)
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +43,9 @@ def create_app() -> FastAPI:
 
 	# Register exception handlers
 	configure_exception_handlers(app)
+
+	# Observability (ADR-012) — no-op unless OTEL_ENABLED=true
+	configure_telemetry(app, service_name="catalog-service", engine=engine)
 
 	# Setup rate limiting
 	app.state.limiter = limiter

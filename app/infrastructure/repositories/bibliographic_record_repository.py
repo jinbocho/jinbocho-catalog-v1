@@ -51,7 +51,9 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 		model = result.scalar_one_or_none()
 		return self._to_entity(model) if model else None
 
-	async def find_by_title_author(self, family_id: UUID, title: str, main_author: str | None) -> BibliographicRecord | None:
+	async def find_by_title_author(
+		self, family_id: UUID, title: str, main_author: str | None
+	) -> BibliographicRecord | None:
 		author_clause = (
 			BibliographicRecordModel.main_author.is_(None)
 			if main_author is None
@@ -90,7 +92,9 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 				),
 			)
 			query = query.where(ts_vector.op("@@")(func.plainto_tsquery("simple", q)))
-		result = await self._session.execute(query.order_by(BibliographicRecordModel.created_at.desc()).limit(limit).offset(offset))
+		result = await self._session.execute(
+			query.order_by(BibliographicRecordModel.created_at.desc()).limit(limit).offset(offset)
+		)
 		return [self._to_entity(model) for model in result.scalars().all()]
 
 	async def count_genres(self, family_id: UUID) -> list[tuple[str, int]]:

@@ -24,8 +24,10 @@ class GetOwnedBookUseCase:
 
 	async def execute(self, book_id: UUID, family_id: UUID, viewer_id: UUID) -> GetOwnedBookOutput:
 		book = await self._book_repo.find_by_id(book_id)
-		if not book or book.family_id != family_id:
+		if not book:
 			raise LookupError("Book not found")
+		if book.family_id != family_id:
+			raise PermissionError("Book does not belong to this family")
 		record = await self._record_repo.find_by_id(book.bibliographic_record_id)
 		if record is None:
 			# bibliographic_record_id is FK RESTRICT — a missing record here means

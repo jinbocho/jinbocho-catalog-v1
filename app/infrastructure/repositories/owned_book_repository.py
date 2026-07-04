@@ -68,7 +68,9 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 			query = query.where(OwnedBookModel.reading_status == reading_status)
 		if tag is not None:
 			query = query.where(OwnedBookModel.tags.contains([tag]))
-		result = await self._session.execute(query.order_by(OwnedBookModel.created_at.desc()).limit(limit).offset(offset))
+		result = await self._session.execute(
+			query.order_by(OwnedBookModel.created_at.desc()).limit(limit).offset(offset)
+		)
 		return [self._to_entity(model) for model in result.scalars().all()]
 
 	async def find_all_by_shelf_ids(self, shelf_ids: list[UUID]) -> list[OwnedBook]:

@@ -27,7 +27,13 @@ class CreateSectionUseCase:
 	async def execute(self, inp: CreateSectionInput) -> Section:
 		await _get_bookcase_for_family(self._bookcase_repo, inp.bookcase_id, inp.family_id)
 		saved = await self._section_repo.save(
-			Section(bookcase_id=inp.bookcase_id, section_index=inp.section_index, label=inp.label, created_at=utcnow(), updated_at=utcnow())
+			Section(
+				bookcase_id=inp.bookcase_id,
+				section_index=inp.section_index,
+				label=inp.label,
+				created_at=utcnow(),
+				updated_at=utcnow(),
+			)
 		)
 		logger.info("Section %s created in family %s", saved.id, inp.family_id)
 		return saved

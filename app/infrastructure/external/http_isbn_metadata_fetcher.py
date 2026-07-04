@@ -15,6 +15,8 @@ class IsbnLookupConfig:
     google_books_url: str = "https://www.googleapis.com/books/v1"
     google_books_api_key: str = ""
     open_library_url: str = "https://openlibrary.org"
+    open_library_covers_url: str = "https://covers.openlibrary.org"
+    cover_size: str = "M"  # S, M, L
 
 
 class HttpIsbnMetadataFetcher(IsbnMetadataFetcher):
@@ -124,7 +126,11 @@ class HttpIsbnMetadataFetcher(IsbnMetadataFetcher):
         authors = doc.get("author_name") or []
         publishers = doc.get("publisher") or []
         cover_i = doc.get("cover_i")
-        cover_url = f"https://covers.openlibrary.org/b/id/{cover_i}-M.jpg" if cover_i else None
+        cover_url = (
+            f"{self._config.open_library_covers_url}/b/id/{cover_i}-{self._config.cover_size}.jpg"
+            if cover_i
+            else None
+        )
         languages = doc.get("language") or []
         return {
             "title": doc.get("title"),

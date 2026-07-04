@@ -103,7 +103,9 @@ async def get_record(
 	return await GetBibliographicRecordUseCase(record_repo).execute(record_id, UUID(payload["family_id"]))
 
 
-@router.get("/{record_id}/incipit", response_model=IncipitResponse, summary="Get or lazily derive the book presentation")
+@router.get(
+	"/{record_id}/incipit", response_model=IncipitResponse, summary="Get or lazily derive the book presentation"
+)
 async def get_incipit(
 	record_id: UUID,
 	payload: dict[str, Any] = Depends(get_current_user_payload),

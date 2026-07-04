@@ -8,7 +8,6 @@ from app.domain.repositories import ShelfRepository
 from app.infrastructure.models import BookcaseModel, SectionModel, ShelfModel
 
 
-
 class SQLAlchemyShelfRepository(ShelfRepository):
 	def __init__(self, session: AsyncSession) -> None:
 		self._session = session
@@ -30,7 +29,11 @@ class SQLAlchemyShelfRepository(ShelfRepository):
 
 	async def find_all_by_section(self, section_id: UUID, limit: int = 50, offset: int = 0) -> list[Shelf]:
 		result = await self._session.execute(
-			select(ShelfModel).where(ShelfModel.section_id == section_id).order_by(ShelfModel.shelf_index).limit(limit).offset(offset)
+			select(ShelfModel)
+			.where(ShelfModel.section_id == section_id)
+			.order_by(ShelfModel.shelf_index)
+			.limit(limit)
+			.offset(offset)
 		)
 		return [self._to_entity(model) for model in result.scalars().all()]
 

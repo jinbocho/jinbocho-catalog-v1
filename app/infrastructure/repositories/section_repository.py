@@ -44,15 +44,23 @@ class SQLAlchemySectionRepository(SectionRepository):
 		limit: int = 50,
 		offset: int = 0,
 	) -> list[Section]:
-		query = select(SectionModel).join(BookcaseModel, SectionModel.bookcase_id == BookcaseModel.id).where(BookcaseModel.family_id == family_id)
+		query = (
+			select(SectionModel)
+			.join(BookcaseModel, SectionModel.bookcase_id == BookcaseModel.id)
+			.where(BookcaseModel.family_id == family_id)
+		)
 		if bookcase_id is not None:
 			query = query.where(SectionModel.bookcase_id == bookcase_id)
-		result = await self._session.execute(query.order_by(SectionModel.section_index).limit(limit).offset(offset))
+		result = await self._session.execute(
+			query.order_by(SectionModel.section_index).limit(limit).offset(offset)
+		)
 		return [self._to_entity(model) for model in result.scalars().all()]
 
 	async def find_by_index(self, bookcase_id: UUID, section_index: int) -> Section | None:
 		result = await self._session.execute(
-			select(SectionModel).where(SectionModel.bookcase_id == bookcase_id, SectionModel.section_index == section_index)
+			select(SectionModel).where(
+				SectionModel.bookcase_id == bookcase_id, SectionModel.section_index == section_index
+			)
 		)
 		model = result.scalars().first()
 		return self._to_entity(model) if model else None

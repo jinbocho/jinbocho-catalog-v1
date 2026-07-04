@@ -11,7 +11,11 @@ class ListSectionsUseCase:
 		self._section_repo = section_repo
 		self._bookcase_repo = bookcase_repo
 
-	async def execute(self, family_id: UUID, bookcase_id: UUID | None = None, limit: int = 50, offset: int = 0) -> list[Section]:
+	async def execute(
+		self, family_id: UUID, bookcase_id: UUID | None = None, limit: int = 50, offset: int = 0
+	) -> list[Section]:
 		if bookcase_id is not None:
 			await _get_bookcase_for_family(self._bookcase_repo, bookcase_id, family_id)
-		return await self._section_repo.find_all_by_family(family_id, bookcase_id=bookcase_id, limit=limit, offset=offset)
+		return await self._section_repo.find_all_by_family(
+			family_id, bookcase_id=bookcase_id, limit=limit, offset=offset
+		)

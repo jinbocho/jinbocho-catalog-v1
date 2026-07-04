@@ -68,7 +68,9 @@ class MockBookcaseRepository(BookcaseRepository):
 	async def find_by_id(self, bookcase_id: UUID) -> Bookcase | None:
 		return self.bookcases.get(bookcase_id)
 
-	async def find_all_by_family(self, family_id: UUID, room_id: UUID | None = None, limit: int = 50, offset: int = 0) -> list[Bookcase]:
+	async def find_all_by_family(
+		self, family_id: UUID, room_id: UUID | None = None, limit: int = 50, offset: int = 0
+	) -> list[Bookcase]:
 		items = [b for b in self.bookcases.values() if b.family_id == family_id]
 		if room_id:
 			items = [b for b in items if b.room_id == room_id]
@@ -101,13 +103,22 @@ class MockBibliographicRecordRepository(BibliographicRecordRepository):
 				return r
 		return None
 
-	async def find_by_title_author(self, family_id: UUID, title: str, main_author: str | None) -> BibliographicRecord | None:
+	async def find_by_title_author(
+		self, family_id: UUID, title: str, main_author: str | None
+	) -> BibliographicRecord | None:
 		for r in self.records.values():
 			if r.family_id == family_id and r.title == title and r.main_author == main_author:
 				return r
 		return None
 
-	async def find_all_by_family(self, family_id: UUID, q: str | None = None, genre: str | None = None, limit: int = 50, offset: int = 0) -> list[BibliographicRecord]:
+	async def find_all_by_family(
+		self,
+		family_id: UUID,
+		q: str | None = None,
+		genre: str | None = None,
+		limit: int = 50,
+		offset: int = 0,
+	) -> list[BibliographicRecord]:
 		items = [r for r in self.records.values() if r.family_id == family_id]
 		if genre:
 			items = [r for r in items if r.genre == genre]
@@ -201,7 +212,9 @@ class MockSectionRepository(SectionRepository):
 	async def find_by_id(self, section_id: UUID) -> Section | None:
 		return self.sections.get(section_id)
 
-	async def find_all_by_family(self, family_id: UUID, bookcase_id: UUID | None = None, limit: int = 50, offset: int = 0) -> list[Section]:
+	async def find_all_by_family(
+		self, family_id: UUID, bookcase_id: UUID | None = None, limit: int = 50, offset: int = 0
+	) -> list[Section]:
 		items = [s for s in self.sections.values() if s.family_id == family_id]
 		if bookcase_id:
 			items = [s for s in items if s.bookcase_id == bookcase_id]
@@ -213,7 +226,12 @@ class MockSectionRepository(SectionRepository):
 
 	async def find_by_index(self, bookcase_id: UUID, section_index: int) -> Section | None:
 		return next(
-			(s for s in self.sections.values() if s.bookcase_id == bookcase_id and s.section_index == section_index), None
+			(
+				s
+				for s in self.sections.values()
+				if s.bookcase_id == bookcase_id and s.section_index == section_index
+			),
+			None,
 		)
 
 	async def delete(self, section_id: UUID) -> None:
@@ -231,7 +249,9 @@ class MockShelfRepository(ShelfRepository):
 	async def find_by_id(self, shelf_id: UUID) -> Shelf | None:
 		return self.shelves.get(shelf_id)
 
-	async def find_all_by_family(self, family_id: UUID, section_id: UUID | None = None, limit: int = 50, offset: int = 0) -> list[Shelf]:
+	async def find_all_by_family(
+		self, family_id: UUID, section_id: UUID | None = None, limit: int = 50, offset: int = 0
+	) -> list[Shelf]:
 		items = [s for s in self.shelves.values() if s.family_id == family_id]
 		if section_id:
 			items = [s for s in items if s.section_id == section_id]
@@ -331,8 +351,10 @@ class MockBookReadRepository(BookReadRepository):
 	async def restore(self, book_read: BookRead) -> BookRead:
 		existing = next(
 			(
-				r for r in self.reads.values()
-				if r.id == book_read.id or (r.owned_book_id == book_read.owned_book_id and r.user_id == book_read.user_id)
+				r
+				for r in self.reads.values()
+				if r.id == book_read.id
+				or (r.owned_book_id == book_read.owned_book_id and r.user_id == book_read.user_id)
 			),
 			None,
 		)

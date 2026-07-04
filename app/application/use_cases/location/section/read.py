@@ -6,7 +6,9 @@ from app.domain.repositories import BookcaseRepository, SectionRepository
 from ..bookcase.read import _get_bookcase_for_family
 
 
-async def _get_section_for_family(section_repo: SectionRepository, bookcase_repo: BookcaseRepository, section_id: UUID, family_id: UUID) -> Section:
+async def _get_section_for_family(
+	section_repo: SectionRepository, bookcase_repo: BookcaseRepository, section_id: UUID, family_id: UUID
+) -> Section:
 	section = await section_repo.find_by_id(section_id)
 	if section is None:
 		raise LookupError("Section not found")

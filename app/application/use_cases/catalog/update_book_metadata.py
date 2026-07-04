@@ -46,8 +46,10 @@ class UpdateBookMetadataUseCase:
 
 	async def execute(self, inp: UpdateBookMetadataInput) -> OwnedBook:
 		book = await self._book_repo.find_by_id(inp.book_id)
-		if not book or book.family_id != inp.family_id:
+		if not book:
 			raise LookupError("Book not found")
+		if book.family_id != inp.family_id:
+			raise PermissionError("Book does not belong to this family")
 		if inp.condition is not None:
 			book.condition = inp.condition
 		if inp.purchase_date is not None:

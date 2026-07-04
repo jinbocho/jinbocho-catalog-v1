@@ -22,7 +22,13 @@ class CreateRoomUseCase:
 
 	async def execute(self, inp: CreateRoomInput) -> Room:
 		saved = await self._room_repo.save(
-			Room(family_id=inp.family_id, name=inp.name, description=inp.description, created_at=utcnow(), updated_at=utcnow())
+			Room(
+				family_id=inp.family_id,
+				name=inp.name,
+				description=inp.description,
+				created_at=utcnow(),
+				updated_at=utcnow(),
+			)
 		)
 		logger.info("Room %s created in family %s", saved.id, inp.family_id)
 		return saved

@@ -9,14 +9,10 @@ from app.api.dependencies import (
 	get_book_history_repository,
 	get_book_loan_repository,
 	get_book_read_repository,
-	get_bookcase_repository,
 	get_current_user_payload,
 	get_duplicate_judge,
 	get_fuzzy_dedup_config,
 	get_owned_book_repository,
-	get_room_repository,
-	get_section_repository,
-	get_shelf_repository,
 	require_role,
 )
 from app.api.v1.schemas.book_schemas import (
@@ -34,11 +30,11 @@ from app.api.v1.schemas.book_schemas import (
 from app.application.use_cases import (
 	AddBookInput,
 	AddBookUseCase,
-	FuzzyDedupConfig,
 	BulkDeleteBooksInput,
 	BulkDeleteBooksUseCase,
 	DeleteBookInput,
 	DeleteBookUseCase,
+	FuzzyDedupConfig,
 	GetBookHistoryUseCase,
 	GetOwnedBookUseCase,
 	LendBookUseCase,
@@ -61,15 +57,11 @@ from app.application.use_cases import (
 from app.domain.entities import BookHistory, BookLoan, BookRead, OwnedBook, ReadingStatus
 from app.domain.repositories import (
 	BibliographicRecordRepository,
-	BookcaseRepository,
 	BookHistoryRepository,
 	BookLoanRepository,
 	BookReadRepository,
 	DuplicateJudge,
 	OwnedBookRepository,
-	RoomRepository,
-	SectionRepository,
-	ShelfRepository,
 )
 from app.infrastructure.database.session import get_db
 
@@ -140,10 +132,6 @@ async def add_book(
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
 	read_repo: BookReadRepository = Depends(get_book_read_repository),
-	room_repo: RoomRepository = Depends(get_room_repository),
-	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
-	section_repo: SectionRepository = Depends(get_section_repository),
-	shelf_repo: ShelfRepository = Depends(get_shelf_repository),
 	dedup_judge: DuplicateJudge = Depends(get_duplicate_judge),
 	fuzzy_config: FuzzyDedupConfig = Depends(get_fuzzy_dedup_config),
 ) -> OwnedBook:
@@ -318,7 +306,9 @@ async def mark_book_read(
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	read_repo: BookReadRepository = Depends(get_book_read_repository),
 ) -> BookRead:
-	result = await MarkBookReadUseCase(book_repo, read_repo).execute(book_id, UUID(payload["family_id"]), request.user_id, request.read_at)
+	result = await MarkBookReadUseCase(book_repo, read_repo).execute(
+		book_id, UUID(payload["family_id"]), request.user_id, request.read_at
+	)
 	await db.commit()
 	return result
 

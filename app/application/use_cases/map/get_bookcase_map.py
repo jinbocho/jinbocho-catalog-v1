@@ -51,7 +51,10 @@ class GetBookcaseMapUseCase:
 		if bookcase.family_id != family_id:
 			raise PermissionError("Access denied")
 
-		sections = await self._section_repo.find_all_by_bookcase(bookcase_id, limit=200, offset=0)
+		# 2000 is a ceiling, not a real-world expectation: no physical bookcase has
+		# anywhere near that many sections. If this is ever hit, the bug is in the
+		# data, not in this query — silently truncating the map would be worse.
+		sections = await self._section_repo.find_all_by_bookcase(bookcase_id, limit=2000, offset=0)
 		section_ids = [section.id for section in sections]
 		all_shelves = await self._shelf_repo.find_all_by_section_ids(section_ids)
 		shelves_by_section: dict[UUID, list[Shelf]] = {}

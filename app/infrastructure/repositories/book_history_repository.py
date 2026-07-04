@@ -93,5 +93,7 @@ class SQLAlchemyBookHistoryRepository(BookHistoryRepository):
 	async def delete_by_owned_book_ids(self, owned_book_ids: list[UUID]) -> None:
 		if not owned_book_ids:
 			return
-		await self._session.execute(sa_delete(BookHistoryModel).where(BookHistoryModel.owned_book_id.in_(owned_book_ids)))
+		await self._session.execute(
+			sa_delete(BookHistoryModel).where(BookHistoryModel.owned_book_id.in_(owned_book_ids))
+		)
 		await self._session.flush()

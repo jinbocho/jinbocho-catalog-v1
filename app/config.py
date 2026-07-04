@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     debug: bool = False
     database_url: str
     open_library_url: str = "https://openlibrary.org"
+    open_library_covers_url: str = "https://covers.openlibrary.org"
+    open_library_cover_size: str = "M"  # S, M, L
     google_books_url: str = "https://www.googleapis.com/books/v1"
     google_books_api_key: str = ""  # optional — without key, quota is shared/limited
     isbn_cache_ttl_days: int = 30
@@ -31,6 +33,11 @@ class Settings(BaseSettings):
     # routes; catalog-service checks it itself before its own server-to-server
     # call to ai-service's /dedup, since that call never passes through the gateway.
     jinbocho_features: str = "catalog,auth"
+
+    # Observability (ADR-012) — off by default so a service run without the
+    # optional Alloy collector container behaves exactly as before.
+    otel_enabled: bool = False
+    otel_exporter_otlp_endpoint: str = "http://alloy:4318"
 
     model_config = SettingsConfigDict(env_file=".env")
 

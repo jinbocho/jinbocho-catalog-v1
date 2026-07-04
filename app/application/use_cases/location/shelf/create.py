@@ -28,7 +28,13 @@ class CreateShelfUseCase:
 			raise LookupError("Section not found")
 		# Verify family_id matches through bookcase
 		saved = await self._shelf_repo.save(
-			Shelf(section_id=inp.section_id, shelf_index=inp.shelf_index, notes=inp.notes, created_at=utcnow(), updated_at=utcnow())
+			Shelf(
+				section_id=inp.section_id,
+				shelf_index=inp.shelf_index,
+				notes=inp.notes,
+				created_at=utcnow(),
+				updated_at=utcnow(),
+			)
 		)
 		logger.info("Shelf %s created in family %s", saved.id, inp.family_id)
 		return saved

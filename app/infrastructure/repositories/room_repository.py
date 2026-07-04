@@ -30,7 +30,11 @@ class SQLAlchemyRoomRepository(RoomRepository):
 
 	async def find_all_by_family(self, family_id: UUID, limit: int = 50, offset: int = 0) -> list[Room]:
 		result = await self._session.execute(
-			select(RoomModel).where(RoomModel.family_id == family_id).order_by(RoomModel.name).limit(limit).offset(offset)
+			select(RoomModel)
+			.where(RoomModel.family_id == family_id)
+			.order_by(RoomModel.name)
+			.limit(limit)
+			.offset(offset)
 		)
 		return [self._to_entity(model) for model in result.scalars().all()]
 

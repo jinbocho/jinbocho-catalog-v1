@@ -21,13 +21,17 @@ class UpdateShelfInput:
 
 
 class UpdateShelfUseCase:
-	def __init__(self, shelf_repo: ShelfRepository, section_repo: SectionRepository, bookcase_repo: BookcaseRepository) -> None:
+	def __init__(
+		self, shelf_repo: ShelfRepository, section_repo: SectionRepository, bookcase_repo: BookcaseRepository
+	) -> None:
 		self._shelf_repo = shelf_repo
 		self._section_repo = section_repo
 		self._bookcase_repo = bookcase_repo
 
 	async def execute(self, inp: UpdateShelfInput) -> Shelf:
-		shelf = await _get_shelf_for_family(self._shelf_repo, self._section_repo, self._bookcase_repo, inp.shelf_id, inp.family_id)
+		shelf = await _get_shelf_for_family(
+			self._shelf_repo, self._section_repo, self._bookcase_repo, inp.shelf_id, inp.family_id
+		)
 		if inp.section_id is not None:
 			shelf.section_id = inp.section_id
 		if inp.shelf_index is not None:

@@ -1,4 +1,4 @@
-from .ai_dedup_client import HttpDuplicateJudge
+from .ai_dedup_client import AiServiceConfig, HttpDuplicateJudge
 from .ai_incipit_client import AiIncipitClient
 from .ai_shelf_scan_client import AiShelfScanClient
 from .ai_tags_client import AiTagsClient
@@ -9,6 +9,7 @@ from .open_library_description_fetcher import OpenLibraryDescriptionFetcher
 
 __all__ = [
     "HttpLoanReminderNotifier",
+    "AiServiceConfig",
     "HttpDuplicateJudge",
     "AiIncipitClient",
     "AiShelfScanClient",

@@ -42,6 +42,8 @@ class SQLAlchemyIsbnLookupCacheRepository(IsbnLookupCacheRepository):
 			},
 		)
 		await self._session.execute(stmt)
-		result = await self._session.execute(select(IsbnLookupCacheModel).where(IsbnLookupCacheModel.isbn == entity.isbn))
+		result = await self._session.execute(
+			select(IsbnLookupCacheModel).where(IsbnLookupCacheModel.isbn == entity.isbn)
+		)
 		model = result.scalar_one()
 		return self._to_entity(model)

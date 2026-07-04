@@ -25,17 +25,27 @@ class OwnedBookModel(Base):
 	bibliographic_record_id: Mapped[uuid.UUID] = mapped_column(
 		UUID(as_uuid=True), ForeignKey("bibliographic_records.id", ondelete="RESTRICT"), nullable=False, index=True
 	)
-	room_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("rooms.id", ondelete="SET NULL"))
-	bookcase_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("bookcases.id", ondelete="SET NULL"))
-	section_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("sections.id", ondelete="SET NULL"))
-	shelf_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("shelves.id", ondelete="SET NULL"), index=True)
+	room_id: Mapped[uuid.UUID | None] = mapped_column(
+		UUID(as_uuid=True), ForeignKey("rooms.id", ondelete="SET NULL")
+	)
+	bookcase_id: Mapped[uuid.UUID | None] = mapped_column(
+		UUID(as_uuid=True), ForeignKey("bookcases.id", ondelete="SET NULL")
+	)
+	section_id: Mapped[uuid.UUID | None] = mapped_column(
+		UUID(as_uuid=True), ForeignKey("sections.id", ondelete="SET NULL")
+	)
+	shelf_id: Mapped[uuid.UUID | None] = mapped_column(
+		UUID(as_uuid=True), ForeignKey("shelves.id", ondelete="SET NULL"), index=True
+	)
 	shelf_position: Mapped[int | None] = mapped_column(Integer)
 	position_description: Mapped[str | None] = mapped_column(Text)
 	condition: Mapped[str | None] = mapped_column(book_condition_enum)
 	purchase_date: Mapped[date | None] = mapped_column(Date)
 	purchase_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
 	source: Mapped[str | None] = mapped_column(book_source_enum)
-	reading_status: Mapped[str] = mapped_column(reading_status_enum, nullable=False, server_default="to_read", index=True)
+	reading_status: Mapped[str] = mapped_column(
+		reading_status_enum, nullable=False, server_default="to_read", index=True
+	)
 	# No ForeignKey: users live in the auth service's database.
 	current_reader_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), index=True)
 	# No ForeignKey: users live in the auth service's database.

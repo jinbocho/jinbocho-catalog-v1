@@ -12,7 +12,9 @@ class BibliographicRecordRepository(ABC):
 	async def find_by_isbn(self, family_id: UUID, isbn: str) -> BibliographicRecord | None: ...
 
 	@abstractmethod
-	async def find_by_title_author(self, family_id: UUID, title: str, main_author: str | None) -> BibliographicRecord | None:
+	async def find_by_title_author(
+		self, family_id: UUID, title: str, main_author: str | None
+	) -> BibliographicRecord | None:
 		"""Fallback dedupe key for library import when a record has no ISBN
 		(find_by_isbn can't help there)."""
 		...

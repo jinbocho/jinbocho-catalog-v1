@@ -242,7 +242,10 @@ async def test_add_book_detects_isbn_duplicate(
 	flagged rather than silently created."""
 	use_case = AddBookUseCase(record_repo, book_repo, history_repo, book_read_repo)
 	await use_case.execute(
-		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id)
+		AddBookInput(
+			family_id=test_family_id, changed_by=test_user_id, title="Dune",
+			isbn="9780441013593", owner_id=test_user_id,
+		)
 	)
 
 	with pytest.raises(DuplicateBookError) as exc_info:
@@ -263,12 +266,18 @@ async def test_add_book_detects_isbn_duplicate_even_with_a_different_owner(
 	other_owner_id = uuid4()
 	use_case = AddBookUseCase(record_repo, book_repo, history_repo, book_read_repo)
 	await use_case.execute(
-		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id)
+		AddBookInput(
+			family_id=test_family_id, changed_by=test_user_id, title="Dune",
+			isbn="9780441013593", owner_id=test_user_id,
+		)
 	)
 
 	with pytest.raises(DuplicateBookError):
 		await use_case.execute(
-			AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=other_owner_id)
+			AddBookInput(
+				family_id=test_family_id, changed_by=test_user_id, title="Dune",
+				isbn="9780441013593", owner_id=other_owner_id,
+			)
 		)
 
 
@@ -282,8 +291,9 @@ async def test_add_book_duplicate_conflict_reports_existing_owner_and_location(
 	room_id, bookcase_id, section_id, shelf_id = uuid4(), uuid4(), uuid4(), uuid4()
 	first = await use_case.execute(
 		AddBookInput(
-			family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id,
-			room_id=room_id, bookcase_id=bookcase_id, section_id=section_id, shelf_id=shelf_id,
+			family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593",
+			owner_id=test_user_id, room_id=room_id, bookcase_id=bookcase_id,
+			section_id=section_id, shelf_id=shelf_id,
 		)
 	)
 
@@ -331,13 +341,16 @@ async def test_add_book_intentional_duplicate_bypasses_the_check(
 	skips the check and is persisted on the new book."""
 	use_case = AddBookUseCase(record_repo, book_repo, history_repo, book_read_repo)
 	await use_case.execute(
-		AddBookInput(family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id)
+		AddBookInput(
+			family_id=test_family_id, changed_by=test_user_id, title="Dune",
+			isbn="9780441013593", owner_id=test_user_id,
+		)
 	)
 
 	book = await use_case.execute(
 		AddBookInput(
-			family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593", owner_id=test_user_id,
-			is_intentional_duplicate=True,
+			family_id=test_family_id, changed_by=test_user_id, title="Dune", isbn="9780441013593",
+			owner_id=test_user_id, is_intentional_duplicate=True,
 		)
 	)
 

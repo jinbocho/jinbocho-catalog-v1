@@ -21,8 +21,10 @@ class LendBookUseCase:
         due_date: datetime | None = None,
     ) -> BookLoan:
         book = await self._book_repo.find_by_id(book_id)
-        if not book or book.family_id != family_id:
+        if not book:
             raise LookupError("Book not found")
+        if book.family_id != family_id:
+            raise PermissionError("Book does not belong to this family")
         active = await self._loan_repo.get_active_for_book(book_id)
         if active:
             raise ValueError("Book is already on loan")
@@ -39,8 +41,10 @@ class ReturnBookUseCase:
 
     async def execute(self, book_id: UUID, family_id: UUID) -> BookLoan:
         book = await self._book_repo.find_by_id(book_id)
-        if not book or book.family_id != family_id:
+        if not book:
             raise LookupError("Book not found")
+        if book.family_id != family_id:
+            raise PermissionError("Book does not belong to this family")
         active = await self._loan_repo.get_active_for_book(book_id)
         if not active:
             raise LookupError("No active loan for this book")
@@ -64,8 +68,10 @@ class ListBookLoansUseCase:
 
     async def execute(self, book_id: UUID, family_id: UUID) -> list[BookLoan]:
         book = await self._book_repo.find_by_id(book_id)
-        if not book or book.family_id != family_id:
+        if not book:
             raise LookupError("Book not found")
+        if book.family_id != family_id:
+            raise PermissionError("Book does not belong to this family")
         return await self._loan_repo.list_by_book(book_id)
 
 

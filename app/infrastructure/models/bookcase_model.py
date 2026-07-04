@@ -34,4 +34,6 @@ class BookcaseModel(Base):
 	)
 
 	room: Mapped[RoomModel] = relationship(back_populates="bookcases")
-	sections: Mapped[list[SectionModel]] = relationship(back_populates="bookcase", order_by="SectionModel.section_index")
+	sections: Mapped[list[SectionModel]] = relationship(
+		back_populates="bookcase", order_by="SectionModel.section_index"
+	)

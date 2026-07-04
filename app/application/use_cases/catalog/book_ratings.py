@@ -35,8 +35,10 @@ class CreateBookRatingUseCase:
 
     async def execute(self, inp: CreateBookRatingInput) -> BookRating:
         book = await self._book_repo.find_by_id(inp.book_id)
-        if not book or book.family_id != inp.family_id:
+        if not book:
             raise LookupError("Book not found")
+        if book.family_id != inp.family_id:
+            raise PermissionError("Book does not belong to this family")
         existing = await self._rating_repo.find_by_book_and_user(inp.book_id, inp.user_id)
         if existing is not None:
             raise ValueError("You have already rated this book")
@@ -62,8 +64,10 @@ class UpdateBookRatingUseCase:
         if rating is None:
             raise LookupError("Rating not found")
         book = await self._book_repo.find_by_id(inp.book_id)
-        if not book or book.family_id != inp.family_id:
+        if not book:
             raise LookupError("Book not found")
+        if book.family_id != inp.family_id:
+            raise PermissionError("Book does not belong to this family")
         if rating.user_id != inp.user_id:
             raise PermissionError("Cannot modify another user's rating")
         if inp.rating is not None:
@@ -88,8 +92,10 @@ class DeleteBookRatingUseCase:
         if rating is None:
             raise LookupError("Rating not found")
         book = await self._book_repo.find_by_id(rating.owned_book_id)
-        if not book or book.family_id != family_id:
+        if not book:
             raise LookupError("Book not found")
+        if book.family_id != family_id:
+            raise PermissionError("Book does not belong to this family")
         if rating.user_id != user_id:
             raise PermissionError("Cannot delete another user's rating")
         await self._rating_repo.delete(rating)
@@ -103,8 +109,10 @@ class ListBookRatingsUseCase:
 
     async def execute(self, book_id: UUID, family_id: UUID) -> list[BookRating]:
         book = await self._book_repo.find_by_id(book_id)
-        if not book or book.family_id != family_id:
+        if not book:
             raise LookupError("Book not found")
+        if book.family_id != family_id:
+            raise PermissionError("Book does not belong to this family")
         return await self._rating_repo.list_by_book(book_id)
 
 
@@ -115,8 +123,10 @@ class GetBookRatingStatsUseCase:
 
     async def execute(self, book_id: UUID, family_id: UUID) -> FamilyRatingStats:
         book = await self._book_repo.find_by_id(book_id)
-        if not book or book.family_id != family_id:
+        if not book:
             raise LookupError("Book not found")
+        if book.family_id != family_id:
+            raise PermissionError("Book does not belong to this family")
         ratings = await self._rating_repo.list_by_book(book_id)
         return FamilyRatingStats.from_ratings(book_id, ratings)
 

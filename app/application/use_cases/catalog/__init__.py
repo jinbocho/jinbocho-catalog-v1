@@ -1,5 +1,6 @@
-from .add_book import AddBookInput, AddBookUseCase, FuzzyDedupConfig
 from app.domain.errors import DuplicateBookConflict, DuplicateBookError
+
+from .add_book import AddBookInput, AddBookUseCase, FuzzyDedupConfig
 from .book_loans import (
 	LendBookUseCase,
 	ListActiveFamilyLoansUseCase,
@@ -22,10 +23,9 @@ from .bulk_delete_books import BulkDeleteBooksInput, BulkDeleteBooksUseCase
 from .create_bibliographic_record import CreateBibliographicRecordInput, CreateBibliographicRecordUseCase
 from .delete_bibliographic_record import DeleteBibliographicRecordUseCase
 from .delete_book import DeleteBookInput, DeleteBookUseCase
+from .generate_ai_incipit import GenerateAiIncipitOutput, GenerateAiIncipitUseCase
 from .get_bibliographic_record import GetBibliographicRecordUseCase
 from .get_book_history import GetBookHistoryUseCase
-from .generate_ai_incipit import GenerateAiIncipitOutput, GenerateAiIncipitUseCase
-from .suggest_tags import SuggestTagsOutput, SuggestTagsUseCase
 from .get_or_fetch_incipit import DeriveIncipitUseCase, GetIncipitUseCase, IncipitOutput
 from .get_owned_book import GetOwnedBookOutput, GetOwnedBookUseCase
 from .list_bibliographic_records import ListBibliographicRecordsUseCase
@@ -33,6 +33,7 @@ from .list_genres import GenreCount, ListGenresUseCase
 from .list_owned_books import ListOwnedBooksUseCase
 from .loan_reminders import SendLoanRemindersUseCase
 from .set_incipit import SetIncipitUseCase
+from .suggest_tags import SuggestTagsOutput, SuggestTagsUseCase
 from .update_bibliographic_record import UpdateBibliographicRecordInput, UpdateBibliographicRecordUseCase
 from .update_book_metadata import UpdateBookMetadataInput, UpdateBookMetadataUseCase
 from .update_book_position import UpdateBookPositionInput, UpdateBookPositionUseCase

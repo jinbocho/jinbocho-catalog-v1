@@ -20,8 +20,10 @@ class SuggestTagsUseCase:
 
     async def execute(self, record_id: UUID, family_id: UUID) -> SuggestTagsOutput:
         record = await self._record_repo.find_by_id(record_id)
-        if not record or record.family_id != family_id:
+        if not record:
             raise LookupError("Bibliographic record not found")
+        if record.family_id != family_id:
+            raise PermissionError("Bibliographic record does not belong to this family")
 
         result = await self._tag_suggester.suggest(
             title=record.title,

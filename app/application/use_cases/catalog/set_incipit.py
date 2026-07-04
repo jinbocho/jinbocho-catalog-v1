@@ -21,8 +21,10 @@ class SetIncipitUseCase:
 			raise ValueError(f"Invalid incipit source: {source}")
 
 		record = await self._record_repo.find_by_id(record_id)
-		if not record or record.family_id != family_id:
+		if not record:
 			raise LookupError("Bibliographic record not found")
+		if record.family_id != family_id:
+			raise PermissionError("Bibliographic record does not belong to this family")
 
 		record.incipit = text.strip()
 		record.incipit_source = source
