@@ -56,7 +56,7 @@ router = APIRouter(tags=["export"])
 
 _CSV_FIELDS = [
 	# Book identity
-	"book_id", "family_id", "owner_id", "current_reader_id",
+	"book_id", "library_id", "owner_id", "current_reader_id",
 	# Status & acquisition
 	"reading_status", "condition", "source", "purchase_date", "purchase_price",
 	# Tags, notes, duplicates
@@ -114,7 +114,7 @@ def _csv_row(item: ExportBookItem) -> dict[str, Any]:
 
 	return {
 		"book_id": str(b.id),
-		"family_id": str(b.family_id),
+		"library_id": str(b.library_id),
 		"owner_id": str(b.owner_id) if b.owner_id else None,
 		"current_reader_id": str(b.current_reader_id) if b.current_reader_id else None,
 		"reading_status": b.reading_status.value,
@@ -234,7 +234,7 @@ async def export_books_csv(
 	items = await _build_use_case(
 		book_repo, record_repo, room_repo, bookcase_repo,
 		section_repo, shelf_repo, book_read_repo, book_loan_repo,
-	).execute(UUID(payload["family_id"]), limit, offset)
+	).execute(UUID(payload["library_id"]), limit, offset)
 
 	output = StringIO()
 	writer = csv.DictWriter(output, fieldnames=_CSV_FIELDS)
@@ -266,7 +266,7 @@ async def export_books_json(
 	items = await _build_use_case(
 		book_repo, record_repo, room_repo, bookcase_repo,
 		section_repo, shelf_repo, book_read_repo, book_loan_repo,
-	).execute(UUID(payload["family_id"]), limit, offset)
+	).execute(UUID(payload["library_id"]), limit, offset)
 
 	return {
 		"exported_at": datetime.now(UTC).isoformat(),
@@ -278,11 +278,11 @@ async def export_books_json(
 @router.get(
 	"/full",
 	response_model=FullLibraryExportResponse,
-	summary="Export the full family library for backup",
+	summary="Export the full library for backup",
 	description="Everything needed to restore the library elsewhere: the full location "
 	"hierarchy (including empty rooms/bookcases), every bibliographic record, every owned "
 	"book, every loan (not just active ones), every read, and the audit history. Pair with "
-	"GET /v1/users/export (auth-service) for a complete family backup. Requires admin role.",
+	"GET /v1/users/export (auth-service) for a complete library backup. Requires admin role.",
 )
 async def export_full_library(
 	payload: dict[str, Any] = Depends(require_role("admin")),
@@ -311,7 +311,7 @@ async def export_full_library(
 		removed_member_repo=removed_member_repo,
 		wishlist_repo=wishlist_repo,
 	)
-	data = await use_case.execute(UUID(payload["family_id"]))
+	data = await use_case.execute(UUID(payload["library_id"]))
 
 	return FullLibraryExportResponse(
 		exported_at=datetime.now(UTC),
@@ -364,6 +364,7 @@ async def export_full_library(
 		book_loans=[
 			BookLoanExportItem(
 				id=loan.id, owned_book_id=loan.owned_book_id, borrower_name=loan.borrower_name,
+				borrower_user_id=loan.borrower_user_id,
 				loaned_at=loan.loaned_at, due_date=loan.due_date, returned_at=loan.returned_at,
 			)
 			for loan in data.book_loans

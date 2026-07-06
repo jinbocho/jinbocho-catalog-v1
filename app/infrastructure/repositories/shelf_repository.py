@@ -37,9 +37,9 @@ class SQLAlchemyShelfRepository(ShelfRepository):
 		)
 		return [self._to_entity(model) for model in result.scalars().all()]
 
-	async def find_all_by_family(
+	async def find_all_by_library(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		section_id: UUID | None = None,
 		limit: int = 50,
 		offset: int = 0,
@@ -48,7 +48,7 @@ class SQLAlchemyShelfRepository(ShelfRepository):
 			select(ShelfModel)
 			.join(SectionModel, ShelfModel.section_id == SectionModel.id)
 			.join(BookcaseModel, SectionModel.bookcase_id == BookcaseModel.id)
-			.where(BookcaseModel.family_id == family_id)
+			.where(BookcaseModel.library_id == library_id)
 		)
 		if section_id is not None:
 			query = query.where(ShelfModel.section_id == section_id)

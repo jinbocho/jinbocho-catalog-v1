@@ -28,12 +28,12 @@ class GenerateAiIncipitUseCase:
         self._ai_client = ai_client
         self._description_provider = description_provider
 
-    async def execute(self, record_id: UUID, family_id: UUID) -> GenerateAiIncipitOutput:
+    async def execute(self, record_id: UUID, library_id: UUID) -> GenerateAiIncipitOutput:
         record = await self._record_repo.find_by_id(record_id)
         if not record:
             raise LookupError("Bibliographic record not found")
-        if record.family_id != family_id:
-            raise PermissionError("Bibliographic record does not belong to this family")
+        if record.library_id != library_id:
+            raise PermissionError("Bibliographic record does not belong to this library")
 
         editorial_description: str | None = None
         if record.isbn:
@@ -57,7 +57,7 @@ class GenerateAiIncipitUseCase:
         record.incipit_generated_at = utcnow()
         record.updated_at = utcnow()
         saved = await self._record_repo.save(record)
-        logger.info("AI incipit generated for record %s in family %s", record_id, family_id)
+        logger.info("AI incipit generated for record %s in library %s", record_id, library_id)
         return GenerateAiIncipitOutput(
             text=saved.incipit,
             source=saved.incipit_source,

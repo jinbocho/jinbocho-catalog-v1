@@ -70,7 +70,7 @@ async def get_current_user_payload(
             algorithms=[settings.jwt_algorithm],
             audience=settings.jwt_audience,
             issuer=settings.jwt_issuer,
-            options={"require": ["exp", "sub", "family_id", "aud", "iss"]},
+            options={"require": ["exp", "sub", "library_id", "aud", "iss"]},
         )
     except jwt.PyJWTError:
         raise HTTPException(
@@ -79,9 +79,9 @@ async def get_current_user_payload(
             headers={"WWW-Authenticate": "Bearer"},
         ) from None
 
-    family_id_str = payload.get("family_id")
+    library_id_str = payload.get("library_id")
     sub = payload.get("sub")
-    if not family_id_str or not sub:
+    if not library_id_str or not sub:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token missing required claims",

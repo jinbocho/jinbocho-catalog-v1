@@ -11,13 +11,13 @@ from app.infrastructure.repositories import (
 
 
 async def test_save_then_find_by_book_returns_real_enum_members_not_raw_strings(
-	db_session: AsyncSession, family_id: UUID
+	db_session: AsyncSession, library_id: UUID
 ) -> None:
 	record = await SQLAlchemyBibliographicRecordRepository(db_session).save(
-		BibliographicRecord(family_id=family_id, title="Test Book")
+		BibliographicRecord(library_id=library_id, title="Test Book")
 	)
 	book = await SQLAlchemyOwnedBookRepository(db_session).save(
-		OwnedBook(family_id=family_id, bibliographic_record_id=record.id)
+		OwnedBook(library_id=library_id, bibliographic_record_id=record.id)
 	)
 	history_repo = SQLAlchemyBookHistoryRepository(db_session)
 

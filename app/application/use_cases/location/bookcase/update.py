@@ -6,8 +6,8 @@ from app.domain.entities import Bookcase
 from app.domain.repositories import BookcaseRepository, RoomRepository
 from app.utils import utcnow
 
-from ..room.read import _get_room_for_family
-from .read import _get_bookcase_for_family
+from ..room.read import _get_room_for_library
+from .read import _get_bookcase_for_library
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class UpdateBookcaseInput:
 	bookcase_id: UUID
-	family_id: UUID
+	library_id: UUID
 	room_id: UUID | None = None
 	name: str | None = None
 	description: str | None = None
@@ -30,9 +30,9 @@ class UpdateBookcaseUseCase:
 		self._room_repo = room_repo
 
 	async def execute(self, inp: UpdateBookcaseInput) -> Bookcase:
-		bookcase = await _get_bookcase_for_family(self._bookcase_repo, inp.bookcase_id, inp.family_id)
+		bookcase = await _get_bookcase_for_library(self._bookcase_repo, inp.bookcase_id, inp.library_id)
 		if inp.room_id is not None:
-			await _get_room_for_family(self._room_repo, inp.room_id, inp.family_id)
+			await _get_room_for_library(self._room_repo, inp.room_id, inp.library_id)
 			bookcase.room_id = inp.room_id
 		if inp.name is not None:
 			bookcase.name = inp.name
@@ -46,5 +46,5 @@ class UpdateBookcaseUseCase:
 			bookcase.image_url = inp.image_url
 		bookcase.updated_at = utcnow()
 		saved = await self._bookcase_repo.save(bookcase)
-		logger.info("Bookcase %s updated in family %s", saved.id, inp.family_id)
+		logger.info("Bookcase %s updated in library %s", saved.id, inp.library_id)
 		return saved

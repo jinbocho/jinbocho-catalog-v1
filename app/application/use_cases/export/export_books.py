@@ -58,8 +58,8 @@ class ExportBooksUseCase:
 		self._book_read_repo = book_read_repo
 		self._book_loan_repo = book_loan_repo
 
-	async def execute(self, family_id: UUID, limit: int, offset: int) -> list[ExportBookItem]:
-		books = await self._book_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+	async def execute(self, library_id: UUID, limit: int, offset: int) -> list[ExportBookItem]:
+		books = await self._book_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		if not books:
 			return []
 
@@ -74,38 +74,38 @@ class ExportBooksUseCase:
 		# Location maps — one query per type, then joined in memory
 		room_map = {
 			r.id: r
-			for r in await self._room_repo.find_all_by_family(
-				family_id, limit=_LOCATION_FETCH_LIMIT
+			for r in await self._room_repo.find_all_by_library(
+				library_id, limit=_LOCATION_FETCH_LIMIT
 			)
 		}
 		bookcase_map = {
 			bc.id: bc
-			for bc in await self._bookcase_repo.find_all_by_family(
-				family_id, limit=_LOCATION_FETCH_LIMIT
+			for bc in await self._bookcase_repo.find_all_by_library(
+				library_id, limit=_LOCATION_FETCH_LIMIT
 			)
 		}
 		section_map = {
 			s.id: s
-			for s in await self._section_repo.find_all_by_family(
-				family_id, limit=_LOCATION_FETCH_LIMIT
+			for s in await self._section_repo.find_all_by_library(
+				library_id, limit=_LOCATION_FETCH_LIMIT
 			)
 		}
 		shelf_map = {
 			sh.id: sh
-			for sh in await self._shelf_repo.find_all_by_family(
-				family_id, limit=_LOCATION_FETCH_LIMIT
+			for sh in await self._shelf_repo.find_all_by_library(
+				library_id, limit=_LOCATION_FETCH_LIMIT
 			)
 		}
 
-		# Reads: family-wide fetch, grouped by book
+		# Reads: library-wide fetch, grouped by book
 		reads_by_book: dict[UUID, list[BookRead]] = {}
-		for read in await self._book_read_repo.list_by_family(family_id):
+		for read in await self._book_read_repo.list_by_library(library_id):
 			reads_by_book.setdefault(read.owned_book_id, []).append(read)
 
-		# Active loans: family-wide fetch, keyed by book
+		# Active loans: library-wide fetch, keyed by book
 		loan_by_book: dict[UUID, BookLoan] = {
 			loan.owned_book_id: loan
-			for loan in await self._book_loan_repo.list_active_by_family(family_id)
+			for loan in await self._book_loan_repo.list_active_by_library(library_id)
 		}
 
 		return [

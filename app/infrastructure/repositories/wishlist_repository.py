@@ -16,7 +16,7 @@ class SQLAlchemyWishlistRepository(WishlistRepository):
     def _to_entity(model: WishlistItemModel) -> WishlistItem:
         return WishlistItem(
             id=model.id,
-            family_id=model.family_id,
+            library_id=model.library_id,
             user_id=model.user_id,
             bibliographic_record_id=model.bibliographic_record_id,
             added_at=model.added_at,
@@ -24,20 +24,20 @@ class SQLAlchemyWishlistRepository(WishlistRepository):
             priority=model.priority,
         )
 
-    async def get(self, item_id: UUID, family_id: UUID) -> WishlistItem | None:
+    async def get(self, item_id: UUID, library_id: UUID) -> WishlistItem | None:
         result = await self._session.execute(
             select(WishlistItemModel).where(
                 WishlistItemModel.id == item_id,
-                WishlistItemModel.family_id == family_id,
+                WishlistItemModel.library_id == library_id,
             )
         )
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def list_by_family(self, family_id: UUID) -> list[WishlistItem]:
+    async def list_by_library(self, library_id: UUID) -> list[WishlistItem]:
         result = await self._session.execute(
             select(WishlistItemModel)
-            .where(WishlistItemModel.family_id == family_id)
+            .where(WishlistItemModel.library_id == library_id)
             .order_by(
                 WishlistItemModel.priority.asc().nulls_last(),
                 WishlistItemModel.added_at.desc(),
@@ -59,7 +59,7 @@ class SQLAlchemyWishlistRepository(WishlistRepository):
     async def add(self, item: WishlistItem) -> WishlistItem:
         model = WishlistItemModel(
             id=item.id,
-            family_id=item.family_id,
+            library_id=item.library_id,
             user_id=item.user_id,
             bibliographic_record_id=item.bibliographic_record_id,
             notes=item.notes,
@@ -70,11 +70,11 @@ class SQLAlchemyWishlistRepository(WishlistRepository):
         await self._session.refresh(model)
         return self._to_entity(model)
 
-    async def delete(self, item_id: UUID, family_id: UUID) -> None:
+    async def delete(self, item_id: UUID, library_id: UUID) -> None:
         result = await self._session.execute(
             select(WishlistItemModel).where(
                 WishlistItemModel.id == item_id,
-                WishlistItemModel.family_id == family_id,
+                WishlistItemModel.library_id == library_id,
             )
         )
         model = result.scalar_one_or_none()
@@ -104,7 +104,7 @@ class SQLAlchemyWishlistRepository(WishlistRepository):
         if model is None:
             model = WishlistItemModel(
                 id=item.id,
-                family_id=item.family_id,
+                library_id=item.library_id,
                 user_id=item.user_id,
                 bibliographic_record_id=item.bibliographic_record_id,
                 added_at=item.added_at,

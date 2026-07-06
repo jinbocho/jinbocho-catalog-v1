@@ -41,7 +41,7 @@ class BookcaseUpdate(BaseModel):
 class BookcaseResponse(BaseModel):
 	id: UUID = Field(..., description="Bookcase ID")
 	room_id: UUID = Field(..., description="Room ID")
-	family_id: UUID = Field(..., description="Family ID")
+	library_id: UUID = Field(..., description="Library ID")
 	name: str = Field(..., description="Bookcase name")
 	description: str | None = Field(None, description="Bookcase description")
 	type: str | None = Field(None, description="Bookcase type")

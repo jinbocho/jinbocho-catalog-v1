@@ -30,48 +30,48 @@ def cache_repo():
 
 
 @pytest.mark.asyncio
-async def test_incipit_derived_from_isbn_description(record_repo, cache_repo, test_family_id):
+async def test_incipit_derived_from_isbn_description(record_repo, cache_repo, test_library_id):
 	record = await CreateBibliographicRecordUseCase(record_repo).execute(
-		CreateBibliographicRecordInput(family_id=test_family_id, title="X", isbn="978000")
+		CreateBibliographicRecordInput(library_id=test_library_id, title="X", isbn="978000")
 	)
 	cache_repo.by_isbn["978000"] = IsbnLookupCache(
 		isbn="978000", metadata={"notes": "  A gripping opening.  "}, source="google_books", fetched_at=utcnow()
 	)
 
 	# DeriveIncipitUseCase finds the cache description and saves it.
-	result = await DeriveIncipitUseCase(record_repo, cache_repo).execute(record.id, test_family_id)
+	result = await DeriveIncipitUseCase(record_repo, cache_repo).execute(record.id, test_library_id)
 	assert result.text == "A gripping opening."
 	assert result.source == "google_books"
 
 	# GetIncipitUseCase returns the now-stored value without touching the cache.
-	stored = await GetIncipitUseCase(record_repo).execute(record.id, test_family_id)
+	stored = await GetIncipitUseCase(record_repo).execute(record.id, test_library_id)
 	assert stored.text == "A gripping opening."
 
 
 @pytest.mark.asyncio
-async def test_incipit_absent_without_source(record_repo, cache_repo, test_family_id):
+async def test_incipit_absent_without_source(record_repo, cache_repo, test_library_id):
 	record = await CreateBibliographicRecordUseCase(record_repo).execute(
-		CreateBibliographicRecordInput(family_id=test_family_id, title="No ISBN")
+		CreateBibliographicRecordInput(library_id=test_library_id, title="No ISBN")
 	)
-	result = await DeriveIncipitUseCase(record_repo, cache_repo).execute(record.id, test_family_id)
+	result = await DeriveIncipitUseCase(record_repo, cache_repo).execute(record.id, test_library_id)
 	assert result.text is None
 	assert result.source is None
 
 
 @pytest.mark.asyncio
-async def test_set_incipit_manual(record_repo, test_family_id):
+async def test_set_incipit_manual(record_repo, test_library_id):
 	record = await CreateBibliographicRecordUseCase(record_repo).execute(
-		CreateBibliographicRecordInput(family_id=test_family_id, title="X")
+		CreateBibliographicRecordInput(library_id=test_library_id, title="X")
 	)
-	result = await SetIncipitUseCase(record_repo).execute(record.id, test_family_id, "  Custom blurb.  ", "manual")
+	result = await SetIncipitUseCase(record_repo).execute(record.id, test_library_id, "  Custom blurb.  ", "manual")
 	assert result.text == "Custom blurb."
 	assert result.source == "manual"
 
 
 @pytest.mark.asyncio
-async def test_set_incipit_rejects_bad_source(record_repo, test_family_id):
+async def test_set_incipit_rejects_bad_source(record_repo, test_library_id):
 	record = await CreateBibliographicRecordUseCase(record_repo).execute(
-		CreateBibliographicRecordInput(family_id=test_family_id, title="X")
+		CreateBibliographicRecordInput(library_id=test_library_id, title="X")
 	)
 	with pytest.raises(ValueError):
-		await SetIncipitUseCase(record_repo).execute(record.id, test_family_id, "txt", "bogus")
+		await SetIncipitUseCase(record_repo).execute(record.id, test_library_id, "txt", "bogus")

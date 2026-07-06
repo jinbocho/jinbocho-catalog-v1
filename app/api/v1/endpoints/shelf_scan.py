@@ -85,7 +85,7 @@ async def scan_shelf(
 		shelf_repo, section_repo, bookcase_repo, spine_reader, search_provider, record_repo, book_repo
 	).execute(
 		ScanShelfInput(
-			family_id=UUID(payload["family_id"]),
+			library_id=UUID(payload["library_id"]),
 			shelf_id=body.shelf_id,
 			image_base64=body.image_base64,
 			media_type=body.media_type,
@@ -137,7 +137,7 @@ async def confirm_shelf_scan(
 		shelf_repo, section_repo, bookcase_repo, book_repo, add_book
 	).execute(
 		ConfirmShelfScanInput(
-			family_id=UUID(payload["family_id"]),
+			library_id=UUID(payload["library_id"]),
 			changed_by=UUID(payload["sub"]),
 			shelf_id=body.shelf_id,
 			items=[ConfirmShelfScanItem(**item.model_dump()) for item in body.items],
@@ -177,7 +177,7 @@ async def audit_shelf(
 		shelf_repo, section_repo, bookcase_repo, spine_reader, book_repo, record_repo
 	).execute(
 		AuditShelfInput(
-			family_id=UUID(payload["family_id"]),
+			library_id=UUID(payload["library_id"]),
 			shelf_id=body.shelf_id,
 			image_base64=body.image_base64,
 			media_type=body.media_type,

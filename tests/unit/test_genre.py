@@ -36,25 +36,25 @@ def test_map_to_genre(raw, expected):
 
 
 @pytest.mark.asyncio
-async def test_create_normalizes_genre_and_preserves_raw(record_repo, test_family_id):
+async def test_create_normalizes_genre_and_preserves_raw(record_repo, test_library_id):
 	created = await CreateBibliographicRecordUseCase(record_repo).execute(
-		CreateBibliographicRecordInput(family_id=test_family_id, title="X", genre="Fantascienza")
+		CreateBibliographicRecordInput(library_id=test_library_id, title="X", genre="Fantascienza")
 	)
 	assert created.genre == Genre.SCIENCE_FICTION.value
 	assert created.genre_raw == "Fantascienza"
 
 
 @pytest.mark.asyncio
-async def test_filter_and_count_by_genre(record_repo, test_family_id):
+async def test_filter_and_count_by_genre(record_repo, test_library_id):
 	create = CreateBibliographicRecordUseCase(record_repo)
-	await create.execute(CreateBibliographicRecordInput(family_id=test_family_id, title="A", genre="Giallo"))
-	await create.execute(CreateBibliographicRecordInput(family_id=test_family_id, title="B", genre="Thriller"))
-	await create.execute(CreateBibliographicRecordInput(family_id=test_family_id, title="C", genre="Cucina"))
+	await create.execute(CreateBibliographicRecordInput(library_id=test_library_id, title="A", genre="Giallo"))
+	await create.execute(CreateBibliographicRecordInput(library_id=test_library_id, title="B", genre="Thriller"))
+	await create.execute(CreateBibliographicRecordInput(library_id=test_library_id, title="C", genre="Cucina"))
 
 	mystery = await ListBibliographicRecordsUseCase(record_repo).execute(
-		test_family_id, q=None, genre=Genre.MYSTERY_THRILLER.value, limit=50, offset=0
+		test_library_id, q=None, genre=Genre.MYSTERY_THRILLER.value, limit=50, offset=0
 	)
 	assert len(mystery) == 2
 
-	counts = {gc.genre: gc.count for gc in await ListGenresUseCase(record_repo).execute(test_family_id)}
+	counts = {gc.genre: gc.count for gc in await ListGenresUseCase(record_repo).execute(test_library_id)}
 	assert counts == {Genre.MYSTERY_THRILLER.value: 2, Genre.COOKING.value: 1}

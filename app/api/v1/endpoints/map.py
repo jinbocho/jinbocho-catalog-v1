@@ -44,7 +44,7 @@ async def get_bookcase_map(
 ) -> BookcaseMapResponse:
 	use_case = GetBookcaseMapUseCase(bookcase_repo, section_repo, shelf_repo, book_repo, record_repo, read_repo)
 	bookcase, sections_data = await use_case.execute(
-		UUID(payload["family_id"]), bookcase_id, viewer_id=UUID(payload["sub"])
+		UUID(payload["library_id"]), bookcase_id, viewer_id=UUID(payload["sub"])
 	)
 
 	# Transform to response format

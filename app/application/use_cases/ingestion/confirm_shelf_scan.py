@@ -36,7 +36,7 @@ class ConfirmShelfScanItem:
 
 @dataclass
 class ConfirmShelfScanInput:
-	family_id: UUID
+	library_id: UUID
 	changed_by: UUID
 	shelf_id: UUID
 	items: list[ConfirmShelfScanItem]
@@ -82,7 +82,7 @@ class ConfirmShelfScanUseCase:
 
 	async def execute(self, inp: ConfirmShelfScanInput) -> ConfirmShelfScanOutput:
 		location = await validate_shelf_ownership(
-			inp.family_id, inp.shelf_id, self._shelf_repo, self._section_repo, self._bookcase_repo
+			inp.library_id, inp.shelf_id, self._shelf_repo, self._section_repo, self._bookcase_repo
 		)
 
 		existing = await self._book_repo.find_all_by_shelf_ids([inp.shelf_id])
@@ -110,7 +110,7 @@ class ConfirmShelfScanUseCase:
 			try:
 				book = await self._add_book.execute(
 					AddBookInput(
-						family_id=inp.family_id,
+						library_id=inp.library_id,
 						changed_by=inp.changed_by,
 						title=item.title,
 						main_author=item.main_author,
@@ -135,9 +135,9 @@ class ConfirmShelfScanUseCase:
 			next_position += 1
 
 		logger.info(
-			"Shelf scan confirmed for shelf %s in family %s: %d book(s) added, %d skipped",
+			"Shelf scan confirmed for shelf %s in library %s: %d book(s) added, %d skipped",
 			inp.shelf_id,
-			inp.family_id,
+			inp.library_id,
 			len(created),
 			len(skipped),
 		)

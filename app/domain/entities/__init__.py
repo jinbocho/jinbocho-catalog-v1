@@ -4,11 +4,11 @@ from .book_loan import BookLoan
 from .book_rating import BookRating
 from .book_read import BookRead
 from .bookcase import Bookcase
-from .family_rating_stats import FamilyRatingStats
 from .genre import Genre, map_to_genre
 from .isbn_lookup_cache import IsbnLookupCache
+from .library_rating_stats import LibraryRatingStats
 from .owned_book import BookCondition, BookSource, OwnedBook, ReadingStatus
-from .removed_member import FamilyRole, RemovedMember
+from .removed_member import LibraryRole, RemovedMember
 from .room import Room
 from .section import Section
 from .shelf import Shelf
@@ -31,9 +31,9 @@ __all__ = [
 	"BookLoan",
 	"BookRating",
 	"BookRead",
-	"FamilyRatingStats",
+	"LibraryRatingStats",
 	"IsbnLookupCache",
 	"RemovedMember",
-	"FamilyRole",
+	"LibraryRole",
 	"WishlistItem",
 ]

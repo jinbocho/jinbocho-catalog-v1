@@ -3,7 +3,7 @@ from uuid import UUID
 
 from app.domain.repositories import BookcaseRepository, SectionRepository, ShelfRepository
 
-from .read import _get_shelf_for_family
+from .read import _get_shelf_for_library
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +16,9 @@ class DeleteShelfUseCase:
 		self._section_repo = section_repo
 		self._bookcase_repo = bookcase_repo
 
-	async def execute(self, shelf_id: UUID, family_id: UUID) -> None:
-		await _get_shelf_for_family(
-			self._shelf_repo, self._section_repo, self._bookcase_repo, shelf_id, family_id
+	async def execute(self, shelf_id: UUID, library_id: UUID) -> None:
+		await _get_shelf_for_library(
+			self._shelf_repo, self._section_repo, self._bookcase_repo, shelf_id, library_id
 		)
 		await self._shelf_repo.delete(shelf_id)
-		logger.info("Shelf %s deleted from family %s", shelf_id, family_id)
+		logger.info("Shelf %s deleted from library %s", shelf_id, library_id)

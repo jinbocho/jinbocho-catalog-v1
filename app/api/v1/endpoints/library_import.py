@@ -54,9 +54,9 @@ router = APIRouter(tags=["import"])
 	"/full",
 	response_model=ImportFullLibraryResponse,
 	summary="Restore a full library backup",
-	description="Restores a backup produced by GET /v1/export/full into the current family. "
+	description="Restores a backup produced by GET /v1/export/full into the current library. "
 	"Run POST /v1/users/import (auth-service) first and pass its user_id_map here. Bibliographic "
-	"records are deduplicated by ISBN against what the family already owns; everything else is "
+	"records are deduplicated by ISBN against what the library already owns; everything else is "
 	"inserted as new (merging into an existing library duplicates rooms/bookcases/books rather "
 	"than guessing what should be reused). Requires admin role.",
 )
@@ -95,7 +95,7 @@ async def import_full_library(
 	# an exception escapes.
 	result = await use_case.execute(
 		ImportFullLibraryInput(
-			family_id=UUID(payload["family_id"]),
+			library_id=UUID(payload["library_id"]),
 			user_id_map={UUID(k): UUID(v) for k, v in body.user_id_map.items()},
 			rooms=[ImportRoomItem(**r.model_dump()) for r in body.rooms],
 			bookcases=[ImportBookcaseItem(**b.model_dump()) for b in body.bookcases],

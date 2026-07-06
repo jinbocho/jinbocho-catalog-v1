@@ -11,7 +11,7 @@ class ListOwnedBooksUseCase:
 
 	async def execute(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		viewer_id: UUID,
 		shelf_id: UUID | None = None,
 		reading_status: ReadingStatus | None = None,
@@ -19,8 +19,8 @@ class ListOwnedBooksUseCase:
 		limit: int = 50,
 		offset: int = 0,
 	) -> list[OwnedBook]:
-		books = await self._book_repo.find_all_by_family(
-			family_id, shelf_id=shelf_id, reading_status=reading_status, tag=tag, limit=limit, offset=offset
+		books = await self._book_repo.find_all_by_library(
+			library_id, shelf_id=shelf_id, reading_status=reading_status, tag=tag, limit=limit, offset=offset
 		)
 		read_ids = await self._read_repo.list_read_book_ids([b.id for b in books], viewer_id)
 		for book in books:

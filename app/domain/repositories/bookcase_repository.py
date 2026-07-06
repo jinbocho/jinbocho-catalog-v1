@@ -9,9 +9,9 @@ class BookcaseRepository(ABC):
 	async def find_by_id(self, bookcase_id: UUID) -> Bookcase | None: ...
 
 	@abstractmethod
-	async def find_all_by_family(
+	async def find_all_by_library(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		room_id: UUID | None = None,
 		limit: int = 50,
 		offset: int = 0,
@@ -29,8 +29,8 @@ class BookcaseRepository(ABC):
 	async def delete(self, bookcase_id: UUID) -> None: ...
 
 	@abstractmethod
-	async def delete_all_by_family(self, family_id: UUID) -> None:
-		"""Bulk-deletes every bookcase for the family (sections/shelves cascade
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		"""Bulk-deletes every bookcase for the library (sections/shelves cascade
 		at the DB level) — used by full account deletion. Caller must do this
 		before deleting rooms (RESTRICT on bookcases.room_id)."""
 		...

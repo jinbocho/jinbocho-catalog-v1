@@ -38,7 +38,7 @@ from app.utils import utcnow
 logger = logging.getLogger(__name__)
 
 # --- Input items -------------------------------------------------------------
-# Deliberately separate from the domain entities (which require family_id /
+# Deliberately separate from the domain entities (which require library_id /
 # server-assigned defaults that don't make sense for an as-exported payload)
 # and from the API schemas (the application layer must not depend on them).
 
@@ -145,6 +145,7 @@ class ImportBookLoanItem:
 	owned_book_id: UUID
 	borrower_name: str
 	loaned_at: datetime
+	borrower_user_id: UUID | None = None
 	due_date: datetime | None = None
 	returned_at: datetime | None = None
 
@@ -172,7 +173,7 @@ class ImportWishlistItem:
 
 @dataclass
 class ImportFullLibraryInput:
-	family_id: UUID
+	library_id: UUID
 	user_id_map: dict[UUID, UUID] = field(default_factory=dict)
 	rooms: list[ImportRoomItem] = field(default_factory=list)
 	bookcases: list[ImportBookcaseItem] = field(default_factory=list)
@@ -207,7 +208,7 @@ class ImportFullLibraryOutput:
 
 
 class ImportFullLibraryUseCase:
-	"""Restores a full library backup into the caller's family.
+	"""Restores a full library backup into the caller's library.
 
 	Every entity gets a brand-new id on import (never the one from the
 	export) and an old-id -> new-id map is built as it goes, used to rewrite
@@ -215,20 +216,20 @@ class ImportFullLibraryUseCase:
 	book_read.owned_book_id, ...). This is deliberate, not incidental:
 	preserving the original id and upserting by it is only safe if the
 	target database is guaranteed to never already contain that id under a
-	*different* family — which merging into an existing, non-empty family
-	cannot guarantee (the id could belong to the very family the backup was
+	*different* library — which merging into an existing, non-empty library
+	cannot guarantee (the id could belong to the very library the backup was
 	exported from, still live in the same database). Reusing an existing id
 	would silently land the import on that unrelated row instead of creating
 	a new one. Random ids make that collision practically impossible.
 
-	Every entity is deduplicated against what the family already has before
+	Every entity is deduplicated against what the library already has before
 	being inserted, by a natural key rather than the (regenerated) id — so
 	re-importing the same backup, or merging two overlapping libraries, does
 	not pile up duplicates:
-	  - bibliographic records: (family_id, isbn), or (family_id, title,
+	  - bibliographic records: (library_id, isbn), or (library_id, title,
 	    main_author) when isbn is absent — the DB enforces the isbn case as a
 	    real uniqueness constraint, so this also avoids a hard failure on merge.
-	  - rooms: (family_id, name). bookcases: (room_id, name).
+	  - rooms: (library_id, name). bookcases: (room_id, name).
 	  - sections: (bookcase_id, section_index). shelves: (section_id,
 	    shelf_index) — both already DB-unique, so this also avoids a hard
 	    failure on merge.
@@ -242,7 +243,7 @@ class ImportFullLibraryUseCase:
 	    changed_by, created_at).
 	In every dedup case the *existing* row wins; the imported one is discarded
 	except for the id remap, so re-running an import never overwrites data
-	already in the family.
+	already in the library.
 
 	Cross-service user ids (owner_id, current_reader_id, book_reads.user_id,
 	book_history.changed_by) are rewritten through `user_id_map`, built by the
@@ -293,9 +294,9 @@ class ImportFullLibraryUseCase:
 		await self._import_wishlist(inp, out, record_id_map)
 
 		logger.info(
-			"Library import completed for family %s: %d room(s), %d bookcase(s), %d section(s), "
+			"Library import completed for library %s: %d room(s), %d bookcase(s), %d section(s), "
 			"%d shelf/shelves, %d record(s), %d owned book(s) (%d deduped)",
-			inp.family_id,
+			inp.library_id,
 			out.rooms_imported,
 			out.bookcases_imported,
 			out.sections_imported,
@@ -312,10 +313,10 @@ class ImportFullLibraryUseCase:
 		record_id_map: dict[UUID, UUID] = {}
 		for record_item in inp.bibliographic_records:
 			existing = (
-				await self._record_repo.find_by_isbn(inp.family_id, record_item.isbn)
+				await self._record_repo.find_by_isbn(inp.library_id, record_item.isbn)
 				if record_item.isbn
 				else await self._record_repo.find_by_title_author(
-					inp.family_id, record_item.title, record_item.main_author
+					inp.library_id, record_item.title, record_item.main_author
 				)
 			)
 			if existing:
@@ -326,7 +327,7 @@ class ImportFullLibraryUseCase:
 			await self._record_repo.save(
 				BibliographicRecord(
 					id=new_id,
-					family_id=inp.family_id,
+					library_id=inp.library_id,
 					title=record_item.title,
 					main_author=record_item.main_author,
 					other_authors=record_item.other_authors,
@@ -354,7 +355,7 @@ class ImportFullLibraryUseCase:
 	) -> dict[UUID, UUID]:
 		room_id_map: dict[UUID, UUID] = {}
 		for room_item in inp.rooms:
-			existing_room = await self._room_repo.find_by_name(inp.family_id, room_item.name)
+			existing_room = await self._room_repo.find_by_name(inp.library_id, room_item.name)
 			if existing_room:
 				room_id_map[room_item.id] = existing_room.id
 				out.rooms_deduped += 1
@@ -363,7 +364,7 @@ class ImportFullLibraryUseCase:
 			await self._room_repo.save(
 				Room(
 					id=new_id,
-					family_id=inp.family_id,
+					library_id=inp.library_id,
 					name=room_item.name,
 					description=room_item.description,
 					created_at=room_item.created_at or now,
@@ -393,7 +394,7 @@ class ImportFullLibraryUseCase:
 			await self._bookcase_repo.save(
 				Bookcase(
 					id=new_id,
-					family_id=inp.family_id,
+					library_id=inp.library_id,
 					room_id=resolved_room_id,
 					name=bookcase_item.name,
 					description=bookcase_item.description,
@@ -488,7 +489,7 @@ class ImportFullLibraryUseCase:
 			book_shelf_id = shelf_id_map.get(book_item.shelf_id) if book_item.shelf_id else None
 
 			existing_book = await self._book_repo.find_duplicate(
-				family_id=inp.family_id,
+				library_id=inp.library_id,
 				bibliographic_record_id=book_record_id,
 				room_id=book_room_id,
 				bookcase_id=book_bookcase_id,
@@ -508,7 +509,7 @@ class ImportFullLibraryUseCase:
 			await self._book_repo.save(
 				OwnedBook(
 					id=new_id,
-					family_id=inp.family_id,
+					library_id=inp.library_id,
 					bibliographic_record_id=book_record_id,
 					room_id=book_room_id,
 					bookcase_id=book_bookcase_id,
@@ -562,6 +563,11 @@ class ImportFullLibraryUseCase:
 					id=uuid4(),
 					owned_book_id=book_id_map[loan_item.owned_book_id],
 					borrower_name=loan_item.borrower_name,
+					borrower_user_id=(
+						inp.user_id_map.get(loan_item.borrower_user_id, loan_item.borrower_user_id)
+						if loan_item.borrower_user_id
+						else None
+					),
 					loaned_at=loan_item.loaned_at,
 					due_date=loan_item.due_date,
 					returned_at=loan_item.returned_at,
@@ -606,7 +612,7 @@ class ImportFullLibraryUseCase:
 			await self._wishlist_repo.restore(
 				WishlistItem(
 					id=uuid4(),
-					family_id=inp.family_id,
+					library_id=inp.library_id,
 					user_id=resolved_user_id,
 					bibliographic_record_id=resolved_record_id,
 					added_at=wish_item.added_at,

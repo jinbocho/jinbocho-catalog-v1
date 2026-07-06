@@ -34,7 +34,7 @@ class ConfirmGoodreadsImportItem:
 
 @dataclass
 class ConfirmGoodreadsImportInput:
-	family_id: UUID
+	library_id: UUID
 	changed_by: UUID
 	items: list[ConfirmGoodreadsImportItem]
 
@@ -65,7 +65,7 @@ class ConfirmGoodreadsImportUseCase:
 	Books have no physical position — Goodreads has no location model — so
 	room/bookcase/section/shelf are left unset; the user places them later.
 
-	Rating and "read" are per-member, attached to changed_by (the family
+	Rating and "read" are per-member, attached to changed_by (the library
 	member running the import), and applied *after* AddBookUseCase creates the
 	book — reading_status=READ is downgraded to TO_READ before it reaches
 	AddBookInput so AddBookUseCase's own auto-mark-read (which always stamps
@@ -107,7 +107,7 @@ class ConfirmGoodreadsImportUseCase:
 			try:
 				book = await self._add_book.execute(
 					AddBookInput(
-						family_id=inp.family_id,
+						library_id=inp.library_id,
 						changed_by=inp.changed_by,
 						title=item.title,
 						main_author=item.main_author,
@@ -136,8 +136,8 @@ class ConfirmGoodreadsImportUseCase:
 			created.append(book.id)
 
 		logger.info(
-			"Goodreads import confirmed for family %s: %d book(s) added, %d skipped, %d rated, %d marked read",
-			inp.family_id,
+			"Goodreads import confirmed for library %s: %d book(s) added, %d skipped, %d rated, %d marked read",
+			inp.library_id,
 			len(created),
 			len(skipped),
 			rated_count,

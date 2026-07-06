@@ -63,11 +63,11 @@ class SQLAlchemyBookReadRepository(BookReadRepository):
         )
         return [self._to_entity(m) for m in result.scalars().all()]
 
-    async def list_by_family(self, family_id: UUID) -> list[BookRead]:
+    async def list_by_library(self, library_id: UUID) -> list[BookRead]:
         result = await self._session.execute(
             select(BookReadModel)
             .join(OwnedBookModel, BookReadModel.owned_book_id == OwnedBookModel.id)
-            .where(OwnedBookModel.family_id == family_id)
+            .where(OwnedBookModel.library_id == library_id)
         )
         return [self._to_entity(m) for m in result.scalars().all()]
 

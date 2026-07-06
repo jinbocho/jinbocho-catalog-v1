@@ -54,7 +54,7 @@ class ExportedBookResponse(BaseModel):
 	source: str | None = None
 	purchase_date: date | None = None
 	purchase_price: Decimal | None = None
-	owner_id: UUID | None = Field(None, description="Family member who owns this copy")
+	owner_id: UUID | None = Field(None, description="Library member who owns this copy")
 	current_reader_id: UUID | None = Field(None, description="Who is currently reading it")
 	tags: list[str] = Field(default_factory=list)
 	notes: str | None = None
@@ -155,6 +155,7 @@ class BookLoanExportItem(BaseModel):
 	id: UUID
 	owned_book_id: UUID
 	borrower_name: str
+	borrower_user_id: UUID | None = None
 	loaned_at: datetime
 	due_date: datetime | None = None
 	returned_at: datetime | None = None
@@ -180,8 +181,8 @@ class WishlistItemExportItem(BaseModel):
 
 
 class RemovedMemberExportItem(BaseModel):
-	"""A former family member's identity, snapshotted when they were removed
-	from the family (see POST /v1/members/removed) — so a future import can
+	"""A former library member's identity, snapshotted when they were removed
+	from the library (see POST /v1/members/removed) — so a future import can
 	recreate their real account instead of leaving owner_id/etc. unresolved."""
 	id: UUID
 	full_name: str
@@ -251,10 +252,10 @@ class ImportFullLibraryResponse(BaseModel):
 	wishlist_items_imported: int = 0
 
 
-class DeleteFamilyDataResponse(BaseModel):
+class DeleteLibraryDataResponse(BaseModel):
 	"""Counts of what was permanently wiped — for the admin's own confirmation
 	toast. This is the catalog-service half of full account deletion; the
-	frontend must also call auth-service's DELETE /v1/families/{family_id}."""
+	frontend must also call auth-service's DELETE /v1/libraries/{library_id}."""
 	rooms_deleted: int
 	bookcases_deleted: int
 	records_deleted: int

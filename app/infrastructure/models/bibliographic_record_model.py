@@ -16,10 +16,10 @@ if TYPE_CHECKING:
 
 class BibliographicRecordModel(Base):
 	__tablename__ = "bibliographic_records"
-	__table_args__ = (UniqueConstraint("family_id", "isbn", name="uq_bib_family_isbn"),)
+	__table_args__ = (UniqueConstraint("library_id", "isbn", name="uq_bib_library_isbn"),)
 
 	id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-	family_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+	library_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
 	title: Mapped[str] = mapped_column(String(500), nullable=False)
 	main_author: Mapped[str | None] = mapped_column(String(255))
 	other_authors: Mapped[list[str] | None] = mapped_column(ARRAY(String))

@@ -9,9 +9,9 @@ class OwnedBookRepository(ABC):
 	async def find_by_id(self, book_id: UUID) -> OwnedBook | None: ...
 
 	@abstractmethod
-	async def find_all_by_family(
+	async def find_all_by_library(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		shelf_id: UUID | None = None,
 		reading_status: ReadingStatus | None = None,
 		tag: str | None = None,
@@ -31,7 +31,7 @@ class OwnedBookRepository(ABC):
 	@abstractmethod
 	async def find_duplicate(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		bibliographic_record_id: UUID,
 		room_id: UUID | None,
 		bookcase_id: UUID | None,
@@ -47,7 +47,7 @@ class OwnedBookRepository(ABC):
 	@abstractmethod
 	async def find_one_by_record(self, bibliographic_record_id: UUID) -> OwnedBook | None:
 		"""Any existing copy of this record, regardless of owner or location —
-		used to warn about a likely duplicate when adding a new book. Family-
+		used to warn about a likely duplicate when adding a new book. Library-
 		wide on purpose: two members can legitimately each own a copy, so the
 		check doesn't block that, it just surfaces who already has it (the
 		caller decides whether to add a separate copy anyway)."""
@@ -63,8 +63,8 @@ class OwnedBookRepository(ABC):
 	async def delete_by_ids(self, book_ids: list[UUID]) -> None: ...
 
 	@abstractmethod
-	async def delete_all_by_family(self, family_id: UUID) -> None:
-		"""Bulk-deletes every owned book for the family (reads/loans cascade at
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		"""Bulk-deletes every owned book for the library (reads/loans cascade at
 		the DB level) — used by full account deletion. Caller must do this
 		before deleting bibliographic records (RESTRICT)."""
 		...

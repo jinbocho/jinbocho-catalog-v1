@@ -18,13 +18,13 @@ class PurgeExpiredPersonalDataUseCase:
 	default) has passed since their removal.
 
 	Book loans are deliberately NOT touched here: a loan's borrower_name
-	belongs to the lending family's own history (comparable to a personal
+	belongs to the lending library's own history (comparable to a personal
 	note — "I lent this to so-and-so"), not to an account with its own
 	lifecycle — most borrowers were never a member at all. That data persists
-	for as long as the family's account exists and is only removed by full
-	account deletion (DeleteFamilyDataUseCase), never by this time-based sweep.
+	for as long as the library's account exists and is only removed by full
+	account deletion (DeleteLibraryDataUseCase), never by this time-based sweep.
 
-	Not family-scoped: this runs as a global scheduled job (see
+	Not library-scoped: this runs as a global scheduled job (see
 	app/core/lifespan.py), the same way SendLoanRemindersUseCase does.
 	"""
 

@@ -25,7 +25,7 @@ class RoomUpdate(BaseModel):
 
 class RoomResponse(BaseModel):
 	id: UUID = Field(..., description="Room ID")
-	family_id: UUID = Field(..., description="Family ID")
+	library_id: UUID = Field(..., description="Library ID")
 	name: str = Field(..., description="Name of the room")
 	description: str | None = Field(None, description="Room description")
 	created_at: datetime = Field(..., description="Creation timestamp")

@@ -7,14 +7,14 @@ from app.domain.entities.book_rating import BookRating
 
 
 @dataclass(frozen=True)
-class FamilyRatingStats:
+class LibraryRatingStats:
     owned_book_id: UUID
     total: int
     average: float | None
     distribution: dict[int, int]  # star value (1..5) → count
 
     @classmethod
-    def from_ratings(cls, owned_book_id: UUID, ratings: list[BookRating]) -> FamilyRatingStats:
+    def from_ratings(cls, owned_book_id: UUID, ratings: list[BookRating]) -> LibraryRatingStats:
         distribution = {star: 0 for star in range(1, 6)}
         for r in ratings:
             distribution[r.rating] += 1

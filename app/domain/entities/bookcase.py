@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 @dataclass
 class Bookcase:
-	family_id: UUID
+	library_id: UUID
 	room_id: UUID
 	name: str
 	description: str | None = None

@@ -3,8 +3,8 @@ from app.domain.errors import DuplicateBookConflict, DuplicateBookError
 from .add_book import AddBookInput, AddBookUseCase, FuzzyDedupConfig
 from .book_loans import (
 	LendBookUseCase,
-	ListActiveFamilyLoansUseCase,
-	ListAllFamilyLoansUseCase,
+	ListActiveLibraryLoansUseCase,
+	ListAllLibraryLoansUseCase,
 	ListBookLoansUseCase,
 	ReturnBookUseCase,
 )
@@ -14,11 +14,11 @@ from .book_ratings import (
 	DeleteBookRatingUseCase,
 	GetBookRatingStatsUseCase,
 	ListBookRatingsUseCase,
-	ListFamilyRatingsUseCase,
+	ListLibraryRatingsUseCase,
 	UpdateBookRatingInput,
 	UpdateBookRatingUseCase,
 )
-from .book_reads import ListBookReadsUseCase, ListFamilyReadsUseCase, MarkBookReadUseCase, UnmarkBookReadUseCase
+from .book_reads import ListBookReadsUseCase, ListLibraryReadsUseCase, MarkBookReadUseCase, UnmarkBookReadUseCase
 from .bulk_delete_books import BulkDeleteBooksInput, BulkDeleteBooksUseCase
 from .create_bibliographic_record import CreateBibliographicRecordInput, CreateBibliographicRecordUseCase
 from .delete_bibliographic_record import DeleteBibliographicRecordUseCase
@@ -38,7 +38,7 @@ from .update_bibliographic_record import UpdateBibliographicRecordInput, UpdateB
 from .update_book_metadata import UpdateBookMetadataInput, UpdateBookMetadataUseCase
 from .update_book_position import UpdateBookPositionInput, UpdateBookPositionUseCase
 from .update_reading_status import UpdateReadingStatusInput, UpdateReadingStatusUseCase
-from .wishlist import AddToWishlistUseCase, ListFamilyWishlistUseCase, RemoveFromWishlistUseCase
+from .wishlist import AddToWishlistUseCase, ListLibraryWishlistUseCase, RemoveFromWishlistUseCase
 
 __all__ = [
 	# Add/Delete/Update Books
@@ -51,8 +51,8 @@ __all__ = [
 	"LendBookUseCase",
 	"ReturnBookUseCase",
 	"ListBookLoansUseCase",
-	"ListActiveFamilyLoansUseCase",
-	"ListAllFamilyLoansUseCase",
+	"ListActiveLibraryLoansUseCase",
+	"ListAllLibraryLoansUseCase",
 	"SendLoanRemindersUseCase",
 	# Book ratings (per-member star rating + review)
 	"CreateBookRatingInput",
@@ -61,13 +61,13 @@ __all__ = [
 	"UpdateBookRatingUseCase",
 	"DeleteBookRatingUseCase",
 	"ListBookRatingsUseCase",
-	"ListFamilyRatingsUseCase",
+	"ListLibraryRatingsUseCase",
 	"GetBookRatingStatsUseCase",
 	# Book reads (per-member reading history)
 	"MarkBookReadUseCase",
 	"UnmarkBookReadUseCase",
 	"ListBookReadsUseCase",
-	"ListFamilyReadsUseCase",
+	"ListLibraryReadsUseCase",
 	"DeleteBookInput",
 	"DeleteBookUseCase",
 	"BulkDeleteBooksInput",
@@ -104,5 +104,5 @@ __all__ = [
 	# Wishlist
 	"AddToWishlistUseCase",
 	"RemoveFromWishlistUseCase",
-	"ListFamilyWishlistUseCase",
+	"ListLibraryWishlistUseCase",
 ]

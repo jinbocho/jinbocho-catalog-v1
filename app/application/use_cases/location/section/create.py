@@ -6,14 +6,14 @@ from app.domain.entities import Section
 from app.domain.repositories import BookcaseRepository, SectionRepository
 from app.utils import utcnow
 
-from ..bookcase.read import _get_bookcase_for_family
+from ..bookcase.read import _get_bookcase_for_library
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class CreateSectionInput:
-	family_id: UUID
+	library_id: UUID
 	bookcase_id: UUID
 	section_index: int
 	label: str | None = None
@@ -25,7 +25,7 @@ class CreateSectionUseCase:
 		self._bookcase_repo = bookcase_repo
 
 	async def execute(self, inp: CreateSectionInput) -> Section:
-		await _get_bookcase_for_family(self._bookcase_repo, inp.bookcase_id, inp.family_id)
+		await _get_bookcase_for_library(self._bookcase_repo, inp.bookcase_id, inp.library_id)
 		saved = await self._section_repo.save(
 			Section(
 				bookcase_id=inp.bookcase_id,
@@ -35,5 +35,5 @@ class CreateSectionUseCase:
 				updated_at=utcnow(),
 			)
 		)
-		logger.info("Section %s created in family %s", saved.id, inp.family_id)
+		logger.info("Section %s created in library %s", saved.id, inp.library_id)
 		return saved

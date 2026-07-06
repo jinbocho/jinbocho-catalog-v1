@@ -39,7 +39,7 @@ async def list_shelves(
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> list[Shelf]:
 	return await ListShelvesUseCase(shelf_repo, section_repo, bookcase_repo).execute(
-		UUID(payload["family_id"]), section_id, limit, offset
+		UUID(payload["library_id"]), section_id, limit, offset
 	)
 
 
@@ -53,7 +53,7 @@ async def create_shelf(
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> Shelf:
 	created = await CreateShelfUseCase(shelf_repo, section_repo).execute(
-		CreateShelfInput(family_id=UUID(payload["family_id"]), **request.model_dump())
+		CreateShelfInput(library_id=UUID(payload["library_id"]), **request.model_dump())
 	)
 	await db.commit()
 	return created
@@ -67,7 +67,7 @@ async def get_shelf(
 	section_repo: SectionRepository = Depends(get_section_repository),
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> Shelf:
-	return await GetShelfUseCase(shelf_repo, section_repo, bookcase_repo).execute(shelf_id, UUID(payload["family_id"]))
+	return await GetShelfUseCase(shelf_repo, section_repo, bookcase_repo).execute(shelf_id, UUID(payload["library_id"]))
 
 
 @router.patch("/{shelf_id}", response_model=ShelfResponse, summary="Update shelf")
@@ -82,7 +82,7 @@ async def update_shelf(
 ) -> Shelf:
 	updated = await UpdateShelfUseCase(shelf_repo, section_repo, bookcase_repo).execute(
 		UpdateShelfInput(
-			shelf_id=shelf_id, family_id=UUID(payload["family_id"]), **request.model_dump(exclude_unset=True)
+			shelf_id=shelf_id, library_id=UUID(payload["library_id"]), **request.model_dump(exclude_unset=True)
 		)
 	)
 	await db.commit()
@@ -98,5 +98,5 @@ async def delete_shelf(
 	section_repo: SectionRepository = Depends(get_section_repository),
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> None:
-	await DeleteShelfUseCase(shelf_repo, section_repo, bookcase_repo).execute(shelf_id, UUID(payload["family_id"]))
+	await DeleteShelfUseCase(shelf_repo, section_repo, bookcase_repo).execute(shelf_id, UUID(payload["library_id"]))
 	await db.commit()

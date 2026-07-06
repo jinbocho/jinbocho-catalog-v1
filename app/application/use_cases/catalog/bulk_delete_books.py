@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BulkDeleteBooksInput:
 	book_ids: list[UUID]
-	family_id: UUID
+	library_id: UUID
 	changed_by: UUID
 
 
@@ -30,7 +30,7 @@ class BulkDeleteBooksUseCase:
 		if missing_ids:
 			raise LookupError(f"OwnedBook(s) not found: {missing_ids}")
 
-		foreign_ids = [book.id for book in books if book.family_id != inp.family_id]
+		foreign_ids = [book.id for book in books if book.library_id != inp.library_id]
 		if foreign_ids:
 			raise PermissionError("Access denied")
 
@@ -46,5 +46,5 @@ class BulkDeleteBooksUseCase:
 				)
 			)
 		await self._book_repo.delete_by_ids(requested_ids)
-		logger.info("Bulk-deleted %d books from family %s", len(requested_ids), inp.family_id)
+		logger.info("Bulk-deleted %d books from library %s", len(requested_ids), inp.library_id)
 		return len(requested_ids)

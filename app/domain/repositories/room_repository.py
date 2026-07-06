@@ -9,11 +9,11 @@ class RoomRepository(ABC):
 	async def find_by_id(self, room_id: UUID) -> Room | None: ...
 
 	@abstractmethod
-	async def find_all_by_family(self, family_id: UUID, limit: int = 50, offset: int = 0) -> list[Room]: ...
+	async def find_all_by_library(self, library_id: UUID, limit: int = 50, offset: int = 0) -> list[Room]: ...
 
 	@abstractmethod
-	async def find_by_name(self, family_id: UUID, name: str) -> Room | None:
-		"""Exact-name lookup within the family — used to dedupe on library import."""
+	async def find_by_name(self, library_id: UUID, name: str) -> Room | None:
+		"""Exact-name lookup within the library — used to dedupe on library import."""
 		...
 
 	@abstractmethod
@@ -23,7 +23,7 @@ class RoomRepository(ABC):
 	async def delete(self, room_id: UUID) -> None: ...
 
 	@abstractmethod
-	async def delete_all_by_family(self, family_id: UUID) -> None:
-		"""Bulk-deletes every room for the family — used by full account
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		"""Bulk-deletes every room for the library — used by full account
 		deletion. Caller must delete dependent bookcases first (RESTRICT)."""
 		...

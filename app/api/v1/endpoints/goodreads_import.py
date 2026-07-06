@@ -50,7 +50,7 @@ router = APIRouter(tags=["goodreads-import"])
 	response_model=GoodreadsPreviewResponse,
 	summary="Parse a Goodreads export CSV into an import preview",
 	description="Parses the CSV and classifies each row (new / already_owned / invalid) against what the "
-	"family already owns — nothing is created until POST /import/goodreads/confirm.",
+	"library already owns — nothing is created until POST /import/goodreads/confirm.",
 )
 @limiter.limit("3/minute")
 async def preview_goodreads_import(
@@ -61,7 +61,7 @@ async def preview_goodreads_import(
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 ) -> GoodreadsPreviewResponse:
 	result = await PreviewGoodreadsImportUseCase(record_repo, book_repo).execute(
-		PreviewGoodreadsImportInput(family_id=UUID(payload["family_id"]), csv_text=body.csv_text)
+		PreviewGoodreadsImportInput(library_id=UUID(payload["library_id"]), csv_text=body.csv_text)
 	)
 	return GoodreadsPreviewResponse(
 		rows=[
@@ -111,7 +111,7 @@ async def confirm_goodreads_import(
 	add_book = AddBookUseCase(record_repo, book_repo, history_repo, read_repo, dedup_judge, fuzzy_config)
 	result = await ConfirmGoodreadsImportUseCase(add_book, read_repo, rating_repo).execute(
 		ConfirmGoodreadsImportInput(
-			family_id=UUID(payload["family_id"]),
+			library_id=UUID(payload["library_id"]),
 			changed_by=UUID(payload["sub"]),
 			items=[ConfirmGoodreadsImportItem(**item.model_dump()) for item in body.items],
 		)

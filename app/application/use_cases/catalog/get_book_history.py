@@ -9,10 +9,10 @@ class GetBookHistoryUseCase:
 		self._history_repo = history_repo
 		self._book_repo = book_repo
 
-	async def execute(self, book_id: UUID, family_id: UUID, limit: int = 50, offset: int = 0) -> list[BookHistory]:
+	async def execute(self, book_id: UUID, library_id: UUID, limit: int = 50, offset: int = 0) -> list[BookHistory]:
 		book = await self._book_repo.find_by_id(book_id)
 		if not book:
 			raise LookupError("Book not found")
-		if book.family_id != family_id:
-			raise PermissionError("Book does not belong to this family")
+		if book.library_id != library_id:
+			raise PermissionError("Book does not belong to this library")
 		return await self._history_repo.find_by_book(book_id, limit=limit, offset=offset)

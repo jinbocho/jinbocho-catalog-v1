@@ -32,7 +32,7 @@ async def list_sections(
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> list[Section]:
 	return await ListSectionsUseCase(section_repo, bookcase_repo).execute(
-		UUID(payload["family_id"]), bookcase_id, limit, offset
+		UUID(payload["library_id"]), bookcase_id, limit, offset
 	)
 
 
@@ -45,7 +45,7 @@ async def create_section(
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> Section:
 	created = await CreateSectionUseCase(section_repo, bookcase_repo).execute(
-		CreateSectionInput(family_id=UUID(payload["family_id"]), **request.model_dump())
+		CreateSectionInput(library_id=UUID(payload["library_id"]), **request.model_dump())
 	)
 	await db.commit()
 	return created
@@ -58,7 +58,7 @@ async def get_section(
 	section_repo: SectionRepository = Depends(get_section_repository),
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> Section:
-	return await GetSectionUseCase(section_repo, bookcase_repo).execute(section_id, UUID(payload["family_id"]))
+	return await GetSectionUseCase(section_repo, bookcase_repo).execute(section_id, UUID(payload["library_id"]))
 
 
 @router.patch("/{section_id}", response_model=SectionResponse, summary="Update section")
@@ -72,7 +72,7 @@ async def update_section(
 ) -> Section:
 	updated = await UpdateSectionUseCase(section_repo, bookcase_repo).execute(
 		UpdateSectionInput(
-			section_id=section_id, family_id=UUID(payload["family_id"]), **request.model_dump(exclude_unset=True)
+			section_id=section_id, library_id=UUID(payload["library_id"]), **request.model_dump(exclude_unset=True)
 		)
 	)
 	await db.commit()
@@ -87,5 +87,5 @@ async def delete_section(
 	section_repo: SectionRepository = Depends(get_section_repository),
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> None:
-	await DeleteSectionUseCase(section_repo, bookcase_repo).execute(section_id, UUID(payload["family_id"]))
+	await DeleteSectionUseCase(section_repo, bookcase_repo).execute(section_id, UUID(payload["library_id"]))
 	await db.commit()

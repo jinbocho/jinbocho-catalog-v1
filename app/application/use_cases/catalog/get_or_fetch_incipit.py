@@ -23,12 +23,12 @@ class GetIncipitUseCase:
 	def __init__(self, record_repo: BibliographicRecordRepository) -> None:
 		self._record_repo = record_repo
 
-	async def execute(self, record_id: UUID, family_id: UUID) -> IncipitOutput:
+	async def execute(self, record_id: UUID, library_id: UUID) -> IncipitOutput:
 		record = await self._record_repo.find_by_id(record_id)
 		if not record:
 			raise LookupError("Bibliographic record not found")
-		if record.family_id != family_id:
-			raise PermissionError("Bibliographic record does not belong to this family")
+		if record.library_id != library_id:
+			raise PermissionError("Bibliographic record does not belong to this library")
 		return IncipitOutput(record.incipit, record.incipit_source, record.incipit_generated_at)
 
 
@@ -48,12 +48,12 @@ class DeriveIncipitUseCase:
 		self._record_repo = record_repo
 		self._cache_repo = cache_repo
 
-	async def execute(self, record_id: UUID, family_id: UUID) -> IncipitOutput:
+	async def execute(self, record_id: UUID, library_id: UUID) -> IncipitOutput:
 		record = await self._record_repo.find_by_id(record_id)
 		if not record:
 			raise LookupError("Bibliographic record not found")
-		if record.family_id != family_id:
-			raise PermissionError("Bibliographic record does not belong to this family")
+		if record.library_id != library_id:
+			raise PermissionError("Bibliographic record does not belong to this library")
 
 		if record.isbn:
 			cached = await self._cache_repo.find_by_isbn(record.isbn)
@@ -67,10 +67,10 @@ class DeriveIncipitUseCase:
 				record.updated_at = utcnow()
 				saved = await self._record_repo.save(record)
 				logger.info(
-					"Incipit derived from ISBN cache (source=%s) for record %s in family %s",
+					"Incipit derived from ISBN cache (source=%s) for record %s in library %s",
 					saved.incipit_source,
 					record_id,
-					family_id,
+					library_id,
 				)
 				return IncipitOutput(saved.incipit, saved.incipit_source, saved.incipit_generated_at)
 

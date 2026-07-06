@@ -1,4 +1,4 @@
-from .delete_family_data import DeleteFamilyDataOutput, DeleteFamilyDataUseCase
+from .delete_library_data import DeleteLibraryDataOutput, DeleteLibraryDataUseCase
 from .export_full_library import ExportFullLibraryUseCase, FullLibraryExport
 from .import_full_library import (
 	ImportBookcaseItem,
@@ -35,6 +35,6 @@ __all__ = [
 	"ImportWishlistItem",
 	"RecordRemovedMemberUseCase",
 	"RecordRemovedMemberInput",
-	"DeleteFamilyDataUseCase",
-	"DeleteFamilyDataOutput",
+	"DeleteLibraryDataUseCase",
+	"DeleteLibraryDataOutput",
 ]

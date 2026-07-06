@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class UpdateReadingStatusInput:
 	book_id: UUID
-	family_id: UUID
+	library_id: UUID
 	changed_by: UUID
 	reading_status: ReadingStatus
 
@@ -32,17 +32,17 @@ class UpdateReadingStatusUseCase:
 		book = await self._book_repo.find_by_id(inp.book_id)
 		if book is None:
 			raise LookupError(f"OwnedBook {inp.book_id} not found")
-		if book.family_id != inp.family_id:
+		if book.library_id != inp.library_id:
 			raise PermissionError("Access denied")
 
 		old_status = book.reading_status_for(inp.changed_by, await self._read_repo.is_read(book.id, inp.changed_by))
 
 		if inp.reading_status == ReadingStatus.READING:
-			# Claiming the single physical copy — shared across the family by nature.
+			# Claiming the single physical copy — shared across the library by nature.
 			book.current_reader_id = inp.changed_by
 		else:
 			# "Read"/"to_read" are personal: they only ever change whether
-			# *this* caller has read it, never the whole family's view.
+			# *this* caller has read it, never the whole library's view.
 			if book.current_reader_id == inp.changed_by:
 				book.current_reader_id = None
 			if inp.reading_status == ReadingStatus.READ:
@@ -66,5 +66,5 @@ class UpdateReadingStatusUseCase:
 				created_at=utcnow(),
 			)
 		)
-		logger.info("Book %s reading status set to %s by family %s", saved.id, new_status, inp.family_id)
+		logger.info("Book %s reading status set to %s by library %s", saved.id, new_status, inp.library_id)
 		return saved

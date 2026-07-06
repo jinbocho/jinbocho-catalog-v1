@@ -12,11 +12,11 @@ class BookHistoryRepository(ABC):
 	async def save(self, history: BookHistory) -> BookHistory: ...
 
 	@abstractmethod
-	async def find_all_by_family(self, family_id: UUID) -> list[BookHistory]:
-		"""All history for the family's currently-existing books, for a full
+	async def find_all_by_library(self, library_id: UUID) -> list[BookHistory]:
+		"""All history for the library's currently-existing books, for a full
 		library export. There's no FK on owned_book_id (audit rows survive book
 		deletion), so this can only join against books that still exist — history
-		for an already-deleted book is not attributable to a family this way."""
+		for an already-deleted book is not attributable to a library this way."""
 		...
 
 	@abstractmethod
@@ -28,8 +28,8 @@ class BookHistoryRepository(ABC):
 
 	@abstractmethod
 	async def delete_by_owned_book_ids(self, owned_book_ids: list[UUID]) -> None:
-		"""Used by full account deletion — there's no FK/family_id on this
-		table, so the caller resolves the family's book ids first (e.g. via
-		OwnedBookRepository.find_all_by_family) and must do so before deleting
+		"""Used by full account deletion — there's no FK/library_id on this
+		table, so the caller resolves the library's book ids first (e.g. via
+		OwnedBookRepository.find_all_by_library) and must do so before deleting
 		those books."""
 		...

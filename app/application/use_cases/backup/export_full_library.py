@@ -49,11 +49,11 @@ class FullLibraryExport:
 
 
 class ExportFullLibraryUseCase:
-	"""Exports every family-owned row needed to fully restore the library
+	"""Exports every library-owned row needed to fully restore the library
 	elsewhere: the location hierarchy (including empty rooms/bookcases/etc,
 	unlike the books-only export), every bibliographic record, every owned
 	book, every loan (not just active ones), every read, and the full audit
-	history. Excludes IsbnLookupCache (a global, non-family cache, not library
+	history. Excludes IsbnLookupCache (a global, non-library cache, not library
 	data) on purpose.
 	"""
 
@@ -83,24 +83,24 @@ class ExportFullLibraryUseCase:
 		self._removed_member_repo = removed_member_repo
 		self._wishlist_repo = wishlist_repo
 
-	async def execute(self, family_id: UUID) -> FullLibraryExport:
+	async def execute(self, library_id: UUID) -> FullLibraryExport:
 		rooms = await fetch_all_pages(
-			lambda limit, offset: self._room_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+			lambda limit, offset: self._room_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		)
 		bookcases = await fetch_all_pages(
-			lambda limit, offset: self._bookcase_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+			lambda limit, offset: self._bookcase_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		)
 		sections = await fetch_all_pages(
-			lambda limit, offset: self._section_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+			lambda limit, offset: self._section_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		)
 		shelves = await fetch_all_pages(
-			lambda limit, offset: self._shelf_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+			lambda limit, offset: self._shelf_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		)
 		records = await fetch_all_pages(
-			lambda limit, offset: self._record_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+			lambda limit, offset: self._record_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		)
 		books = await fetch_all_pages(
-			lambda limit, offset: self._book_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+			lambda limit, offset: self._book_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		)
 
 		export = FullLibraryExport(
@@ -110,15 +110,15 @@ class ExportFullLibraryUseCase:
 			shelves=shelves,
 			bibliographic_records=records,
 			owned_books=books,
-			book_reads=await self._book_read_repo.list_by_family(family_id),
-			book_loans=await self._book_loan_repo.find_all_by_family(family_id),
-			book_history=await self._book_history_repo.find_all_by_family(family_id),
-			wishlist_items=await self._wishlist_repo.list_by_family(family_id),
-			removed_members=await self._removed_member_repo.find_all_by_family(family_id),
+			book_reads=await self._book_read_repo.list_by_library(library_id),
+			book_loans=await self._book_loan_repo.find_all_by_library(library_id),
+			book_history=await self._book_history_repo.find_all_by_library(library_id),
+			wishlist_items=await self._wishlist_repo.list_by_library(library_id),
+			removed_members=await self._removed_member_repo.find_all_by_library(library_id),
 		)
 		logger.info(
-			"Full library exported for family %s: %d owned book(s), %d bibliographic record(s)",
-			family_id,
+			"Full library exported for library %s: %d owned book(s), %d bibliographic record(s)",
+			library_id,
 			len(export.owned_books),
 			len(export.bibliographic_records),
 		)

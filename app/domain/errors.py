@@ -13,7 +13,7 @@ class DuplicateBookConflict:
 	title: str
 	main_author: str | None
 	isbn: str | None
-	# Who already has it and where — the check is family-wide, not owner-scoped
+	# Who already has it and where — the check is library-wide, not owner-scoped
 	# (two members can each legitimately own a copy), so the caller needs this
 	# to decide whether adding a separate copy makes sense.
 	existing_owner_id: UUID | None

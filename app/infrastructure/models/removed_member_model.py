@@ -16,7 +16,7 @@ class RemovedMemberModel(Base):
 	# Primary key is the ORIGINAL auth-service user id, not a fresh one — it's
 	# the join key used to resolve owner_id/current_reader_id/etc. on export.
 	id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
-	family_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+	library_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
 	full_name: Mapped[str] = mapped_column(String(255), nullable=False)
 	email: Mapped[str] = mapped_column(String(255), nullable=False)
 	role: Mapped[str] = mapped_column(String(20), nullable=False)

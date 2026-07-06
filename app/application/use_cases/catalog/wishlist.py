@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class AddToWishlistInput:
-    family_id: UUID
+    library_id: UUID
     user_id: UUID
     bibliographic_record_id: UUID | None = None
     title: str | None = None
@@ -40,7 +40,7 @@ class AddToWishlistUseCase:
             if not inp.title:
                 raise ValueError("Either bibliographic_record_id or title must be provided")
             record = BibliographicRecord(
-                family_id=inp.family_id,
+                library_id=inp.library_id,
                 title=inp.title,
                 isbn=inp.isbn,
                 main_author=inp.main_author,
@@ -57,8 +57,8 @@ class AddToWishlistUseCase:
             fetched = await self._record_repo.find_by_id(inp.bibliographic_record_id)
             if not fetched:
                 raise LookupError("Bibliographic record not found")
-            if fetched.family_id != inp.family_id:
-                raise PermissionError("Bibliographic record does not belong to this family")
+            if fetched.library_id != inp.library_id:
+                raise PermissionError("Bibliographic record does not belong to this library")
             bibliographic_record_id = inp.bibliographic_record_id
 
         if await self._wishlist_repo.exists_for_user_and_record(inp.user_id, bibliographic_record_id):
@@ -66,14 +66,14 @@ class AddToWishlistUseCase:
 
         saved = await self._wishlist_repo.add(
             WishlistItem(
-                family_id=inp.family_id,
+                library_id=inp.library_id,
                 user_id=inp.user_id,
                 bibliographic_record_id=bibliographic_record_id,
                 notes=inp.notes,
                 priority=inp.priority,
             )
         )
-        logger.info("Wishlist item %s added by user %s in family %s", saved.id, inp.user_id, inp.family_id)
+        logger.info("Wishlist item %s added by user %s in library %s", saved.id, inp.user_id, inp.library_id)
         return saved
 
 
@@ -81,19 +81,19 @@ class RemoveFromWishlistUseCase:
     def __init__(self, wishlist_repo: WishlistRepository) -> None:
         self._wishlist_repo = wishlist_repo
 
-    async def execute(self, item_id: UUID, family_id: UUID, user_id: UUID, role: str) -> None:
-        item = await self._wishlist_repo.get(item_id, family_id)
+    async def execute(self, item_id: UUID, library_id: UUID, user_id: UUID, role: str) -> None:
+        item = await self._wishlist_repo.get(item_id, library_id)
         if not item:
             raise LookupError("Wishlist item not found")
         if item.user_id != user_id and role != "admin":
             raise PermissionError("Cannot remove another user's wishlist item")
-        await self._wishlist_repo.delete(item_id, family_id)
-        logger.info("Wishlist item %s removed by user %s in family %s", item_id, user_id, family_id)
+        await self._wishlist_repo.delete(item_id, library_id)
+        logger.info("Wishlist item %s removed by user %s in library %s", item_id, user_id, library_id)
 
 
-class ListFamilyWishlistUseCase:
+class ListLibraryWishlistUseCase:
     def __init__(self, wishlist_repo: WishlistRepository) -> None:
         self._wishlist_repo = wishlist_repo
 
-    async def execute(self, family_id: UUID) -> list[WishlistItem]:
-        return await self._wishlist_repo.list_by_family(family_id)
+    async def execute(self, library_id: UUID) -> list[WishlistItem]:
+        return await self._wishlist_repo.list_by_library(library_id)

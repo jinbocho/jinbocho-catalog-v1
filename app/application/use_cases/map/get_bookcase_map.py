@@ -43,12 +43,12 @@ class GetBookcaseMapUseCase:
 		self._read_repo = read_repo
 
 	async def execute(
-		self, family_id: UUID, bookcase_id: UUID, viewer_id: UUID
+		self, library_id: UUID, bookcase_id: UUID, viewer_id: UUID
 	) -> tuple[Bookcase, list[MapSectionData]]:
 		bookcase = await self._bookcase_repo.find_by_id(bookcase_id)
 		if bookcase is None:
 			raise LookupError("Bookcase not found")
-		if bookcase.family_id != family_id:
+		if bookcase.library_id != library_id:
 			raise PermissionError("Access denied")
 
 		# 2000 is a ceiling, not a real-world expectation: no physical bookcase has

@@ -13,14 +13,16 @@ class MarkBookReadUseCase:
         self._book_repo = book_repo
         self._read_repo = read_repo
 
-    async def execute(self, book_id: UUID, family_id: UUID, user_id: UUID, read_at: datetime | None = None) -> BookRead:
+    async def execute(
+        self, book_id: UUID, library_id: UUID, user_id: UUID, read_at: datetime | None = None
+    ) -> BookRead:
         book = await self._book_repo.find_by_id(book_id)
         if not book:
             raise LookupError("Book not found")
-        if book.family_id != family_id:
-            raise PermissionError("Book does not belong to this family")
+        if book.library_id != library_id:
+            raise PermissionError("Book does not belong to this library")
         saved = await self._read_repo.add(book_id, user_id, read_at)
-        logger.info("Book %s marked read by user %s in family %s", book_id, user_id, family_id)
+        logger.info("Book %s marked read by user %s in library %s", book_id, user_id, library_id)
         return saved
 
 
@@ -29,14 +31,14 @@ class UnmarkBookReadUseCase:
         self._book_repo = book_repo
         self._read_repo = read_repo
 
-    async def execute(self, book_id: UUID, family_id: UUID, user_id: UUID) -> None:
+    async def execute(self, book_id: UUID, library_id: UUID, user_id: UUID) -> None:
         book = await self._book_repo.find_by_id(book_id)
         if not book:
             raise LookupError("Book not found")
-        if book.family_id != family_id:
-            raise PermissionError("Book does not belong to this family")
+        if book.library_id != library_id:
+            raise PermissionError("Book does not belong to this library")
         await self._read_repo.remove(book_id, user_id)
-        logger.info("Book %s unmarked read by user %s in family %s", book_id, user_id, family_id)
+        logger.info("Book %s unmarked read by user %s in library %s", book_id, user_id, library_id)
 
 
 class ListBookReadsUseCase:
@@ -44,18 +46,18 @@ class ListBookReadsUseCase:
         self._book_repo = book_repo
         self._read_repo = read_repo
 
-    async def execute(self, book_id: UUID, family_id: UUID) -> list[BookRead]:
+    async def execute(self, book_id: UUID, library_id: UUID) -> list[BookRead]:
         book = await self._book_repo.find_by_id(book_id)
         if not book:
             raise LookupError("Book not found")
-        if book.family_id != family_id:
-            raise PermissionError("Book does not belong to this family")
+        if book.library_id != library_id:
+            raise PermissionError("Book does not belong to this library")
         return await self._read_repo.list_by_book(book_id)
 
 
-class ListFamilyReadsUseCase:
+class ListLibraryReadsUseCase:
     def __init__(self, read_repo: BookReadRepository) -> None:
         self._read_repo = read_repo
 
-    async def execute(self, family_id: UUID) -> list[BookRead]:
-        return await self._read_repo.list_by_family(family_id)
+    async def execute(self, library_id: UUID) -> list[BookRead]:
+        return await self._read_repo.list_by_library(library_id)

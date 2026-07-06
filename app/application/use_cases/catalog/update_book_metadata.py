@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class UpdateBookMetadataInput:
 	book_id: UUID
-	family_id: UUID
+	library_id: UUID
 	changed_by: UUID
 	condition: BookCondition | None = None
 	purchase_date: date | None = None
@@ -48,8 +48,8 @@ class UpdateBookMetadataUseCase:
 		book = await self._book_repo.find_by_id(inp.book_id)
 		if not book:
 			raise LookupError("Book not found")
-		if book.family_id != inp.family_id:
-			raise PermissionError("Book does not belong to this family")
+		if book.library_id != inp.library_id:
+			raise PermissionError("Book does not belong to this library")
 		if inp.condition is not None:
 			book.condition = inp.condition
 		if inp.purchase_date is not None:
@@ -91,5 +91,5 @@ class UpdateBookMetadataUseCase:
 					created_at=utcnow(),
 			)
 		)
-		logger.info("Book %s metadata updated by family %s", book.id, inp.family_id)
+		logger.info("Book %s metadata updated by library %s", book.id, inp.library_id)
 		return updated

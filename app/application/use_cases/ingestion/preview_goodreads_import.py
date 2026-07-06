@@ -13,7 +13,7 @@ GoodreadsPreviewRowStatus = Literal["new", "already_owned", "invalid"]
 
 @dataclass
 class PreviewGoodreadsImportInput:
-	family_id: UUID
+	library_id: UUID
 	csv_text: str
 
 
@@ -50,14 +50,14 @@ class PreviewGoodreadsImportUseCase:
 
 	async def execute(self, inp: PreviewGoodreadsImportInput) -> PreviewGoodreadsImportOutput:
 		rows = parse_goodreads_csv(inp.csv_text)
-		# One family-scoped read per row; a Goodreads export can be hundreds of
+		# One library-scoped read per row; a Goodreads export can be hundreds of
 		# rows, so these run concurrently rather than serially awaited.
-		previewed = await asyncio.gather(*(self._to_preview_row(inp.family_id, row) for row in rows))
+		previewed = await asyncio.gather(*(self._to_preview_row(inp.library_id, row) for row in rows))
 		return PreviewGoodreadsImportOutput(rows=list(previewed))
 
-	async def _to_preview_row(self, family_id: UUID, row: GoodreadsRow) -> GoodreadsPreviewRow:
+	async def _to_preview_row(self, library_id: UUID, row: GoodreadsRow) -> GoodreadsPreviewRow:
 		status: GoodreadsPreviewRowStatus = "invalid" if not row.title else "new"
-		if status == "new" and await self._is_already_owned(family_id, row):
+		if status == "new" and await self._is_already_owned(library_id, row):
 			status = "already_owned"
 		return GoodreadsPreviewRow(
 			row_number=row.row_number,
@@ -75,10 +75,10 @@ class PreviewGoodreadsImportUseCase:
 			tags=row.tags,
 		)
 
-	async def _is_already_owned(self, family_id: UUID, row: GoodreadsRow) -> bool:
-		record = await self._record_repo.find_by_isbn(family_id, row.isbn) if row.isbn else None
+	async def _is_already_owned(self, library_id: UUID, row: GoodreadsRow) -> bool:
+		record = await self._record_repo.find_by_isbn(library_id, row.isbn) if row.isbn else None
 		if record is None:
-			record = await self._record_repo.find_by_title_author(family_id, row.title, row.main_author)
+			record = await self._record_repo.find_by_title_author(library_id, row.title, row.main_author)
 		if record is None:
 			return False
 		return await self._book_repo.exists_by_bibliographic_record_id(record.id)

@@ -38,7 +38,7 @@ class WishlistItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(..., description="Wishlist item ID")
-    family_id: UUID = Field(..., description="Family ID")
+    library_id: UUID = Field(..., description="Library ID")
     user_id: UUID = Field(..., description="User who wants this book")
     bibliographic_record_id: UUID = Field(..., description="Bibliographic record ID")
     added_at: datetime = Field(..., description="When added to wishlist")

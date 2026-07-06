@@ -18,14 +18,14 @@ class FakeNotifier(LoanReminderNotifier):
 		self.calls: list[tuple[UUID, str, str, datetime]] = []
 		self._fail_for = fail_for or set()
 
-	async def notify(self, family_id: UUID, book_title: str, borrower_name: str, due_date: datetime) -> None:
-		if family_id in self._fail_for:
+	async def notify(self, library_id: UUID, book_title: str, borrower_name: str, due_date: datetime) -> None:
+		if library_id in self._fail_for:
 			raise RuntimeError("boom")
-		self.calls.append((family_id, book_title, borrower_name, due_date))
+		self.calls.append((library_id, book_title, borrower_name, due_date))
 
 
 @pytest.fixture
-def family_id() -> UUID:
+def library_id() -> UUID:
 	return uuid4()
 
 
@@ -33,13 +33,13 @@ async def _seed_loan(
 	loan_repo: MockBookLoanRepository,
 	book_repo: MockOwnedBookRepository,
 	record_repo: MockBibliographicRecordRepository,
-	family_id: UUID,
+	library_id: UUID,
 	due_date: datetime | None,
 	borrower_name: str = "Mario",
 ) -> BookLoan:
-	record = BibliographicRecord(family_id=family_id, title="Dune")
+	record = BibliographicRecord(library_id=library_id, title="Dune")
 	await record_repo.save(record)
-	book = OwnedBook(family_id=family_id, bibliographic_record_id=record.id)
+	book = OwnedBook(library_id=library_id, bibliographic_record_id=record.id)
 	await book_repo.save(book)
 	loan = BookLoan(owned_book_id=book.id, borrower_name=borrower_name, due_date=due_date)
 	await loan_repo.add(loan)
@@ -47,13 +47,13 @@ async def _seed_loan(
 
 
 @pytest.mark.asyncio
-async def test_sends_reminder_for_loan_due_soon_and_marks_it_sent(family_id: UUID) -> None:
+async def test_sends_reminder_for_loan_due_soon_and_marks_it_sent(library_id: UUID) -> None:
 	loan_repo = MockBookLoanRepository()
 	book_repo = MockOwnedBookRepository()
 	record_repo = MockBibliographicRecordRepository()
 	notifier = FakeNotifier()
 	loan = await _seed_loan(
-		loan_repo, book_repo, record_repo, family_id,
+		loan_repo, book_repo, record_repo, library_id,
 		due_date=datetime.now(UTC) + timedelta(hours=12),
 	)
 
@@ -61,18 +61,18 @@ async def test_sends_reminder_for_loan_due_soon_and_marks_it_sent(family_id: UUI
 	sent = await use_case.execute(lead_days=1)
 
 	assert sent == 1
-	assert notifier.calls == [(family_id, "Dune", "Mario", loan.due_date)]
+	assert notifier.calls == [(library_id, "Dune", "Mario", loan.due_date)]
 	assert loan_repo.loans[loan.id].reminder_sent_at is not None
 
 
 @pytest.mark.asyncio
-async def test_skips_loan_not_yet_due(family_id: UUID) -> None:
+async def test_skips_loan_not_yet_due(library_id: UUID) -> None:
 	loan_repo = MockBookLoanRepository()
 	book_repo = MockOwnedBookRepository()
 	record_repo = MockBibliographicRecordRepository()
 	notifier = FakeNotifier()
 	await _seed_loan(
-		loan_repo, book_repo, record_repo, family_id,
+		loan_repo, book_repo, record_repo, library_id,
 		due_date=datetime.now(UTC) + timedelta(days=10),
 	)
 
@@ -84,13 +84,13 @@ async def test_skips_loan_not_yet_due(family_id: UUID) -> None:
 
 
 @pytest.mark.asyncio
-async def test_skips_already_reminded_loan(family_id: UUID) -> None:
+async def test_skips_already_reminded_loan(library_id: UUID) -> None:
 	loan_repo = MockBookLoanRepository()
 	book_repo = MockOwnedBookRepository()
 	record_repo = MockBibliographicRecordRepository()
 	notifier = FakeNotifier()
 	loan = await _seed_loan(
-		loan_repo, book_repo, record_repo, family_id,
+		loan_repo, book_repo, record_repo, library_id,
 		due_date=datetime.now(UTC) + timedelta(hours=1),
 	)
 	await loan_repo.mark_reminder_sent(loan.id, datetime.now(UTC))
@@ -103,19 +103,19 @@ async def test_skips_already_reminded_loan(family_id: UUID) -> None:
 
 
 @pytest.mark.asyncio
-async def test_one_failing_loan_does_not_block_the_rest(family_id: UUID) -> None:
-	other_family_id = uuid4()
+async def test_one_failing_loan_does_not_block_the_rest(library_id: UUID) -> None:
+	other_library_id = uuid4()
 	loan_repo = MockBookLoanRepository()
 	book_repo = MockOwnedBookRepository()
 	record_repo = MockBibliographicRecordRepository()
-	notifier = FakeNotifier(fail_for={family_id})
+	notifier = FakeNotifier(fail_for={library_id})
 
 	failing_loan = await _seed_loan(
-		loan_repo, book_repo, record_repo, family_id,
+		loan_repo, book_repo, record_repo, library_id,
 		due_date=datetime.now(UTC) + timedelta(hours=1), borrower_name="Mario",
 	)
 	ok_loan = await _seed_loan(
-		loan_repo, book_repo, record_repo, other_family_id,
+		loan_repo, book_repo, record_repo, other_library_id,
 		due_date=datetime.now(UTC) + timedelta(hours=1), borrower_name="Luigi",
 	)
 

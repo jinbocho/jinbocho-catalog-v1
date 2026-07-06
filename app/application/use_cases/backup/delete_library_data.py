@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class DeleteFamilyDataOutput:
+class DeleteLibraryDataOutput:
 	rooms_deleted: int
 	bookcases_deleted: int
 	records_deleted: int
@@ -24,15 +24,15 @@ class DeleteFamilyDataOutput:
 	removed_members_deleted: int
 
 
-class DeleteFamilyDataUseCase:
-	"""Permanently wipes every row this service holds for one family — the
+class DeleteLibraryDataUseCase:
+	"""Permanently wipes every row this service holds for one library — the
 	catalog-service half of the "delete my account" feature (the auth-service
-	half deletes the Family/User rows in its own database; the two databases
+	half deletes the Library/User rows in its own database; the two databases
 	have no FK between them, so each side must clean up its own data).
 
 	Deletion order matters — it exists to satisfy FK constraints without
 	relying on cascades that don't exist for every relationship:
-	  1. book_history has no FK/family_id at all, so it can only be reached by
+	  1. book_history has no FK/library_id at all, so it can only be reached by
 	     joining against owned_books *before* those are deleted.
 	  2. owned_books are deleted next — book_reads/book_loans cascade
 	     automatically at the DB level (ON DELETE CASCADE).
@@ -41,7 +41,7 @@ class DeleteFamilyDataUseCase:
 	  4. bookcases are deleted next — sections/shelves cascade automatically.
 	  5. rooms can only be deleted once no bookcase references them (RESTRICT).
 	  6. removed_members has no dependents — order doesn't matter, done last.
-	Excludes IsbnLookupCache on purpose: it's a global cache, not family data.
+	Excludes IsbnLookupCache on purpose: it's a global cache, not library data.
 	"""
 
 	def __init__(
@@ -60,44 +60,44 @@ class DeleteFamilyDataUseCase:
 		self._book_history_repo = book_history_repo
 		self._removed_member_repo = removed_member_repo
 
-	async def execute(self, family_id: UUID) -> DeleteFamilyDataOutput:
+	async def execute(self, library_id: UUID) -> DeleteLibraryDataOutput:
 		book_ids = [book.id for book in await fetch_all_pages(
-			lambda limit, offset: self._book_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+			lambda limit, offset: self._book_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		)]
 		await self._book_history_repo.delete_by_owned_book_ids(book_ids)
 
 		owned_books_deleted = len(book_ids)
-		await self._book_repo.delete_all_by_family(family_id)
+		await self._book_repo.delete_all_by_library(library_id)
 
 		records_deleted = len(await fetch_all_pages(
-			lambda limit, offset: self._record_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+			lambda limit, offset: self._record_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		))
-		await self._record_repo.delete_all_by_family(family_id)
+		await self._record_repo.delete_all_by_library(library_id)
 
 		bookcases_deleted = len(await fetch_all_pages(
-			lambda limit, offset: self._bookcase_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+			lambda limit, offset: self._bookcase_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		))
-		await self._bookcase_repo.delete_all_by_family(family_id)
+		await self._bookcase_repo.delete_all_by_library(library_id)
 
 		rooms_deleted = len(await fetch_all_pages(
-			lambda limit, offset: self._room_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+			lambda limit, offset: self._room_repo.find_all_by_library(library_id, limit=limit, offset=offset)
 		))
-		await self._room_repo.delete_all_by_family(family_id)
+		await self._room_repo.delete_all_by_library(library_id)
 
-		removed_members_deleted = len(await self._removed_member_repo.find_all_by_family(family_id))
-		await self._removed_member_repo.delete_all_by_family(family_id)
+		removed_members_deleted = len(await self._removed_member_repo.find_all_by_library(library_id))
+		await self._removed_member_repo.delete_all_by_library(library_id)
 
 		logger.info(
-			"GDPR wipe completed for family %s: %d room(s), %d bookcase(s), %d record(s), "
+			"GDPR wipe completed for library %s: %d room(s), %d bookcase(s), %d record(s), "
 			"%d owned book(s), %d removed member(s)",
-			family_id,
+			library_id,
 			rooms_deleted,
 			bookcases_deleted,
 			records_deleted,
 			owned_books_deleted,
 			removed_members_deleted,
 		)
-		return DeleteFamilyDataOutput(
+		return DeleteLibraryDataOutput(
 			rooms_deleted=rooms_deleted,
 			bookcases_deleted=bookcases_deleted,
 			records_deleted=records_deleted,

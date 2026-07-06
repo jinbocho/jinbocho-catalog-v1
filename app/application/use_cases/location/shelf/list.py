@@ -13,8 +13,8 @@ class ListShelvesUseCase:
 		self._bookcase_repo = bookcase_repo
 
 	async def execute(
-		self, family_id: UUID, section_id: UUID | None = None, limit: int = 50, offset: int = 0
+		self, library_id: UUID, section_id: UUID | None = None, limit: int = 50, offset: int = 0
 	) -> list[Shelf]:
-		return await self._shelf_repo.find_all_by_family(
-			family_id, section_id=section_id, limit=limit, offset=offset
+		return await self._shelf_repo.find_all_by_library(
+			library_id, section_id=section_id, limit=limit, offset=offset
 		)

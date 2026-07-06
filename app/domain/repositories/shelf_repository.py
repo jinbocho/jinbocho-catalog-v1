@@ -12,9 +12,9 @@ class ShelfRepository(ABC):
 	async def find_all_by_section(self, section_id: UUID, limit: int = 50, offset: int = 0) -> list[Shelf]: ...
 
 	@abstractmethod
-	async def find_all_by_family(
+	async def find_all_by_library(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		section_id: UUID | None = None,
 		limit: int = 50,
 		offset: int = 0,

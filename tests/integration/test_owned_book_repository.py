@@ -6,20 +6,20 @@ from app.domain.entities import BibliographicRecord, BookCondition, BookSource, 
 from app.infrastructure.repositories import SQLAlchemyBibliographicRecordRepository, SQLAlchemyOwnedBookRepository
 
 
-async def _make_record(db_session: AsyncSession, family_id: UUID) -> BibliographicRecord:
+async def _make_record(db_session: AsyncSession, library_id: UUID) -> BibliographicRecord:
 	record_repo = SQLAlchemyBibliographicRecordRepository(db_session)
-	return await record_repo.save(BibliographicRecord(family_id=family_id, title="Test Book"))
+	return await record_repo.save(BibliographicRecord(library_id=library_id, title="Test Book"))
 
 
 async def test_save_then_find_by_id_returns_real_enum_members_not_raw_strings(
-	db_session: AsyncSession, family_id: UUID
+	db_session: AsyncSession, library_id: UUID
 ) -> None:
-	record = await _make_record(db_session, family_id)
+	record = await _make_record(db_session, library_id)
 	book_repo = SQLAlchemyOwnedBookRepository(db_session)
 
 	saved = await book_repo.save(
 		OwnedBook(
-			family_id=family_id,
+			library_id=library_id,
 			bibliographic_record_id=record.id,
 			condition=BookCondition.GOOD,
 			source=BookSource.GIFT,
@@ -39,12 +39,12 @@ async def test_save_then_find_by_id_returns_real_enum_members_not_raw_strings(
 
 
 async def test_save_then_find_by_id_round_trips_nullable_enum_fields_as_none(
-	db_session: AsyncSession, family_id: UUID
+	db_session: AsyncSession, library_id: UUID
 ) -> None:
-	record = await _make_record(db_session, family_id)
+	record = await _make_record(db_session, library_id)
 	book_repo = SQLAlchemyOwnedBookRepository(db_session)
 
-	saved = await book_repo.save(OwnedBook(family_id=family_id, bibliographic_record_id=record.id))
+	saved = await book_repo.save(OwnedBook(library_id=library_id, bibliographic_record_id=record.id))
 
 	found = await book_repo.find_by_id(saved.id)
 	assert found is not None

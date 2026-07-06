@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CreateBibliographicRecordInput:
-	family_id: UUID
+	library_id: UUID
 	title: str
 	main_author: str | None = None
 	other_authors: list[str] | None = None
@@ -29,9 +29,9 @@ class CreateBibliographicRecordUseCase:
 		self._record_repo = record_repo
 
 	async def execute(self, inp: CreateBibliographicRecordInput) -> BibliographicRecord:
-		# The DB enforces UNIQUE(family_id, isbn); a blind insert would crash
+		# The DB enforces UNIQUE(library_id, isbn); a blind insert would crash
 		# with a generic 409 "data integrity violation" the second time someone
-		# adds a book with an ISBN the family already has on file. Reuse the
+		# adds a book with an ISBN the library already has on file. Reuse the
 		# existing record instead — same rule AddBookUseCase already applies
 		# when it resolves a record by ISBN internally.
 		# Note: unlike AddBookUseCase's own internal resolution path, this use
@@ -39,14 +39,14 @@ class CreateBibliographicRecordUseCase:
 		# here too, or a hyphenated resubmission of the same ISBN wouldn't be
 		# found and would still crash on the unique constraint.
 		if inp.isbn:
-			existing = await self._record_repo.find_by_isbn(inp.family_id, inp.isbn)
+			existing = await self._record_repo.find_by_isbn(inp.library_id, inp.isbn)
 			if existing:
 				return existing
 
 		genre = map_to_genre(inp.genre)
 		saved = await self._record_repo.save(
 			BibliographicRecord(
-				family_id=inp.family_id,
+				library_id=inp.library_id,
 				title=inp.title,
 				main_author=inp.main_author,
 				other_authors=inp.other_authors or [],
@@ -62,5 +62,5 @@ class CreateBibliographicRecordUseCase:
 				updated_at=utcnow(),
 			)
 		)
-		logger.info("Bibliographic record %s created in family %s", saved.id, inp.family_id)
+		logger.info("Bibliographic record %s created in library %s", saved.id, inp.library_id)
 		return saved

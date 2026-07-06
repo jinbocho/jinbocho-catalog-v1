@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class UpdateBibliographicRecordInput:
 	record_id: UUID
-	family_id: UUID
+	library_id: UUID
 	title: str | None = None
 	main_author: str | None = None
 	other_authors: list[str] | None = None
@@ -33,7 +33,7 @@ class UpdateBibliographicRecordUseCase:
 		record = await self._record_repo.find_by_id(inp.record_id)
 		if record is None:
 			raise LookupError("Bibliographic record not found")
-		if record.family_id != inp.family_id:
+		if record.library_id != inp.library_id:
 			raise PermissionError("Access denied")
 
 		if inp.title is not None:
@@ -60,5 +60,5 @@ class UpdateBibliographicRecordUseCase:
 			record.notes = inp.notes
 		record.updated_at = utcnow()
 		saved = await self._record_repo.save(record)
-		logger.info("Bibliographic record %s updated in family %s", saved.id, inp.family_id)
+		logger.info("Bibliographic record %s updated in library %s", saved.id, inp.library_id)
 		return saved

@@ -20,7 +20,7 @@ _AUDIT_MATCH_THRESHOLD = 0.80
 
 @dataclass
 class AuditShelfInput:
-	family_id: UUID
+	library_id: UUID
 	shelf_id: UUID
 	image_base64: str
 	media_type: str
@@ -76,7 +76,7 @@ class AuditShelfUseCase:
 
 	async def execute(self, inp: AuditShelfInput) -> AuditShelfOutput:
 		await validate_shelf_ownership(
-			inp.family_id, inp.shelf_id, self._shelf_repo, self._section_repo, self._bookcase_repo
+			inp.library_id, inp.shelf_id, self._shelf_repo, self._section_repo, self._bookcase_repo
 		)
 
 		read = await self._spine_reader.read_spines(inp.image_base64, inp.media_type)

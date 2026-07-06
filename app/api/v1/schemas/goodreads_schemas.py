@@ -21,7 +21,7 @@ class GoodreadsPreviewRowResponse(BaseModel):
 	row_number: int = Field(..., description="1-based position in the CSV")
 	status: Literal["new", "already_owned", "invalid"] = Field(
 		...,
-		description="new: not yet owned. already_owned: matches a book the family already has. "
+		description="new: not yet owned. already_owned: matches a book the library already has. "
 		"invalid: missing a title, cannot be imported.",
 	)
 	title: str
@@ -67,7 +67,7 @@ class GoodreadsSkippedItemResponse(BaseModel):
 	title: str = Field(..., description="Title of the item that was not created")
 	reason: Literal["already_owned", "duplicate_in_import"] = Field(
 		...,
-		description="already_owned: the family already had this book. "
+		description="already_owned: the library already had this book. "
 		"duplicate_in_import: the same book appeared twice in this CSV.",
 	)
 	row_number: int = Field(..., description="Echoes the item's row_number, to match it back to what was sent")

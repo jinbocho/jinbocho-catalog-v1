@@ -63,16 +63,16 @@ async def list_records(
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 ) -> list[BibliographicRecord]:
 	return await ListBibliographicRecordsUseCase(record_repo).execute(
-		UUID(payload["family_id"]), q, genre.value if genre else None, limit, offset
+		UUID(payload["library_id"]), q, genre.value if genre else None, limit, offset
 	)
 
 
-@router.get("/genres", response_model=list[GenreCountResponse], summary="List genres present in the family library")
+@router.get("/genres", response_model=list[GenreCountResponse], summary="List genres present in the library")
 async def list_genres(
 	payload: dict[str, Any] = Depends(get_current_user_payload),
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 ) -> list[GenreCount]:
-	return await ListGenresUseCase(record_repo).execute(UUID(payload["family_id"]))
+	return await ListGenresUseCase(record_repo).execute(UUID(payload["library_id"]))
 
 
 @router.post(
@@ -88,7 +88,7 @@ async def create_record(
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 ) -> BibliographicRecord:
 	created = await CreateBibliographicRecordUseCase(record_repo).execute(
-		CreateBibliographicRecordInput(family_id=UUID(payload["family_id"]), **request.model_dump())
+		CreateBibliographicRecordInput(library_id=UUID(payload["library_id"]), **request.model_dump())
 	)
 	await db.commit()
 	return created
@@ -100,7 +100,7 @@ async def get_record(
 	payload: dict[str, Any] = Depends(get_current_user_payload),
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 ) -> BibliographicRecord:
-	return await GetBibliographicRecordUseCase(record_repo).execute(record_id, UUID(payload["family_id"]))
+	return await GetBibliographicRecordUseCase(record_repo).execute(record_id, UUID(payload["library_id"]))
 
 
 @router.get(
@@ -113,10 +113,10 @@ async def get_incipit(
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 	cache_repo: IsbnLookupCacheRepository = Depends(get_isbn_lookup_cache_repository),
 ) -> IncipitResponse:
-	family_id = UUID(payload["family_id"])
-	result = await GetIncipitUseCase(record_repo).execute(record_id, family_id)
+	library_id = UUID(payload["library_id"])
+	result = await GetIncipitUseCase(record_repo).execute(record_id, library_id)
 	if result.text is None:
-		result = await DeriveIncipitUseCase(record_repo, cache_repo).execute(record_id, family_id)
+		result = await DeriveIncipitUseCase(record_repo, cache_repo).execute(record_id, library_id)
 		if result.text is not None:
 			await db.commit()
 	return IncipitResponse(text=result.text, source=result.source, generated_at=result.generated_at)
@@ -131,7 +131,7 @@ async def set_incipit(
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 ) -> IncipitResponse:
 	result = await SetIncipitUseCase(record_repo).execute(
-		record_id, UUID(payload["family_id"]), request.text, request.source
+		record_id, UUID(payload["library_id"]), request.text, request.source
 	)
 	await db.commit()
 	return IncipitResponse(text=result.text, source=result.source, generated_at=result.generated_at)
@@ -152,7 +152,7 @@ async def generate_incipit_ai(
 ) -> IncipitResponse:
 	try:
 		result = await GenerateAiIncipitUseCase(record_repo, ai_client, description_provider).execute(
-			record_id, UUID(payload["family_id"])
+			record_id, UUID(payload["library_id"])
 		)
 	except LookupError:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found") from None
@@ -178,7 +178,7 @@ async def suggest_tags(
 ) -> TagSuggestionResponse:
 	try:
 		result = await SuggestTagsUseCase(record_repo, tag_suggester).execute(
-			record_id, UUID(payload["family_id"])
+			record_id, UUID(payload["library_id"])
 		)
 	except LookupError:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found") from None
@@ -195,7 +195,7 @@ async def update_record(
 ) -> BibliographicRecord:
 	updated = await UpdateBibliographicRecordUseCase(record_repo).execute(
 		UpdateBibliographicRecordInput(
-			record_id=record_id, family_id=UUID(payload["family_id"]), **request.model_dump(exclude_unset=True)
+			record_id=record_id, library_id=UUID(payload["library_id"]), **request.model_dump(exclude_unset=True)
 		)
 	)
 	await db.commit()
@@ -210,5 +210,5 @@ async def delete_record(
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 ) -> None:
-	await DeleteBibliographicRecordUseCase(record_repo, book_repo).execute(record_id, UUID(payload["family_id"]))
+	await DeleteBibliographicRecordUseCase(record_repo, book_repo).execute(record_id, UUID(payload["library_id"]))
 	await db.commit()

@@ -23,7 +23,7 @@ class ShelfScanCandidateResponse(BaseModel):
 	status: Literal["matched", "uncertain", "not_found"] = Field(
 		..., description="Confidence of the metadata provider match"
 	)
-	already_owned: bool = Field(..., description="Whether the family already owns this title")
+	already_owned: bool = Field(..., description="Whether the library already owns this title")
 	metadata: dict[str, Any] | None = Field(None, description="Best provider match metadata, if any")
 
 
@@ -55,7 +55,7 @@ class ShelfScanSkippedItemResponse(BaseModel):
 	title: str = Field(..., description="Title of the item that was not created")
 	reason: Literal["already_owned", "duplicate_in_scan"] = Field(
 		...,
-		description="already_owned: the family already had this book. "
+		description="already_owned: the library already had this book. "
 		"duplicate_in_scan: the same book was matched twice in this photo.",
 	)
 	position: int = Field(..., description="Echoes the item's position, to match it back to what was sent")

@@ -31,9 +31,9 @@ from app.utils import utcnow
 
 logger = logging.getLogger(__name__)
 
-# Page size for the fuzzy-dedup candidate scan — not a hard cap: _all_family_records
-# loops find_all_by_family until a short page, so every record is covered
-# regardless of family size, this only bounds round-trips per page.
+# Page size for the fuzzy-dedup candidate scan — not a hard cap: _all_library_records
+# loops find_all_by_library until a short page, so every record is covered
+# regardless of library size, this only bounds round-trips per page.
 _FUZZY_SCAN_PAGE_SIZE = 200
 
 
@@ -46,7 +46,7 @@ def _normalize_for_fuzzy_match(text: str) -> str:
 
 @dataclass
 class AddBookInput:
-	family_id: UUID
+	library_id: UUID
 	changed_by: UUID
 	bibliographic_record_id: UUID | None = None
 	title: str | None = None
@@ -113,7 +113,7 @@ class AddBookUseCase:
 		initial_status = ReadingStatus.READING if inp.reading_status == ReadingStatus.READING else ReadingStatus.TO_READ
 		book = await self._book_repo.save(
 			OwnedBook(
-				family_id=inp.family_id,
+				library_id=inp.library_id,
 				bibliographic_record_id=record.id,
 				room_id=inp.room_id,
 				bookcase_id=inp.bookcase_id,
@@ -153,14 +153,14 @@ class AddBookUseCase:
 				created_at=utcnow(),
 			)
 		)
-		logger.info("Book %s added to family %s", book.id, inp.family_id)
+		logger.info("Book %s added to library %s", book.id, inp.library_id)
 		return book
 
 	async def _check_for_duplicate(
 		self, inp: AddBookInput, record: BibliographicRecord
 	) -> DuplicateBookConflict | None:
-		"""Two ways a new book can look like one the family already has — this
-		is a family-wide check, not scoped to an owner: two different members
+		"""Two ways a new book can look like one the library already has — this
+		is a library-wide check, not scoped to an owner: two different members
 		can legitimately each own a copy, so this never blocks that, it just
 		surfaces who already has it (and where) so the caller can decide.
 		  1. Same resolved record (i.e. same ISBN) — find_by_isbn already
@@ -173,7 +173,7 @@ class AddBookUseCase:
 		if existing:
 			return self._to_conflict("isbn_match", existing, record)
 
-		candidate = await self._record_repo.find_by_title_author(inp.family_id, record.title, record.main_author)
+		candidate = await self._record_repo.find_by_title_author(inp.library_id, record.title, record.main_author)
 		if candidate and candidate.id != record.id:
 			existing = await self._book_repo.find_one_by_record(candidate.id)
 			if existing:
@@ -191,7 +191,7 @@ class AddBookUseCase:
 		if self._dedup_judge is None:
 			return None
 
-		others = [r for r in await self._all_family_records(inp.family_id) if r.id != record.id]
+		others = [r for r in await self._all_library_records(inp.library_id) if r.id != record.id]
 		if not others:
 			return None
 
@@ -254,15 +254,15 @@ class AddBookUseCase:
 			return None
 		return self._to_conflict("fuzzy_match", existing, best_record, match_reason=judgement.reason)
 
-	async def _all_family_records(self, family_id: UUID) -> list[BibliographicRecord]:
-		"""Every record for the family, regardless of how many — find_all_by_family
+	async def _all_library_records(self, library_id: UUID) -> list[BibliographicRecord]:
+		"""Every record for the library, regardless of how many — find_all_by_library
 		is paginated for the catalog list UI, but a fuzzy duplicate scan that
 		silently only checked the first page would miss real duplicates in any
 		library bigger than one page."""
 		records: list[BibliographicRecord] = []
 		offset = 0
 		while True:
-			page = await self._record_repo.find_all_by_family(family_id, limit=_FUZZY_SCAN_PAGE_SIZE, offset=offset)
+			page = await self._record_repo.find_all_by_library(library_id, limit=_FUZZY_SCAN_PAGE_SIZE, offset=offset)
 			records.extend(page)
 			if len(page) < _FUZZY_SCAN_PAGE_SIZE:
 				return records
@@ -295,13 +295,13 @@ class AddBookUseCase:
 			record = await self._record_repo.find_by_id(inp.bibliographic_record_id)
 			if record is None:
 				raise LookupError(f"BibliographicRecord {inp.bibliographic_record_id} not found")
-			if record.family_id != inp.family_id:
-				raise PermissionError("BibliographicRecord belongs to a different family")
+			if record.library_id != inp.library_id:
+				raise PermissionError("BibliographicRecord belongs to a different library")
 			return record
 
 		if inp.isbn:
 			normalized = normalize_isbn(inp.isbn)
-			existing = await self._record_repo.find_by_isbn(inp.family_id, normalized)
+			existing = await self._record_repo.find_by_isbn(inp.library_id, normalized)
 			if existing:
 				return existing
 
@@ -324,7 +324,7 @@ class AddBookUseCase:
 
 		return await self._record_repo.save(
 			BibliographicRecord(
-				family_id=inp.family_id,
+				library_id=inp.library_id,
 				title=title,
 				main_author=metadata.get("main_author"),
 				other_authors=list(metadata.get("other_authors") or []),

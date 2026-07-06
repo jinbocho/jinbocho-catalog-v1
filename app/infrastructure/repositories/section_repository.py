@@ -37,9 +37,9 @@ class SQLAlchemySectionRepository(SectionRepository):
 		)
 		return [self._to_entity(model) for model in result.scalars().all()]
 
-	async def find_all_by_family(
+	async def find_all_by_library(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		bookcase_id: UUID | None = None,
 		limit: int = 50,
 		offset: int = 0,
@@ -47,7 +47,7 @@ class SQLAlchemySectionRepository(SectionRepository):
 		query = (
 			select(SectionModel)
 			.join(BookcaseModel, SectionModel.bookcase_id == BookcaseModel.id)
-			.where(BookcaseModel.family_id == family_id)
+			.where(BookcaseModel.library_id == library_id)
 		)
 		if bookcase_id is not None:
 			query = query.where(SectionModel.bookcase_id == bookcase_id)

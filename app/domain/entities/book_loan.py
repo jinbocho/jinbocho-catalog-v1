@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 class BookLoan:
     owned_book_id: UUID
     borrower_name: str
+    borrower_user_id: UUID | None = None
     loaned_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     due_date: datetime | None = None
     returned_at: datetime | None = None

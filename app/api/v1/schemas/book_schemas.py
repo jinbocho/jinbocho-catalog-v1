@@ -9,8 +9,8 @@ from app.domain.entities import BookCondition, BookSource, ReadingStatus
 
 
 class DuplicateBookConflictResponse(BaseModel):
-	"""409 body for POST /v1/books/ when the family already owns this book.
-	The check is family-wide, not scoped to an owner (two members can each
+	"""409 body for POST /v1/books/ when the library already owns this book.
+	The check is library-wide, not scoped to an owner (two members can each
 	legitimately have a copy) — existing_owner_id/location say who already
 	has it and where. Resubmit with is_intentional_duplicate=true to add it
 	anyway."""
@@ -44,7 +44,7 @@ class OwnedBookCreate(BaseModel):
 	purchase_price: Decimal | None = Field(None, description="Purchase price")
 	source: BookSource | None = Field(None, description="Source of book")
 	reading_status: ReadingStatus = Field(ReadingStatus.TO_READ, description="Reading status")
-	owner_id: UUID | None = Field(None, description="Family member who owns this copy")
+	owner_id: UUID | None = Field(None, description="Library member who owns this copy")
 	notes: str | None = Field(None, description="Notes")
 	tags: list[str] | None = Field(None, description="Tags")
 	is_intentional_duplicate: bool = Field(
@@ -65,14 +65,14 @@ class OwnedBookUpdate(BaseModel):
 	purchase_price: Decimal | None = Field(None, description="Purchase price")
 	source: BookSource | None = Field(None, description="Source of book")
 	reading_status: ReadingStatus | None = Field(None, description="Reading status")
-	owner_id: UUID | None = Field(None, description="Family member who owns this copy")
+	owner_id: UUID | None = Field(None, description="Library member who owns this copy")
 	tags: list[str] | None = Field(None, description="Tags")
 	notes: str | None = Field(None, description="Notes")
 
 
 class OwnedBookResponse(BaseModel):
 	id: UUID = Field(..., description="Book ID")
-	family_id: UUID = Field(..., description="Family ID")
+	library_id: UUID = Field(..., description="Library ID")
 	bibliographic_record_id: UUID = Field(..., description="Bibliographic record ID")
 	room_id: UUID | None = Field(None, description="Room ID")
 	bookcase_id: UUID | None = Field(None, description="Bookcase ID")
@@ -85,7 +85,7 @@ class OwnedBookResponse(BaseModel):
 	source: str | None = Field(None, description="Source of book")
 	reading_status: str = Field(..., description="Reading status")
 	current_reader_id: UUID | None = Field(None, description="User currently reading the copy")
-	owner_id: UUID | None = Field(None, description="Family member who owns this copy")
+	owner_id: UUID | None = Field(None, description="Library member who owns this copy")
 	notes: str | None = Field(None, description="Notes")
 	tags: list[str] = Field(..., description="Tags")
 	is_intentional_duplicate: bool = Field(False, description="True if added despite a duplicate warning")
@@ -130,7 +130,7 @@ class BookRatingResponse(BaseModel):
 	model_config = ConfigDict(from_attributes=True)
 
 
-class FamilyRatingStatsResponse(BaseModel):
+class LibraryRatingStatsResponse(BaseModel):
 	owned_book_id: UUID = Field(..., description="Book copy ID")
 	total: int = Field(..., description="Total number of ratings")
 	average: float | None = Field(None, description="Average star rating, null when no ratings exist")
@@ -142,7 +142,7 @@ class BulkDeleteBooksRequest(BaseModel):
 		...,
 		min_length=1,
 		max_length=200,
-		description="Book IDs to delete. All-or-nothing: if any ID is missing or belongs to another family, "
+		description="Book IDs to delete. All-or-nothing: if any ID is missing or belongs to another library, "
 		"none are deleted.",
 	)
 
@@ -153,6 +153,9 @@ class BulkDeleteBooksResponse(BaseModel):
 
 class BookLoanCreate(BaseModel):
 	borrower_name: str = Field(..., min_length=1, max_length=255, description="Name of the person borrowing the book")
+	borrower_user_id: UUID | None = Field(
+		None, description="Set when lending to a Jinbocho user found via search, instead of free text"
+	)
 	due_date: datetime | None = Field(None, description="Expected return date")
 
 
@@ -160,6 +163,7 @@ class BookLoanResponse(BaseModel):
 	id: UUID = Field(..., description="Loan ID")
 	owned_book_id: UUID = Field(..., description="Book ID")
 	borrower_name: str = Field(..., description="Name of the borrower")
+	borrower_user_id: UUID | None = Field(None, description="Set if the borrower is a Jinbocho user")
 	loaned_at: datetime = Field(..., description="When the book was lent")
 	due_date: datetime | None = Field(None, description="Expected return date")
 	returned_at: datetime | None = Field(None, description="When the book was returned (null = still on loan)")

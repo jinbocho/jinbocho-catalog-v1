@@ -16,20 +16,20 @@ class SetIncipitUseCase:
 	def __init__(self, record_repo: BibliographicRecordRepository) -> None:
 		self._record_repo = record_repo
 
-	async def execute(self, record_id: UUID, family_id: UUID, text: str, source: str) -> IncipitOutput:
+	async def execute(self, record_id: UUID, library_id: UUID, text: str, source: str) -> IncipitOutput:
 		if source not in _ALLOWED_SOURCES:
 			raise ValueError(f"Invalid incipit source: {source}")
 
 		record = await self._record_repo.find_by_id(record_id)
 		if not record:
 			raise LookupError("Bibliographic record not found")
-		if record.family_id != family_id:
-			raise PermissionError("Bibliographic record does not belong to this family")
+		if record.library_id != library_id:
+			raise PermissionError("Bibliographic record does not belong to this library")
 
 		record.incipit = text.strip()
 		record.incipit_source = source
 		record.incipit_generated_at = utcnow()
 		record.updated_at = utcnow()
 		saved = await self._record_repo.save(record)
-		logger.info("Incipit set (source=%s) for record %s in family %s", source, record_id, family_id)
+		logger.info("Incipit set (source=%s) for record %s in library %s", source, record_id, library_id)
 		return IncipitOutput(saved.incipit, saved.incipit_source, saved.incipit_generated_at)

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CreateRoomInput:
-	family_id: UUID
+	library_id: UUID
 	name: str
 	description: str | None = None
 
@@ -23,12 +23,12 @@ class CreateRoomUseCase:
 	async def execute(self, inp: CreateRoomInput) -> Room:
 		saved = await self._room_repo.save(
 			Room(
-				family_id=inp.family_id,
+				library_id=inp.library_id,
 				name=inp.name,
 				description=inp.description,
 				created_at=utcnow(),
 				updated_at=utcnow(),
 			)
 		)
-		logger.info("Room %s created in family %s", saved.id, inp.family_id)
+		logger.info("Room %s created in library %s", saved.id, inp.library_id)
 		return saved

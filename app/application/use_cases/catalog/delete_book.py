@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DeleteBookInput:
 	book_id: UUID
-	family_id: UUID
+	library_id: UUID
 	changed_by: UUID
 
 
@@ -25,7 +25,7 @@ class DeleteBookUseCase:
 		book = await self._book_repo.find_by_id(inp.book_id)
 		if book is None:
 			raise LookupError(f"OwnedBook {inp.book_id} not found")
-		if book.family_id != inp.family_id:
+		if book.library_id != inp.library_id:
 			raise PermissionError("Access denied")
 		await self._history_repo.save(
 			BookHistory(
@@ -37,4 +37,4 @@ class DeleteBookUseCase:
 			)
 		)
 		await self._book_repo.delete(book.id)
-		logger.info("Book %s deleted from family %s", book.id, inp.family_id)
+		logger.info("Book %s deleted from library %s", book.id, inp.library_id)

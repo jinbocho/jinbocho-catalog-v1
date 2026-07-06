@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 @dataclass
 class WishlistItem:
-    family_id: UUID
+    library_id: UUID
     user_id: UUID
     bibliographic_record_id: UUID
     added_at: datetime = field(default_factory=lambda: datetime.now(UTC))

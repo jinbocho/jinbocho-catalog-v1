@@ -32,7 +32,7 @@ async def list_bookcases(
 	room_repo: RoomRepository = Depends(get_room_repository),
 ) -> list[Bookcase]:
 	return await ListBookcasesUseCase(bookcase_repo, room_repo).execute(
-		UUID(payload["family_id"]), room_id, limit, offset
+		UUID(payload["library_id"]), room_id, limit, offset
 	)
 
 
@@ -45,7 +45,7 @@ async def create_bookcase(
 	room_repo: RoomRepository = Depends(get_room_repository),
 ) -> Bookcase:
 	created = await CreateBookcaseUseCase(bookcase_repo, room_repo).execute(
-		CreateBookcaseInput(family_id=UUID(payload["family_id"]), **request.model_dump())
+		CreateBookcaseInput(library_id=UUID(payload["library_id"]), **request.model_dump())
 	)
 	await db.commit()
 	return created
@@ -57,7 +57,7 @@ async def get_bookcase(
 	payload: dict[str, Any] = Depends(get_current_user_payload),
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> Bookcase:
-	return await GetBookcaseUseCase(bookcase_repo).execute(bookcase_id, UUID(payload["family_id"]))
+	return await GetBookcaseUseCase(bookcase_repo).execute(bookcase_id, UUID(payload["library_id"]))
 
 
 @router.patch("/{bookcase_id}", response_model=BookcaseResponse, summary="Update bookcase")
@@ -71,7 +71,7 @@ async def update_bookcase(
 ) -> Bookcase:
 	updated = await UpdateBookcaseUseCase(bookcase_repo, room_repo).execute(
 		UpdateBookcaseInput(
-			bookcase_id=bookcase_id, family_id=UUID(payload["family_id"]), **request.model_dump(exclude_unset=True)
+			bookcase_id=bookcase_id, library_id=UUID(payload["library_id"]), **request.model_dump(exclude_unset=True)
 		)
 	)
 	await db.commit()
@@ -85,5 +85,5 @@ async def delete_bookcase(
 	db: AsyncSession = Depends(get_db),
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> None:
-	await DeleteBookcaseUseCase(bookcase_repo).execute(bookcase_id, UUID(payload["family_id"]))
+	await DeleteBookcaseUseCase(bookcase_repo).execute(bookcase_id, UUID(payload["library_id"]))
 	await db.commit()

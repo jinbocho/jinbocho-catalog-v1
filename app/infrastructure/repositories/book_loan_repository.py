@@ -20,6 +20,7 @@ class SQLAlchemyBookLoanRepository(BookLoanRepository):
             id=model.id,
             owned_book_id=model.owned_book_id,
             borrower_name=model.borrower_name,
+            borrower_user_id=model.borrower_user_id,
             loaned_at=model.loaned_at,
             due_date=model.due_date,
             returned_at=model.returned_at,
@@ -31,6 +32,7 @@ class SQLAlchemyBookLoanRepository(BookLoanRepository):
             id=loan.id,
             owned_book_id=loan.owned_book_id,
             borrower_name=loan.borrower_name,
+            borrower_user_id=loan.borrower_user_id,
             due_date=loan.due_date,
         )
         self._session.add(model)
@@ -65,12 +67,12 @@ class SQLAlchemyBookLoanRepository(BookLoanRepository):
         )
         return [self._to_entity(m) for m in result.scalars().all()]
 
-    async def list_active_by_family(self, family_id: UUID) -> list[BookLoan]:
+    async def list_active_by_library(self, library_id: UUID) -> list[BookLoan]:
         result = await self._session.execute(
             select(BookLoanModel)
             .join(OwnedBookModel, BookLoanModel.owned_book_id == OwnedBookModel.id)
             .where(
-                OwnedBookModel.family_id == family_id,
+                OwnedBookModel.library_id == library_id,
                 BookLoanModel.returned_at.is_(None),
             )
             .order_by(BookLoanModel.loaned_at.desc())
@@ -97,11 +99,11 @@ class SQLAlchemyBookLoanRepository(BookLoanRepository):
             model.reminder_sent_at = sent_at
             await self._session.flush()
 
-    async def find_all_by_family(self, family_id: UUID) -> list[BookLoan]:
+    async def find_all_by_library(self, library_id: UUID) -> list[BookLoan]:
         result = await self._session.execute(
             select(BookLoanModel)
             .join(OwnedBookModel, BookLoanModel.owned_book_id == OwnedBookModel.id)
-            .where(OwnedBookModel.family_id == family_id)
+            .where(OwnedBookModel.library_id == library_id)
             .order_by(BookLoanModel.loaned_at.desc())
         )
         return [self._to_entity(m) for m in result.scalars().all()]
@@ -125,6 +127,7 @@ class SQLAlchemyBookLoanRepository(BookLoanRepository):
                 id=loan.id,
                 owned_book_id=loan.owned_book_id,
                 borrower_name=loan.borrower_name,
+                borrower_user_id=loan.borrower_user_id,
                 loaned_at=loan.loaned_at,
                 due_date=loan.due_date,
                 returned_at=loan.returned_at,

@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 
 @dataclass
 class BibliographicRecord:
-	family_id: UUID
+	library_id: UUID
 	title: str
 	main_author: str | None = None
 	other_authors: list[str] = field(default_factory=list)

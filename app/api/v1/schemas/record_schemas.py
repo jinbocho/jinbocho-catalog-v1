@@ -48,7 +48,7 @@ class BibliographicRecordUpdate(BaseModel):
 
 class BibliographicRecordResponse(BaseModel):
 	id: UUID = Field(..., description="Record ID")
-	family_id: UUID = Field(..., description="Family ID")
+	library_id: UUID = Field(..., description="Library ID")
 	title: str = Field(..., description="Book title")
 	main_author: str | None = Field(None, description="Main author name")
 	other_authors: list[str] = Field(..., description="Other authors")

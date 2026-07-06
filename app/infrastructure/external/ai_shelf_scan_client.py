@@ -27,7 +27,12 @@ class AiShelfScanClient(ShelfSpineReader):
 				f"{self._ai_service_url}/v1/suggestions/shelf-scan",
 				headers={"X-Internal-Token": settings.ai_internal_service_token},
 				json={"image_base64": image_base64, "media_type": media_type},
-				timeout=60.0,
+				# A real shelf with 15-20+ spines takes highly variable time for
+				# the vision model to read — observed 62s for 17 spines and 138s
+				# for 19 spines on the same model/provider, so the variance isn't
+				# just proportional to spine count. 240s gives real margin above
+				# the worst case actually measured, not just the best case.
+				timeout=240.0,
 			)
 			response.raise_for_status()
 			data = response.json()

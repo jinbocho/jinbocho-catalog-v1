@@ -44,17 +44,17 @@ class MockRoomRepository(RoomRepository):
 	async def find_by_id(self, room_id: UUID) -> Room | None:
 		return self.rooms.get(room_id)
 
-	async def find_all_by_family(self, family_id: UUID, limit: int = 50, offset: int = 0) -> list[Room]:
-		return [r for r in self.rooms.values() if r.family_id == family_id][offset:offset+limit]
+	async def find_all_by_library(self, library_id: UUID, limit: int = 50, offset: int = 0) -> list[Room]:
+		return [r for r in self.rooms.values() if r.library_id == library_id][offset:offset+limit]
 
-	async def find_by_name(self, family_id: UUID, name: str) -> Room | None:
-		return next((r for r in self.rooms.values() if r.family_id == family_id and r.name == name), None)
+	async def find_by_name(self, library_id: UUID, name: str) -> Room | None:
+		return next((r for r in self.rooms.values() if r.library_id == library_id and r.name == name), None)
 
 	async def delete(self, room_id: UUID) -> None:
 		self.rooms.pop(room_id, None)
 
-	async def delete_all_by_family(self, family_id: UUID) -> None:
-		self.rooms = {k: v for k, v in self.rooms.items() if v.family_id != family_id}
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		self.rooms = {k: v for k, v in self.rooms.items() if v.library_id != library_id}
 
 
 class MockBookcaseRepository(BookcaseRepository):
@@ -68,10 +68,10 @@ class MockBookcaseRepository(BookcaseRepository):
 	async def find_by_id(self, bookcase_id: UUID) -> Bookcase | None:
 		return self.bookcases.get(bookcase_id)
 
-	async def find_all_by_family(
-		self, family_id: UUID, room_id: UUID | None = None, limit: int = 50, offset: int = 0
+	async def find_all_by_library(
+		self, library_id: UUID, room_id: UUID | None = None, limit: int = 50, offset: int = 0
 	) -> list[Bookcase]:
-		items = [b for b in self.bookcases.values() if b.family_id == family_id]
+		items = [b for b in self.bookcases.values() if b.library_id == library_id]
 		if room_id:
 			items = [b for b in items if b.room_id == room_id]
 		return items[offset:offset+limit]
@@ -82,8 +82,8 @@ class MockBookcaseRepository(BookcaseRepository):
 	async def delete(self, bookcase_id: UUID) -> None:
 		self.bookcases.pop(bookcase_id, None)
 
-	async def delete_all_by_family(self, family_id: UUID) -> None:
-		self.bookcases = {k: v for k, v in self.bookcases.items() if v.family_id != family_id}
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		self.bookcases = {k: v for k, v in self.bookcases.items() if v.library_id != library_id}
 
 
 class MockBibliographicRecordRepository(BibliographicRecordRepository):
@@ -97,39 +97,39 @@ class MockBibliographicRecordRepository(BibliographicRecordRepository):
 	async def find_by_id(self, record_id: UUID) -> BibliographicRecord | None:
 		return self.records.get(record_id)
 
-	async def find_by_isbn(self, family_id: UUID, isbn: str) -> BibliographicRecord | None:
+	async def find_by_isbn(self, library_id: UUID, isbn: str) -> BibliographicRecord | None:
 		for r in self.records.values():
-			if r.family_id == family_id and r.isbn == isbn:
+			if r.library_id == library_id and r.isbn == isbn:
 				return r
 		return None
 
 	async def find_by_title_author(
-		self, family_id: UUID, title: str, main_author: str | None
+		self, library_id: UUID, title: str, main_author: str | None
 	) -> BibliographicRecord | None:
 		for r in self.records.values():
-			if r.family_id == family_id and r.title == title and r.main_author == main_author:
+			if r.library_id == library_id and r.title == title and r.main_author == main_author:
 				return r
 		return None
 
-	async def find_all_by_family(
+	async def find_all_by_library(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		q: str | None = None,
 		genre: str | None = None,
 		limit: int = 50,
 		offset: int = 0,
 	) -> list[BibliographicRecord]:
-		items = [r for r in self.records.values() if r.family_id == family_id]
+		items = [r for r in self.records.values() if r.library_id == library_id]
 		if genre:
 			items = [r for r in items if r.genre == genre]
 		if q:
 			items = [r for r in items if q.lower() in r.title.lower()]
 		return items[offset:offset+limit]
 
-	async def count_genres(self, family_id: UUID) -> list[tuple[str, int]]:
+	async def count_genres(self, library_id: UUID) -> list[tuple[str, int]]:
 		counts: dict[str, int] = {}
 		for r in self.records.values():
-			if r.family_id == family_id and r.genre:
+			if r.library_id == library_id and r.genre:
 				counts[r.genre] = counts.get(r.genre, 0) + 1
 		return sorted(counts.items(), key=lambda kv: kv[1], reverse=True)
 
@@ -139,8 +139,8 @@ class MockBibliographicRecordRepository(BibliographicRecordRepository):
 	async def delete(self, record_id: UUID) -> None:
 		self.records.pop(record_id, None)
 
-	async def delete_all_by_family(self, family_id: UUID) -> None:
-		self.records = {k: v for k, v in self.records.items() if v.family_id != family_id}
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		self.records = {k: v for k, v in self.records.items() if v.library_id != library_id}
 
 
 class MockOwnedBookRepository(OwnedBookRepository):
@@ -154,8 +154,8 @@ class MockOwnedBookRepository(OwnedBookRepository):
 	async def find_by_id(self, book_id: UUID) -> OwnedBook | None:
 		return self.books.get(book_id)
 
-	async def find_all_by_family(self, family_id: UUID, limit: int = 50, offset: int = 0) -> list[OwnedBook]:
-		items = [b for b in self.books.values() if b.family_id == family_id]
+	async def find_all_by_library(self, library_id: UUID, limit: int = 50, offset: int = 0) -> list[OwnedBook]:
+		items = [b for b in self.books.values() if b.library_id == library_id]
 		return items[offset:offset+limit]
 
 	async def find_all_by_shelf_ids(self, shelf_ids: list[UUID]) -> list[OwnedBook]:
@@ -168,12 +168,13 @@ class MockOwnedBookRepository(OwnedBookRepository):
 		return any(b.bibliographic_record_id == record_id for b in self.books.values())
 
 	async def find_duplicate(
-		self, family_id: UUID, bibliographic_record_id: UUID, room_id, bookcase_id, section_id, shelf_id, shelf_position
+		self, library_id: UUID, bibliographic_record_id: UUID,
+		room_id, bookcase_id, section_id, shelf_id, shelf_position
 	) -> OwnedBook | None:
 		return next(
 			(
 				b for b in self.books.values()
-				if b.family_id == family_id
+				if b.library_id == library_id
 				and b.bibliographic_record_id == bibliographic_record_id
 				and b.room_id == room_id
 				and b.bookcase_id == bookcase_id
@@ -197,8 +198,8 @@ class MockOwnedBookRepository(OwnedBookRepository):
 		ids = set(book_ids)
 		self.books = {k: v for k, v in self.books.items() if k not in ids}
 
-	async def delete_all_by_family(self, family_id: UUID) -> None:
-		self.books = {k: v for k, v in self.books.items() if v.family_id != family_id}
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		self.books = {k: v for k, v in self.books.items() if v.library_id != library_id}
 
 
 class MockSectionRepository(SectionRepository):
@@ -212,10 +213,10 @@ class MockSectionRepository(SectionRepository):
 	async def find_by_id(self, section_id: UUID) -> Section | None:
 		return self.sections.get(section_id)
 
-	async def find_all_by_family(
-		self, family_id: UUID, bookcase_id: UUID | None = None, limit: int = 50, offset: int = 0
+	async def find_all_by_library(
+		self, library_id: UUID, bookcase_id: UUID | None = None, limit: int = 50, offset: int = 0
 	) -> list[Section]:
-		items = [s for s in self.sections.values() if s.family_id == family_id]
+		items = [s for s in self.sections.values() if s.library_id == library_id]
 		if bookcase_id:
 			items = [s for s in items if s.bookcase_id == bookcase_id]
 		return items[offset:offset+limit]
@@ -249,10 +250,10 @@ class MockShelfRepository(ShelfRepository):
 	async def find_by_id(self, shelf_id: UUID) -> Shelf | None:
 		return self.shelves.get(shelf_id)
 
-	async def find_all_by_family(
-		self, family_id: UUID, section_id: UUID | None = None, limit: int = 50, offset: int = 0
+	async def find_all_by_library(
+		self, library_id: UUID, section_id: UUID | None = None, limit: int = 50, offset: int = 0
 	) -> list[Shelf]:
-		items = [s for s in self.shelves.values() if s.family_id == family_id]
+		items = [s for s in self.shelves.values() if s.library_id == library_id]
 		if section_id:
 			items = [s for s in items if s.section_id == section_id]
 		return items[offset:offset+limit]
@@ -284,10 +285,10 @@ class MockBookHistoryRepository(BookHistoryRepository):
 		items = [e for e in self.history.values() if e.owned_book_id == book_id]
 		return items[offset:offset+limit]
 
-	async def find_all_by_family(self, family_id: UUID) -> list:
-		# This mock doesn't model the owned_book -> family join the real
+	async def find_all_by_library(self, library_id: UUID) -> list:
+		# This mock doesn't model the owned_book -> library join the real
 		# repository does; it just returns everything stored. Tests that need
-		# real family-boundary behavior should filter the input fixtures instead.
+		# real library-boundary behavior should filter the input fixtures instead.
 		return list(self.history.values())
 
 	async def restore(self, history):
@@ -336,9 +337,9 @@ class MockBookReadRepository(BookReadRepository):
 	async def list_by_book(self, owned_book_id: UUID) -> list[BookRead]:
 		return [r for r in self.reads.values() if r.owned_book_id == owned_book_id]
 
-	async def list_by_family(self, family_id: UUID) -> list[BookRead]:
+	async def list_by_library(self, library_id: UUID) -> list[BookRead]:
 		# Like MockBookHistoryRepository, this mock doesn't model the
-		# owned_book -> family join; it returns everything stored.
+		# owned_book -> library join; it returns everything stored.
 		return list(self.reads.values())
 
 	async def is_read(self, owned_book_id: UUID, user_id: UUID) -> bool:
@@ -385,7 +386,7 @@ class MockBookLoanRepository(BookLoanRepository):
 	async def list_by_book(self, owned_book_id: UUID) -> list[BookLoan]:
 		return [loan for loan in self.loans.values() if loan.owned_book_id == owned_book_id]
 
-	async def list_active_by_family(self, family_id: UUID) -> list[BookLoan]:
+	async def list_active_by_library(self, library_id: UUID) -> list[BookLoan]:
 		return [loan for loan in self.loans.values() if loan.returned_at is None]
 
 	async def list_due_for_reminder(self, due_before) -> list[BookLoan]:
@@ -401,9 +402,9 @@ class MockBookLoanRepository(BookLoanRepository):
 		if loan_id in self.loans:
 			self.loans[loan_id].reminder_sent_at = sent_at
 
-	async def find_all_by_family(self, family_id: UUID) -> list[BookLoan]:
+	async def find_all_by_library(self, library_id: UUID) -> list[BookLoan]:
 		# Like MockBookHistoryRepository, this mock doesn't model the
-		# owned_book -> family join; it returns everything stored.
+		# owned_book -> library join; it returns everything stored.
 		return list(self.loans.values())
 
 	async def restore(self, loan: BookLoan) -> BookLoan:
@@ -437,12 +438,12 @@ class MockWishlistRepository(WishlistRepository):
 	def __init__(self) -> None:
 		self.items: dict[UUID, WishlistItem] = {}
 
-	async def get(self, item_id: UUID, family_id: UUID) -> WishlistItem | None:
+	async def get(self, item_id: UUID, library_id: UUID) -> WishlistItem | None:
 		item = self.items.get(item_id)
-		return item if item and item.family_id == family_id else None
+		return item if item and item.library_id == library_id else None
 
-	async def list_by_family(self, family_id: UUID) -> list[WishlistItem]:
-		return [i for i in self.items.values() if i.family_id == family_id]
+	async def list_by_library(self, library_id: UUID) -> list[WishlistItem]:
+		return [i for i in self.items.values() if i.library_id == library_id]
 
 	async def list_by_user(self, user_id: UUID) -> list[WishlistItem]:
 		return [i for i in self.items.values() if i.user_id == user_id]
@@ -451,7 +452,7 @@ class MockWishlistRepository(WishlistRepository):
 		self.items[item.id] = item
 		return item
 
-	async def delete(self, item_id: UUID, family_id: UUID) -> None:
+	async def delete(self, item_id: UUID, library_id: UUID) -> None:
 		self.items.pop(item_id, None)
 
 	async def exists_for_user_and_record(self, user_id: UUID, record_id: UUID) -> bool:
@@ -497,9 +498,9 @@ class MockBookRatingRepository(BookRatingRepository):
 	async def list_by_book(self, owned_book_id: UUID) -> list[BookRating]:
 		return [r for r in self.ratings.values() if r.owned_book_id == owned_book_id]
 
-	async def list_by_family(self, family_id: UUID) -> list[BookRating]:
+	async def list_by_library(self, library_id: UUID) -> list[BookRating]:
 		# Like MockBookHistoryRepository, this mock doesn't model the
-		# owned_book -> family join; it returns everything stored.
+		# owned_book -> library join; it returns everything stored.
 		return list(self.ratings.values())
 
 	async def delete(self, rating: BookRating) -> None:
@@ -527,11 +528,11 @@ class MockRemovedMemberRepository(RemovedMemberRepository):
 		self.members[member.id] = member
 		return member
 
-	async def find_all_by_family(self, family_id: UUID) -> list[RemovedMember]:
-		return [m for m in self.members.values() if m.family_id == family_id]
+	async def find_all_by_library(self, library_id: UUID) -> list[RemovedMember]:
+		return [m for m in self.members.values() if m.library_id == library_id]
 
-	async def delete_all_by_family(self, family_id: UUID) -> None:
-		self.members = {k: v for k, v in self.members.items() if v.family_id != family_id}
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		self.members = {k: v for k, v in self.members.items() if v.library_id != library_id}
 
 	async def delete_expired(self, older_than) -> int:
 		expired = [k for k, v in self.members.items() if v.removed_at < older_than]
@@ -541,7 +542,7 @@ class MockRemovedMemberRepository(RemovedMemberRepository):
 
 
 @pytest.fixture
-def test_family_id() -> UUID:
+def test_library_id() -> UUID:
 	return uuid4()
 
 

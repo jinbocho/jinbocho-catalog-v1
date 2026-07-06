@@ -19,7 +19,7 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 	def _to_entity(model: OwnedBookModel) -> OwnedBook:
 		return OwnedBook(
 			id=model.id,
-			family_id=model.family_id,
+			library_id=model.library_id,
 			bibliographic_record_id=model.bibliographic_record_id,
 			room_id=model.room_id,
 			bookcase_id=model.bookcase_id,
@@ -52,16 +52,16 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 		model = await self._session.get(OwnedBookModel, book_id)
 		return self._to_entity(model) if model else None
 
-	async def find_all_by_family(
+	async def find_all_by_library(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		shelf_id: UUID | None = None,
 		reading_status: ReadingStatus | None = None,
 		tag: str | None = None,
 		limit: int = 50,
 		offset: int = 0,
 	) -> list[OwnedBook]:
-		query = select(OwnedBookModel).where(OwnedBookModel.family_id == family_id)
+		query = select(OwnedBookModel).where(OwnedBookModel.library_id == library_id)
 		if shelf_id is not None:
 			query = query.where(OwnedBookModel.shelf_id == shelf_id)
 		if reading_status is not None:
@@ -91,7 +91,7 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 
 	async def find_duplicate(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		bibliographic_record_id: UUID,
 		room_id: UUID | None,
 		bookcase_id: UUID | None,
@@ -104,7 +104,7 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 
 		result = await self._session.execute(
 			select(OwnedBookModel).where(
-				OwnedBookModel.family_id == family_id,
+				OwnedBookModel.library_id == library_id,
 				OwnedBookModel.bibliographic_record_id == bibliographic_record_id,
 				_eq(OwnedBookModel.room_id, room_id),
 				_eq(OwnedBookModel.bookcase_id, bookcase_id),
@@ -128,7 +128,7 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 		if model is None:
 			model = OwnedBookModel(
 				id=owned_book.id,
-				family_id=owned_book.family_id,
+				library_id=owned_book.library_id,
 				bibliographic_record_id=owned_book.bibliographic_record_id,
 				room_id=owned_book.room_id,
 				bookcase_id=owned_book.bookcase_id,
@@ -187,6 +187,6 @@ class SQLAlchemyOwnedBookRepository(OwnedBookRepository):
 		await self._session.execute(sa_delete(OwnedBookModel).where(OwnedBookModel.id.in_(book_ids)))
 		await self._session.flush()
 
-	async def delete_all_by_family(self, family_id: UUID) -> None:
-		await self._session.execute(sa_delete(OwnedBookModel).where(OwnedBookModel.family_id == family_id))
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		await self._session.execute(sa_delete(OwnedBookModel).where(OwnedBookModel.library_id == library_id))
 		await self._session.flush()

@@ -10,10 +10,10 @@ class ListBibliographicRecordsUseCase:
 
 	async def execute(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		q: str | None,
 		genre: str | None,
 		limit: int,
 		offset: int,
 	) -> list[BibliographicRecord]:
-		return await self._record_repo.find_all_by_family(family_id, q=q, genre=genre, limit=limit, offset=offset)
+		return await self._record_repo.find_all_by_library(library_id, q=q, genre=genre, limit=limit, offset=offset)

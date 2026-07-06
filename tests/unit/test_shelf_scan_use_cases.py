@@ -38,9 +38,9 @@ class StubSearchProvider(BookSearchProvider):
 		return self._results
 
 
-async def _build_shelf(family_id: UUID, room_repo, bookcase_repo, section_repo, shelf_repo) -> Shelf:
-	room = await room_repo.save(Room(family_id=family_id, name="Studio"))
-	bookcase = await bookcase_repo.save(Bookcase(family_id=family_id, room_id=room.id, name="Billy"))
+async def _build_shelf(library_id: UUID, room_repo, bookcase_repo, section_repo, shelf_repo) -> Shelf:
+	room = await room_repo.save(Room(library_id=library_id, name="Studio"))
+	bookcase = await bookcase_repo.save(Bookcase(library_id=library_id, room_id=room.id, name="Billy"))
 	section = await section_repo.save(Section(bookcase_id=bookcase.id, section_index=1))
 	return await shelf_repo.save(Shelf(section_id=section.id, shelf_index=1))
 
@@ -51,16 +51,16 @@ def _scan_use_case(shelf_repo, section_repo, bookcase_repo, reader, provider, re
 
 @pytest.mark.asyncio
 async def test_scan_reports_unavailable_when_vision_is_off(
-	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
+	test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	use_case = _scan_use_case(
 		shelf_repo, section_repo, bookcase_repo, StubSpineReader(None, reason="unsupported"),
 		StubSearchProvider([]), record_repo, book_repo
 	)
 
 	result = await use_case.execute(
-		ScanShelfInput(family_id=test_family_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
+		ScanShelfInput(library_id=test_library_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
 	)
 
 	assert result.available is False
@@ -70,15 +70,15 @@ async def test_scan_reports_unavailable_when_vision_is_off(
 
 @pytest.mark.asyncio
 async def test_scan_matches_a_spine_against_the_provider(
-	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
+	test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	reader = StubSpineReader([SpineReading(title="Dune", author="Frank Herbert", position=0)])
 	provider = StubSearchProvider([{"title": "Dune", "main_author": "Frank Herbert", "isbn": "9780441013593"}])
 	use_case = _scan_use_case(shelf_repo, section_repo, bookcase_repo, reader, provider, record_repo, book_repo)
 
 	result = await use_case.execute(
-		ScanShelfInput(family_id=test_family_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
+		ScanShelfInput(library_id=test_library_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
 	)
 
 	assert result.available is True
@@ -92,15 +92,15 @@ async def test_scan_matches_a_spine_against_the_provider(
 
 @pytest.mark.asyncio
 async def test_scan_flags_weak_provider_hit_as_uncertain(
-	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
+	test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	reader = StubSpineReader([SpineReading(title="Il nome della rosa", author=None, position=0)])
 	provider = StubSearchProvider([{"title": "Il nome della rosa e altri scritti", "main_author": "Umberto Eco"}])
 	use_case = _scan_use_case(shelf_repo, section_repo, bookcase_repo, reader, provider, record_repo, book_repo)
 
 	result = await use_case.execute(
-		ScanShelfInput(family_id=test_family_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
+		ScanShelfInput(library_id=test_library_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
 	)
 
 	assert result.candidates[0].status == "uncertain"
@@ -109,16 +109,16 @@ async def test_scan_flags_weak_provider_hit_as_uncertain(
 
 @pytest.mark.asyncio
 async def test_scan_marks_spine_not_found_when_provider_has_nothing(
-	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
+	test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	reader = StubSpineReader([SpineReading(title="Titolo Illeggibile", author=None, position=0)])
 	use_case = _scan_use_case(
 		shelf_repo, section_repo, bookcase_repo, reader, StubSearchProvider([]), record_repo, book_repo
 	)
 
 	result = await use_case.execute(
-		ScanShelfInput(family_id=test_family_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
+		ScanShelfInput(library_id=test_library_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
 	)
 
 	assert result.candidates[0].status == "not_found"
@@ -126,44 +126,44 @@ async def test_scan_marks_spine_not_found_when_provider_has_nothing(
 
 
 @pytest.mark.asyncio
-async def test_scan_flags_books_the_family_already_owns(
-	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
+async def test_scan_flags_books_the_library_already_owns(
+	test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	record = await record_repo.save(
-		BibliographicRecord(family_id=test_family_id, title="Dune", main_author="Frank Herbert")
+		BibliographicRecord(library_id=test_library_id, title="Dune", main_author="Frank Herbert")
 	)
-	await book_repo.save(OwnedBook(family_id=test_family_id, bibliographic_record_id=record.id))
+	await book_repo.save(OwnedBook(library_id=test_library_id, bibliographic_record_id=record.id))
 	reader = StubSpineReader([SpineReading(title="Dune", author="Frank Herbert", position=0)])
 	provider = StubSearchProvider([{"title": "Dune", "main_author": "Frank Herbert"}])
 	use_case = _scan_use_case(shelf_repo, section_repo, bookcase_repo, reader, provider, record_repo, book_repo)
 
 	result = await use_case.execute(
-		ScanShelfInput(family_id=test_family_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
+		ScanShelfInput(library_id=test_library_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
 	)
 
 	assert result.candidates[0].already_owned is True
 
 
 @pytest.mark.asyncio
-async def test_scan_rejects_a_shelf_of_another_family(
-	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
+async def test_scan_rejects_a_shelf_of_another_library(
+	test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
-	other_family = uuid4()
-	shelf = await _build_shelf(other_family, room_repo, bookcase_repo, section_repo, shelf_repo)
+	other_library = uuid4()
+	shelf = await _build_shelf(other_library, room_repo, bookcase_repo, section_repo, shelf_repo)
 	use_case = _scan_use_case(
 		shelf_repo, section_repo, bookcase_repo, StubSpineReader([]), StubSearchProvider([]), record_repo, book_repo
 	)
 
 	with pytest.raises(PermissionError):
 		await use_case.execute(
-			ScanShelfInput(family_id=test_family_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
+			ScanShelfInput(library_id=test_library_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
 		)
 
 
 @pytest.mark.asyncio
 async def test_scan_rejects_unknown_shelf(
-	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
+	test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
 	use_case = _scan_use_case(
 		shelf_repo, section_repo, bookcase_repo, StubSpineReader([]), StubSearchProvider([]), record_repo, book_repo
@@ -171,7 +171,7 @@ async def test_scan_rejects_unknown_shelf(
 
 	with pytest.raises(LookupError):
 		await use_case.execute(
-			ScanShelfInput(family_id=test_family_id, shelf_id=uuid4(), image_base64="abc", media_type="image/jpeg")
+			ScanShelfInput(library_id=test_library_id, shelf_id=uuid4(), image_base64="abc", media_type="image/jpeg")
 		)
 
 
@@ -182,17 +182,17 @@ def _confirm_use_case(shelf_repo, section_repo, bookcase_repo, record_repo, book
 
 @pytest.mark.asyncio
 async def test_confirm_creates_books_positioned_on_the_scanned_shelf(
-	test_family_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
+	test_library_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
 	record_repo, book_repo, history_repo, book_read_repo,
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	use_case = _confirm_use_case(
 		shelf_repo, section_repo, bookcase_repo, record_repo, book_repo, history_repo, book_read_repo
 	)
 
 	result = await use_case.execute(
 		ConfirmShelfScanInput(
-			family_id=test_family_id,
+			library_id=test_library_id,
 			changed_by=test_user_id,
 			shelf_id=shelf.id,
 			items=[
@@ -212,10 +212,10 @@ async def test_confirm_creates_books_positioned_on_the_scanned_shelf(
 
 @pytest.mark.asyncio
 async def test_confirm_orders_books_by_spine_position_not_list_order(
-	test_family_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
+	test_library_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
 	record_repo, book_repo, history_repo, book_read_repo,
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	use_case = _confirm_use_case(
 		shelf_repo, section_repo, bookcase_repo, record_repo, book_repo, history_repo, book_read_repo
 	)
@@ -223,7 +223,7 @@ async def test_confirm_orders_books_by_spine_position_not_list_order(
 	# Sent out of order; the spine positions must drive shelf placement.
 	result = await use_case.execute(
 		ConfirmShelfScanInput(
-			family_id=test_family_id,
+			library_id=test_library_id,
 			changed_by=test_user_id,
 			shelf_id=shelf.id,
 			items=[
@@ -246,14 +246,14 @@ async def test_confirm_orders_books_by_spine_position_not_list_order(
 
 @pytest.mark.asyncio
 async def test_confirm_positions_after_books_already_on_the_shelf(
-	test_family_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
+	test_library_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
 	record_repo, book_repo, history_repo, book_read_repo,
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
-	existing_record = await record_repo.save(BibliographicRecord(family_id=test_family_id, title="Fondazione"))
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	existing_record = await record_repo.save(BibliographicRecord(library_id=test_library_id, title="Fondazione"))
 	await book_repo.save(
 		OwnedBook(
-			family_id=test_family_id,
+			library_id=test_library_id,
 			bibliographic_record_id=existing_record.id,
 			shelf_id=shelf.id,
 			shelf_position=4,
@@ -265,7 +265,7 @@ async def test_confirm_positions_after_books_already_on_the_shelf(
 
 	result = await use_case.execute(
 		ConfirmShelfScanInput(
-			family_id=test_family_id,
+			library_id=test_library_id,
 			changed_by=test_user_id,
 			shelf_id=shelf.id,
 			items=[ConfirmShelfScanItem(title="Dune")],
@@ -279,21 +279,21 @@ async def test_confirm_positions_after_books_already_on_the_shelf(
 
 @pytest.mark.asyncio
 async def test_confirm_skips_duplicates_without_failing_the_batch(
-	test_family_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
+	test_library_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
 	record_repo, book_repo, history_repo, book_read_repo,
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	record = await record_repo.save(
-		BibliographicRecord(family_id=test_family_id, title="Dune", main_author="Frank Herbert")
+		BibliographicRecord(library_id=test_library_id, title="Dune", main_author="Frank Herbert")
 	)
-	await book_repo.save(OwnedBook(family_id=test_family_id, bibliographic_record_id=record.id))
+	await book_repo.save(OwnedBook(library_id=test_library_id, bibliographic_record_id=record.id))
 	use_case = _confirm_use_case(
 		shelf_repo, section_repo, bookcase_repo, record_repo, book_repo, history_repo, book_read_repo
 	)
 
 	result = await use_case.execute(
 		ConfirmShelfScanInput(
-			family_id=test_family_id,
+			library_id=test_library_id,
 			changed_by=test_user_id,
 			shelf_id=shelf.id,
 			items=[
@@ -309,20 +309,20 @@ async def test_confirm_skips_duplicates_without_failing_the_batch(
 
 @pytest.mark.asyncio
 async def test_confirm_skips_the_same_book_matched_twice_in_one_scan(
-	test_family_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
+	test_library_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
 	record_repo, book_repo, history_repo, book_read_repo,
 ):
 	"""Two spines resolving to the same not-yet-owned book (e.g. two copies
 	standing side by side) must not both be created — this is the case that
-	used to reach the DB as two inserts for the same family+ISBN."""
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	used to reach the DB as two inserts for the same library+ISBN."""
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	use_case = _confirm_use_case(
 		shelf_repo, section_repo, bookcase_repo, record_repo, book_repo, history_repo, book_read_repo
 	)
 
 	result = await use_case.execute(
 		ConfirmShelfScanInput(
-			family_id=test_family_id,
+			library_id=test_library_id,
 			changed_by=test_user_id,
 			shelf_id=shelf.id,
 			items=[
@@ -338,17 +338,17 @@ async def test_confirm_skips_the_same_book_matched_twice_in_one_scan(
 
 @pytest.mark.asyncio
 async def test_confirm_keeps_an_intentional_duplicate_matched_twice_in_one_scan(
-	test_family_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
+	test_library_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
 	record_repo, book_repo, history_repo, book_read_repo,
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	use_case = _confirm_use_case(
 		shelf_repo, section_repo, bookcase_repo, record_repo, book_repo, history_repo, book_read_repo
 	)
 
 	result = await use_case.execute(
 		ConfirmShelfScanInput(
-			family_id=test_family_id,
+			library_id=test_library_id,
 			changed_by=test_user_id,
 			shelf_id=shelf.id,
 			items=[
@@ -366,8 +366,8 @@ async def test_confirm_keeps_an_intentional_duplicate_matched_twice_in_one_scan(
 
 
 @pytest.mark.asyncio
-async def test_confirm_rejects_a_shelf_of_another_family(
-	test_family_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
+async def test_confirm_rejects_a_shelf_of_another_library(
+	test_library_id, test_user_id, room_repo, bookcase_repo, section_repo, shelf_repo,
 	record_repo, book_repo, history_repo, book_read_repo,
 ):
 	shelf = await _build_shelf(uuid4(), room_repo, bookcase_repo, section_repo, shelf_repo)
@@ -378,7 +378,7 @@ async def test_confirm_rejects_a_shelf_of_another_family(
 	with pytest.raises(PermissionError):
 		await use_case.execute(
 			ConfirmShelfScanInput(
-				family_id=test_family_id,
+				library_id=test_library_id,
 				changed_by=test_user_id,
 				shelf_id=shelf.id,
 				items=[ConfirmShelfScanItem(title="Dune")],
@@ -390,26 +390,26 @@ def _audit_use_case(shelf_repo, section_repo, bookcase_repo, reader, book_repo, 
 	return AuditShelfUseCase(shelf_repo, section_repo, bookcase_repo, reader, book_repo, record_repo)
 
 
-async def _shelve_book(family_id, shelf_id, title, main_author, record_repo, book_repo):
+async def _shelve_book(library_id, shelf_id, title, main_author, record_repo, book_repo):
 	record = await record_repo.save(
-		BibliographicRecord(family_id=family_id, title=title, main_author=main_author)
+		BibliographicRecord(library_id=library_id, title=title, main_author=main_author)
 	)
 	await book_repo.save(
-		OwnedBook(family_id=family_id, bibliographic_record_id=record.id, shelf_id=shelf_id)
+		OwnedBook(library_id=library_id, bibliographic_record_id=record.id, shelf_id=shelf_id)
 	)
 
 
 @pytest.mark.asyncio
 async def test_audit_reports_unavailable_when_vision_is_off(
-	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
+	test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
 	use_case = _audit_use_case(
 		shelf_repo, section_repo, bookcase_repo, StubSpineReader(None, reason="unsupported"), book_repo, record_repo
 	)
 
 	result = await use_case.execute(
-		AuditShelfInput(family_id=test_family_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
+		AuditShelfInput(library_id=test_library_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
 	)
 
 	assert result.available is False
@@ -418,11 +418,11 @@ async def test_audit_reports_unavailable_when_vision_is_off(
 
 @pytest.mark.asyncio
 async def test_audit_classifies_present_missing_and_unexpected(
-	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
+	test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
-	shelf = await _build_shelf(test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo)
-	await _shelve_book(test_family_id, shelf.id, "Dune", "Frank Herbert", record_repo, book_repo)
-	await _shelve_book(test_family_id, shelf.id, "Fondazione", "Isaac Asimov", record_repo, book_repo)
+	shelf = await _build_shelf(test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo)
+	await _shelve_book(test_library_id, shelf.id, "Dune", "Frank Herbert", record_repo, book_repo)
+	await _shelve_book(test_library_id, shelf.id, "Fondazione", "Isaac Asimov", record_repo, book_repo)
 
 	# Photo shows Dune (present) and Neuromancer (unexpected); Fondazione is gone (missing).
 	reader = StubSpineReader([
@@ -432,7 +432,7 @@ async def test_audit_classifies_present_missing_and_unexpected(
 	use_case = _audit_use_case(shelf_repo, section_repo, bookcase_repo, reader, book_repo, record_repo)
 
 	result = await use_case.execute(
-		AuditShelfInput(family_id=test_family_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
+		AuditShelfInput(library_id=test_library_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
 	)
 
 	assert result.available is True
@@ -442,13 +442,13 @@ async def test_audit_classifies_present_missing_and_unexpected(
 
 
 @pytest.mark.asyncio
-async def test_audit_rejects_a_shelf_of_another_family(
-	test_family_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
+async def test_audit_rejects_a_shelf_of_another_library(
+	test_library_id, room_repo, bookcase_repo, section_repo, shelf_repo, record_repo, book_repo
 ):
 	shelf = await _build_shelf(uuid4(), room_repo, bookcase_repo, section_repo, shelf_repo)
 	use_case = _audit_use_case(shelf_repo, section_repo, bookcase_repo, StubSpineReader([]), book_repo, record_repo)
 
 	with pytest.raises(PermissionError):
 		await use_case.execute(
-			AuditShelfInput(family_id=test_family_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
+			AuditShelfInput(library_id=test_library_id, shelf_id=shelf.id, image_base64="abc", media_type="image/jpeg")
 		)

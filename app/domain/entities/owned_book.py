@@ -27,7 +27,7 @@ class BookSource(StrEnum):
 
 @dataclass
 class OwnedBook:
-	family_id: UUID
+	library_id: UUID
 	bibliographic_record_id: UUID
 	room_id: UUID | None = None
 	bookcase_id: UUID | None = None
@@ -43,7 +43,7 @@ class OwnedBook:
 	# Who is currently reading the (single physical) copy; None when nobody is.
 	# Users live in the auth service → bare UUID, no FK.
 	current_reader_id: UUID | None = None
-	# Family member who owns this copy; all members can read it.
+	# Library member who owns this copy; all members can read it.
 	# Users live in the auth service → bare UUID, no FK.
 	owner_id: UUID | None = None
 	tags: list[str] = field(default_factory=list)
@@ -55,7 +55,7 @@ class OwnedBook:
 	updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 	def reading_status_for(self, viewer_id: UUID, has_read: bool) -> ReadingStatus:
-		"""Reading status as seen by a specific family member. "Reading" is
+		"""Reading status as seen by a specific library member. "Reading" is
 		inherently shared (only one person can hold the single physical copy
 		at a time); "read" is per-member, derived from BookRead rows, so one
 		member finishing the book doesn't mark it read for everyone else."""

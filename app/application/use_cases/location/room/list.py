@@ -8,5 +8,5 @@ class ListRoomsUseCase:
 	def __init__(self, room_repo: RoomRepository) -> None:
 		self._room_repo = room_repo
 
-	async def execute(self, family_id: UUID, limit: int = 50, offset: int = 0) -> list[Room]:
-		return await self._room_repo.find_all_by_family(family_id, limit=limit, offset=offset)
+	async def execute(self, library_id: UUID, limit: int = 50, offset: int = 0) -> list[Room]:
+		return await self._room_repo.find_all_by_library(library_id, limit=limit, offset=offset)

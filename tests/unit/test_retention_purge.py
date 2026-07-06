@@ -4,7 +4,7 @@ from uuid import uuid4
 import pytest
 
 from app.application.use_cases.retention import PurgeExpiredPersonalDataUseCase
-from app.domain.entities import FamilyRole, RemovedMember
+from app.domain.entities import LibraryRole, RemovedMember
 from tests.unit.conftest import MockRemovedMemberRepository
 
 
@@ -14,12 +14,12 @@ async def test_deletes_removed_members_older_than_cutoff() -> None:
 	now = datetime.now(UTC)
 
 	old_member = RemovedMember(
-		id=uuid4(), family_id=uuid4(), full_name="Old Member", email="old@test.com",
-		role=FamilyRole.VIEWER, removed_at=now - timedelta(days=400),
+		id=uuid4(), library_id=uuid4(), full_name="Old Member", email="old@test.com",
+		role=LibraryRole.VIEWER, removed_at=now - timedelta(days=400),
 	)
 	recent_member = RemovedMember(
-		id=uuid4(), family_id=uuid4(), full_name="Recent Member", email="recent@test.com",
-		role=FamilyRole.VIEWER, removed_at=now - timedelta(days=10),
+		id=uuid4(), library_id=uuid4(), full_name="Recent Member", email="recent@test.com",
+		role=LibraryRole.VIEWER, removed_at=now - timedelta(days=10),
 	)
 	await removed_member_repo.save(old_member)
 	await removed_member_repo.save(recent_member)

@@ -26,7 +26,7 @@ router = APIRouter(tags=["rooms"])
 	"/",
 	response_model=list[RoomResponse],
 	summary="List rooms",
-	description="Retrieve all rooms for the family",
+	description="Retrieve all rooms for the library",
 )
 async def list_rooms(
 	limit: int = Query(default=50, ge=1, le=200),
@@ -34,7 +34,7 @@ async def list_rooms(
 	payload: dict[str, Any] = Depends(get_current_user_payload),
 	room_repo: RoomRepository = Depends(get_room_repository),
 ) -> list[Room]:
-	return await ListRoomsUseCase(room_repo).execute(UUID(payload["family_id"]), limit, offset)
+	return await ListRoomsUseCase(room_repo).execute(UUID(payload["library_id"]), limit, offset)
 
 
 @router.post(
@@ -51,7 +51,7 @@ async def create_room(
 	room_repo: RoomRepository = Depends(get_room_repository),
 ) -> Room:
 	room = await CreateRoomUseCase(room_repo).execute(
-		CreateRoomInput(UUID(payload["family_id"]), request.name, request.description)
+		CreateRoomInput(UUID(payload["library_id"]), request.name, request.description)
 	)
 	await db.commit()
 	return room
@@ -69,7 +69,7 @@ async def get_room(
 	payload: dict[str, Any] = Depends(get_current_user_payload),
 	room_repo: RoomRepository = Depends(get_room_repository),
 ) -> Room:
-	return await GetRoomUseCase(room_repo).execute(room_id, UUID(payload["family_id"]))
+	return await GetRoomUseCase(room_repo).execute(room_id, UUID(payload["library_id"]))
 
 
 @router.patch(
@@ -87,7 +87,9 @@ async def update_room(
 	room_repo: RoomRepository = Depends(get_room_repository),
 ) -> Room:
 	updated = await UpdateRoomUseCase(room_repo).execute(
-		UpdateRoomInput(room_id=room_id, family_id=UUID(payload["family_id"]), **request.model_dump(exclude_unset=True))
+		UpdateRoomInput(
+			room_id=room_id, library_id=UUID(payload["library_id"]), **request.model_dump(exclude_unset=True)
+		)
 	)
 	await db.commit()
 	return updated
@@ -106,5 +108,5 @@ async def delete_room(
 	db: AsyncSession = Depends(get_db),
 	room_repo: RoomRepository = Depends(get_room_repository),
 ) -> None:
-	await DeleteRoomUseCase(room_repo).execute(room_id, UUID(payload["family_id"]))
+	await DeleteRoomUseCase(room_repo).execute(room_id, UUID(payload["library_id"]))
 	await db.commit()

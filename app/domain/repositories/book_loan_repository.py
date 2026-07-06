@@ -19,7 +19,7 @@ class BookLoanRepository(ABC):
     async def list_by_book(self, owned_book_id: UUID) -> list["BookLoan"]: ...
 
     @abstractmethod
-    async def list_active_by_family(self, family_id: UUID) -> list["BookLoan"]: ...
+    async def list_active_by_library(self, library_id: UUID) -> list["BookLoan"]: ...
 
     @abstractmethod
     async def list_due_for_reminder(self, due_before: datetime) -> list["BookLoan"]:
@@ -31,9 +31,9 @@ class BookLoanRepository(ABC):
     async def mark_reminder_sent(self, loan_id: UUID, sent_at: datetime) -> None: ...
 
     @abstractmethod
-    async def find_all_by_family(self, family_id: UUID) -> list["BookLoan"]:
+    async def find_all_by_library(self, library_id: UUID) -> list["BookLoan"]:
         """All loans (active and returned) — for a full library export, unlike
-        list_active_by_family which only covers what's currently lent out."""
+        list_active_by_library which only covers what's currently lent out."""
         ...
 
     @abstractmethod

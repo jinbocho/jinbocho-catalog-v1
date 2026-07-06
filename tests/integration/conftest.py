@@ -28,17 +28,17 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture
-def family_id() -> UUID:
+def library_id() -> UUID:
 	return uuid4()
 
 
 @pytest_asyncio.fixture
-async def client(db_session: AsyncSession, family_id: UUID) -> AsyncGenerator[AsyncClient, None]:
+async def client(db_session: AsyncSession, library_id: UUID) -> AsyncGenerator[AsyncClient, None]:
 	"""An HTTP client wired to the real app, with get_db overridden to reuse
 	the same rolled-back-on-exit session as db_session (so a test can assert
 	through the API and still inspect rows via a repository in the same
 	uncommitted transaction), and JWT auth overridden to a fixed admin payload
-	for `family_id` — issuing/validating real tokens is auth-service's concern,
+	for `library_id` — issuing/validating real tokens is auth-service's concern,
 	not catalog-service's; this exercises the full endpoint -> use case ->
 	repository -> Postgres flow without re-testing auth-service's job. The
 	app's real http_client is only set up by the lifespan context (not run
@@ -49,7 +49,7 @@ async def client(db_session: AsyncSession, family_id: UUID) -> AsyncGenerator[As
 		yield db_session
 
 	async def _override_get_current_user_payload() -> dict[str, Any]:
-		return {"family_id": str(family_id), "sub": str(uuid4()), "role": "admin"}
+		return {"library_id": str(library_id), "sub": str(uuid4()), "role": "admin"}
 
 	async def _override_get_http_client() -> AsyncGenerator[AsyncClient, None]:
 		async with AsyncClient() as http_client:

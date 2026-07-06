@@ -27,7 +27,7 @@ ShelfScanMatchStatus = Literal["matched", "uncertain", "not_found"]
 
 @dataclass
 class ScanShelfInput:
-	family_id: UUID
+	library_id: UUID
 	shelf_id: UUID
 	image_base64: str
 	media_type: str
@@ -71,7 +71,7 @@ class ScanShelfUseCase:
 
 	async def execute(self, inp: ScanShelfInput) -> ScanShelfOutput:
 		await validate_shelf_ownership(
-			inp.family_id, inp.shelf_id, self._shelf_repo, self._section_repo, self._bookcase_repo
+			inp.library_id, inp.shelf_id, self._shelf_repo, self._section_repo, self._bookcase_repo
 		)
 
 		read = await self._spine_reader.read_spines(inp.image_base64, inp.media_type)
@@ -81,11 +81,11 @@ class ScanShelfUseCase:
 		# Provider lookups run concurrently: a full shelf is ~25 spines and the
 		# whole scan must stay well inside the gateway's 30s upstream timeout.
 		candidates = list(
-			await asyncio.gather(*(self._match_spine(inp.family_id, spine) for spine in read.spines))
+			await asyncio.gather(*(self._match_spine(inp.library_id, spine) for spine in read.spines))
 		)
 		return ScanShelfOutput(available=True, candidates=candidates)
 
-	async def _match_spine(self, family_id: UUID, spine: SpineReading) -> ShelfScanCandidate:
+	async def _match_spine(self, library_id: UUID, spine: SpineReading) -> ShelfScanCandidate:
 		results = await self._search_provider.search(spine.title, spine.author, _PROVIDER_MAX_RESULTS)
 
 		best: dict[str, Any] | None = None
@@ -112,26 +112,26 @@ class ScanShelfUseCase:
 			spine_author=spine.author,
 			position=spine.position,
 			status=status,
-			already_owned=await self._is_already_owned(family_id, title, author),
+			already_owned=await self._is_already_owned(library_id, title, author),
 			metadata=best,
 		)
 
-	async def _is_already_owned(self, family_id: UUID, title: str, author: str | None) -> bool:
-		record = await self._record_repo.find_by_title_author(family_id, title, author)
+	async def _is_already_owned(self, library_id: UUID, title: str, author: str | None) -> bool:
+		record = await self._record_repo.find_by_title_author(library_id, title, author)
 		if record is None:
 			return False
 		return await self._book_repo.exists_by_bibliographic_record_id(record.id)
 
 
 async def validate_shelf_ownership(
-	family_id: UUID,
+	library_id: UUID,
 	shelf_id: UUID,
 	shelf_repo: ShelfRepository,
 	section_repo: SectionRepository,
 	bookcase_repo: BookcaseRepository,
 ) -> "ResolvedShelfLocation":
 	"""Walks shelf -> section -> bookcase to prove the shelf belongs to the
-	family, and returns the full location chain needed to position a book."""
+	library, and returns the full location chain needed to position a book."""
 	shelf = await shelf_repo.find_by_id(shelf_id)
 	if shelf is None:
 		raise LookupError(f"Shelf {shelf_id} not found")
@@ -141,8 +141,8 @@ async def validate_shelf_ownership(
 	bookcase = await bookcase_repo.find_by_id(section.bookcase_id)
 	if bookcase is None:
 		raise LookupError(f"Bookcase {section.bookcase_id} not found")
-	if bookcase.family_id != family_id:
-		raise PermissionError("Shelf belongs to a different family")
+	if bookcase.library_id != library_id:
+		raise PermissionError("Shelf belongs to a different library")
 	return ResolvedShelfLocation(
 		room_id=bookcase.room_id,
 		bookcase_id=bookcase.id,

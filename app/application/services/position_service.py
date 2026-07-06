@@ -28,7 +28,7 @@ class PositionValidationService:
 
 	async def validate(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		room_id: UUID,
 		bookcase_id: UUID,
 		section_id: UUID,
@@ -37,14 +37,14 @@ class PositionValidationService:
 		room = await self._room_repo.find_by_id(room_id)
 		if not room:
 			raise LookupError("Room not found")
-		if room.family_id != family_id:
-			raise PermissionError("Room does not belong to this family")
+		if room.library_id != library_id:
+			raise PermissionError("Room does not belong to this library")
 
 		bookcase = await self._bookcase_repo.find_by_id(bookcase_id)
 		if not bookcase:
 			raise LookupError("Bookcase not found")
-		if bookcase.family_id != family_id:
-			raise PermissionError("Bookcase does not belong to this family")
+		if bookcase.library_id != library_id:
+			raise PermissionError("Bookcase does not belong to this library")
 		if bookcase.room_id != room_id:
 			raise LookupError("Bookcase does not belong to this room")
 

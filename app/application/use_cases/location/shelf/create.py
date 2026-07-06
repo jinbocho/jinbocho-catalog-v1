@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CreateShelfInput:
-	family_id: UUID
+	library_id: UUID
 	section_id: UUID
 	shelf_index: int
 	notes: str | None = None
@@ -26,7 +26,7 @@ class CreateShelfUseCase:
 		section = await self._section_repo.find_by_id(inp.section_id)
 		if section is None:
 			raise LookupError("Section not found")
-		# Verify family_id matches through bookcase
+		# Verify library_id matches through bookcase
 		saved = await self._shelf_repo.save(
 			Shelf(
 				section_id=inp.section_id,
@@ -36,5 +36,5 @@ class CreateShelfUseCase:
 				updated_at=utcnow(),
 			)
 		)
-		logger.info("Shelf %s created in family %s", saved.id, inp.family_id)
+		logger.info("Shelf %s created in library %s", saved.id, inp.library_id)
 		return saved

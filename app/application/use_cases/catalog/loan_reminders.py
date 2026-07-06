@@ -26,7 +26,7 @@ class SendLoanRemindersUseCase:
 		self._notifier = notifier
 
 	async def execute(self, lead_days: int) -> int:
-		"""Notifies families about loans due within ``lead_days``. Returns the
+		"""Notifies libraries about loans due within ``lead_days``. Returns the
 		number of reminders sent. A failure on one loan (missing book/record,
 		notifier error) is logged and skipped — it must not block the rest of
 		the batch."""
@@ -46,7 +46,7 @@ class SendLoanRemindersUseCase:
 				assert loan.due_date is not None  # guaranteed by list_due_for_reminder's filter
 
 				await self._notifier.notify(
-					family_id=book.family_id,
+					library_id=book.library_id,
 					book_title=book_title,
 					borrower_name=loan.borrower_name,
 					due_date=loan.due_date,

@@ -18,7 +18,7 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 	def _to_entity(model: BibliographicRecordModel) -> BibliographicRecord:
 		return BibliographicRecord(
 			id=model.id,
-			family_id=model.family_id,
+			library_id=model.library_id,
 			title=model.title,
 			main_author=model.main_author,
 			other_authors=list(model.other_authors) if model.other_authors else [],
@@ -41,10 +41,10 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 		model = await self._session.get(BibliographicRecordModel, record_id)
 		return self._to_entity(model) if model else None
 
-	async def find_by_isbn(self, family_id: UUID, isbn: str) -> BibliographicRecord | None:
+	async def find_by_isbn(self, library_id: UUID, isbn: str) -> BibliographicRecord | None:
 		result = await self._session.execute(
 			select(BibliographicRecordModel).where(
-				BibliographicRecordModel.family_id == family_id,
+				BibliographicRecordModel.library_id == library_id,
 				BibliographicRecordModel.isbn == isbn,
 			)
 		)
@@ -52,7 +52,7 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 		return self._to_entity(model) if model else None
 
 	async def find_by_title_author(
-		self, family_id: UUID, title: str, main_author: str | None
+		self, library_id: UUID, title: str, main_author: str | None
 	) -> BibliographicRecord | None:
 		author_clause = (
 			BibliographicRecordModel.main_author.is_(None)
@@ -61,7 +61,7 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 		)
 		result = await self._session.execute(
 			select(BibliographicRecordModel).where(
-				BibliographicRecordModel.family_id == family_id,
+				BibliographicRecordModel.library_id == library_id,
 				BibliographicRecordModel.title == title,
 				author_clause,
 			)
@@ -69,15 +69,15 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 		model = result.scalars().first()
 		return self._to_entity(model) if model else None
 
-	async def find_all_by_family(
+	async def find_all_by_library(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		q: str | None = None,
 		genre: str | None = None,
 		limit: int = 50,
 		offset: int = 0,
 	) -> list[BibliographicRecord]:
-		query = select(BibliographicRecordModel).where(BibliographicRecordModel.family_id == family_id)
+		query = select(BibliographicRecordModel).where(BibliographicRecordModel.library_id == library_id)
 		if genre:
 			query = query.where(BibliographicRecordModel.genre == genre)
 		if q:
@@ -97,11 +97,11 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 		)
 		return [self._to_entity(model) for model in result.scalars().all()]
 
-	async def count_genres(self, family_id: UUID) -> list[tuple[str, int]]:
+	async def count_genres(self, library_id: UUID) -> list[tuple[str, int]]:
 		result = await self._session.execute(
 			select(BibliographicRecordModel.genre, func.count())
 			.where(
-				BibliographicRecordModel.family_id == family_id,
+				BibliographicRecordModel.library_id == library_id,
 				BibliographicRecordModel.genre.is_not(None),
 			)
 			.group_by(BibliographicRecordModel.genre)
@@ -123,7 +123,7 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 		if model is None:
 			model = BibliographicRecordModel(
 				id=record.id,
-				family_id=record.family_id,
+				library_id=record.library_id,
 				title=record.title,
 				main_author=record.main_author,
 				other_authors=record.other_authors or None,
@@ -161,7 +161,7 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 
 		if is_new and record.isbn:
 			# A brand-new row with an ISBN can race a concurrent insert for the
-			# same (family_id, isbn) — e.g. a double-submitted confirm, or two
+			# same (library_id, isbn) — e.g. a double-submitted confirm, or two
 			# devices cataloging the same book at once. A savepoint keeps that
 			# failure local instead of poisoning the whole request's transaction,
 			# and we fall back to whichever row won the race.
@@ -170,7 +170,7 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 					await self._session.flush()
 			except IntegrityError:
 				self._session.expunge(model)
-				existing = await self.find_by_isbn(record.family_id, record.isbn)
+				existing = await self.find_by_isbn(record.library_id, record.isbn)
 				if existing is None:
 					raise
 				return existing
@@ -185,8 +185,8 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 			await self._session.delete(model)
 			await self._session.flush()
 
-	async def delete_all_by_family(self, family_id: UUID) -> None:
+	async def delete_all_by_library(self, library_id: UUID) -> None:
 		await self._session.execute(
-			sa_delete(BibliographicRecordModel).where(BibliographicRecordModel.family_id == family_id)
+			sa_delete(BibliographicRecordModel).where(BibliographicRecordModel.library_id == library_id)
 		)
 		await self._session.flush()

@@ -13,8 +13,8 @@ from app.api.dependencies import (
 	get_room_repository,
 	require_role,
 )
-from app.api.v1.schemas.export_schemas import DeleteFamilyDataResponse
-from app.application.use_cases import DeleteFamilyDataUseCase
+from app.api.v1.schemas.export_schemas import DeleteLibraryDataResponse
+from app.application.use_cases import DeleteLibraryDataUseCase
 from app.domain.repositories import (
 	BibliographicRecordRepository,
 	BookcaseRepository,
@@ -30,12 +30,12 @@ router = APIRouter(tags=["account"])
 
 @router.delete(
 	"/",
-	response_model=DeleteFamilyDataResponse,
-	summary="Permanently delete every row this service holds for the family",
+	response_model=DeleteLibraryDataResponse,
+	summary="Permanently delete every row this service holds for the library",
 	description="Catalog-service half of full account deletion: rooms, bookcases, sections, "
 	"shelves, bibliographic records, owned books, reads, loans, history and removed-member "
 	"snapshots — everything except the global ISBN lookup cache. Irreversible. The frontend "
-	"must call this BEFORE auth-service's DELETE /v1/families/{family_id}: if that ran first, "
+	"must call this BEFORE auth-service's DELETE /v1/libraries/{library_id}: if that ran first, "
 	"a failure here would leave this data permanently orphaned with no account left to reach it. "
 	"Requires admin role.",
 )
@@ -48,8 +48,8 @@ async def delete_account_data(
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	book_history_repo: BookHistoryRepository = Depends(get_book_history_repository),
 	removed_member_repo: RemovedMemberRepository = Depends(get_removed_member_repository),
-) -> DeleteFamilyDataResponse:
-	use_case = DeleteFamilyDataUseCase(
+) -> DeleteLibraryDataResponse:
+	use_case = DeleteLibraryDataUseCase(
 		room_repo=room_repo,
 		bookcase_repo=bookcase_repo,
 		record_repo=record_repo,
@@ -57,6 +57,6 @@ async def delete_account_data(
 		book_history_repo=book_history_repo,
 		removed_member_repo=removed_member_repo,
 	)
-	result = await use_case.execute(UUID(payload["family_id"]))
+	result = await use_case.execute(UUID(payload["library_id"]))
 	await db.commit()
-	return DeleteFamilyDataResponse(**result.__dict__)
+	return DeleteLibraryDataResponse(**result.__dict__)

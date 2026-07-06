@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class UpdateBookPositionInput:
 	book_id: UUID
-	family_id: UUID
+	library_id: UUID
 	changed_by: UUID
 	room_id: UUID | None
 	bookcase_id: UUID | None
@@ -31,7 +31,7 @@ class UpdateBookPositionUseCase:
 		book = await self._book_repo.find_by_id(inp.book_id)
 		if book is None:
 			raise LookupError(f"OwnedBook {inp.book_id} not found")
-		if book.family_id != inp.family_id:
+		if book.library_id != inp.library_id:
 			raise PermissionError("Access denied")
 
 		old = {
@@ -67,5 +67,5 @@ class UpdateBookPositionUseCase:
 				created_at=utcnow(),
 			)
 		)
-		logger.info("Book %s position updated by family %s", saved.id, inp.family_id)
+		logger.info("Book %s position updated by library %s", saved.id, inp.library_id)
 		return saved

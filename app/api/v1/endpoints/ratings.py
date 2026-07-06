@@ -14,7 +14,7 @@ from app.api.v1.schemas.book_schemas import (
     BookRatingCreate,
     BookRatingResponse,
     BookRatingUpdate,
-    FamilyRatingStatsResponse,
+    LibraryRatingStatsResponse,
 )
 from app.application.use_cases import (
     CreateBookRatingInput,
@@ -22,7 +22,7 @@ from app.application.use_cases import (
     DeleteBookRatingUseCase,
     GetBookRatingStatsUseCase,
     ListBookRatingsUseCase,
-    ListFamilyRatingsUseCase,
+    ListLibraryRatingsUseCase,
     UpdateBookRatingInput,
     UpdateBookRatingUseCase,
 )
@@ -30,39 +30,39 @@ from app.domain.repositories import BookRatingRepository, OwnedBookRepository
 from app.infrastructure.database.session import get_db
 
 router = APIRouter(tags=["ratings"])
-family_router = APIRouter(tags=["ratings"])
+library_router = APIRouter(tags=["ratings"])
 
 
-@family_router.get(
+@library_router.get(
     "/",
     response_model=list[BookRatingResponse],
-    summary="List all family ratings",
-    description="Returns every rating submitted by any member of the current family, across all books.",
+    summary="List all library ratings",
+    description="Returns every rating submitted by any member of the current library, across all books.",
 )
-async def list_all_family_ratings(
+async def list_all_library_ratings(
     payload: dict[str, Any] = Depends(get_current_user_payload),
     rating_repo: BookRatingRepository = Depends(get_book_rating_repository),
 ) -> list[BookRatingResponse]:
-    family_id = UUID(payload["family_id"])
-    ratings = await ListFamilyRatingsUseCase(rating_repo).execute(family_id)
+    library_id = UUID(payload["library_id"])
+    ratings = await ListLibraryRatingsUseCase(rating_repo).execute(library_id)
     return [BookRatingResponse.model_validate(r) for r in ratings]
 
 
 @router.get(
     "/{book_id}/ratings/stats",
-    response_model=FamilyRatingStatsResponse,
-    summary="Get family rating stats for a book",
-    description="Returns the average rating and star distribution across all family members for the given book.",
+    response_model=LibraryRatingStatsResponse,
+    summary="Get library rating stats for a book",
+    description="Returns the average rating and star distribution across all library members for the given book.",
 )
 async def get_rating_stats(
     book_id: UUID,
     payload: dict[str, Any] = Depends(get_current_user_payload),
     book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
     rating_repo: BookRatingRepository = Depends(get_book_rating_repository),
-) -> FamilyRatingStatsResponse:
-    family_id = UUID(payload["family_id"])
-    stats = await GetBookRatingStatsUseCase(book_repo, rating_repo).execute(book_id, family_id)
-    return FamilyRatingStatsResponse(
+) -> LibraryRatingStatsResponse:
+    library_id = UUID(payload["library_id"])
+    stats = await GetBookRatingStatsUseCase(book_repo, rating_repo).execute(book_id, library_id)
+    return LibraryRatingStatsResponse(
         owned_book_id=stats.owned_book_id,
         total=stats.total,
         average=stats.average,
@@ -74,7 +74,7 @@ async def get_rating_stats(
     "/{book_id}/ratings",
     response_model=list[BookRatingResponse],
     summary="List ratings for a book",
-    description="Returns all family member ratings for the given book copy.",
+    description="Returns all library member ratings for the given book copy.",
 )
 async def list_ratings(
     book_id: UUID,
@@ -82,8 +82,8 @@ async def list_ratings(
     book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
     rating_repo: BookRatingRepository = Depends(get_book_rating_repository),
 ) -> list[BookRatingResponse]:
-    family_id = UUID(payload["family_id"])
-    ratings = await ListBookRatingsUseCase(book_repo, rating_repo).execute(book_id, family_id)
+    library_id = UUID(payload["library_id"])
+    ratings = await ListBookRatingsUseCase(book_repo, rating_repo).execute(book_id, library_id)
     return [BookRatingResponse.model_validate(r) for r in ratings]
 
 
@@ -107,12 +107,12 @@ async def create_rating(
     book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
     rating_repo: BookRatingRepository = Depends(get_book_rating_repository),
 ) -> BookRatingResponse:
-    family_id = UUID(payload["family_id"])
+    library_id = UUID(payload["library_id"])
     user_id = UUID(payload["sub"])
     rating = await CreateBookRatingUseCase(book_repo, rating_repo).execute(
         CreateBookRatingInput(
             book_id=book_id,
-            family_id=family_id,
+            library_id=library_id,
             user_id=user_id,
             rating=body.rating,
             review=body.review,
@@ -141,13 +141,13 @@ async def update_rating(
     book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
     rating_repo: BookRatingRepository = Depends(get_book_rating_repository),
 ) -> BookRatingResponse:
-    family_id = UUID(payload["family_id"])
+    library_id = UUID(payload["library_id"])
     user_id = UUID(payload["sub"])
     rating = await UpdateBookRatingUseCase(book_repo, rating_repo).execute(
         UpdateBookRatingInput(
             rating_id=rating_id,
             book_id=book_id,
-            family_id=family_id,
+            library_id=library_id,
             user_id=user_id,
             rating=body.rating,
             review=body.review,
@@ -175,7 +175,7 @@ async def delete_rating(
     book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
     rating_repo: BookRatingRepository = Depends(get_book_rating_repository),
 ) -> None:
-    family_id = UUID(payload["family_id"])
+    library_id = UUID(payload["library_id"])
     user_id = UUID(payload["sub"])
-    await DeleteBookRatingUseCase(book_repo, rating_repo).execute(rating_id, family_id, user_id)
+    await DeleteBookRatingUseCase(book_repo, rating_repo).execute(rating_id, library_id, user_id)
     await db.commit()

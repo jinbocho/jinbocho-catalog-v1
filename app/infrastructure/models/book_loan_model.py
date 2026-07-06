@@ -19,6 +19,9 @@ class BookLoanModel(Base):
         UUID(as_uuid=True), ForeignKey("owned_books.id", ondelete="CASCADE"), nullable=False
     )
     borrower_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Weak reference only — no FK, auth_db is a separate database (ADR-007).
+    # Validated at write time by LendBookUseCase, not enforced at the DB level.
+    borrower_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     loaned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     returned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

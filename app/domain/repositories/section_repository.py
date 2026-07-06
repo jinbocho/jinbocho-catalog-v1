@@ -12,9 +12,9 @@ class SectionRepository(ABC):
 	async def find_all_by_bookcase(self, bookcase_id: UUID, limit: int = 50, offset: int = 0) -> list[Section]: ...
 
 	@abstractmethod
-	async def find_all_by_family(
+	async def find_all_by_library(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		bookcase_id: UUID | None = None,
 		limit: int = 50,
 		offset: int = 0,

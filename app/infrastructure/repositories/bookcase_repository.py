@@ -17,7 +17,7 @@ class SQLAlchemyBookcaseRepository(BookcaseRepository):
 	def _to_entity(model: BookcaseModel) -> Bookcase:
 		return Bookcase(
 			id=model.id,
-			family_id=model.family_id,
+			library_id=model.library_id,
 			room_id=model.room_id,
 			name=model.name,
 			description=model.description,
@@ -32,14 +32,14 @@ class SQLAlchemyBookcaseRepository(BookcaseRepository):
 		model = await self._session.get(BookcaseModel, bookcase_id)
 		return self._to_entity(model) if model else None
 
-	async def find_all_by_family(
+	async def find_all_by_library(
 		self,
-		family_id: UUID,
+		library_id: UUID,
 		room_id: UUID | None = None,
 		limit: int = 50,
 		offset: int = 0,
 	) -> list[Bookcase]:
-		query = select(BookcaseModel).where(BookcaseModel.family_id == family_id)
+		query = select(BookcaseModel).where(BookcaseModel.library_id == library_id)
 		if room_id is not None:
 			query = query.where(BookcaseModel.room_id == room_id)
 		result = await self._session.execute(query.order_by(BookcaseModel.name).limit(limit).offset(offset))
@@ -57,7 +57,7 @@ class SQLAlchemyBookcaseRepository(BookcaseRepository):
 		if model is None:
 			model = BookcaseModel(
 				id=bookcase.id,
-				family_id=bookcase.family_id,
+				library_id=bookcase.library_id,
 				room_id=bookcase.room_id,
 				name=bookcase.name,
 				description=bookcase.description,
@@ -86,6 +86,6 @@ class SQLAlchemyBookcaseRepository(BookcaseRepository):
 			await self._session.delete(model)
 			await self._session.flush()
 
-	async def delete_all_by_family(self, family_id: UUID) -> None:
-		await self._session.execute(sa_delete(BookcaseModel).where(BookcaseModel.family_id == family_id))
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		await self._session.execute(sa_delete(BookcaseModel).where(BookcaseModel.library_id == library_id))
 		await self._session.flush()

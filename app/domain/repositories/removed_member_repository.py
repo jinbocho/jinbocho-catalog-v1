@@ -13,15 +13,15 @@ class RemovedMemberRepository(ABC):
 		...
 
 	@abstractmethod
-	async def find_all_by_family(self, family_id: UUID) -> list[RemovedMember]: ...
+	async def find_all_by_library(self, library_id: UUID) -> list[RemovedMember]: ...
 
 	@abstractmethod
-	async def delete_all_by_family(self, family_id: UUID) -> None:
+	async def delete_all_by_library(self, library_id: UUID) -> None:
 		"""Used by full account deletion."""
 		...
 
 	@abstractmethod
 	async def delete_expired(self, older_than: datetime) -> int:
-		"""Global sweep (not family-scoped) for the retention job — deletes
+		"""Global sweep (not library-scoped) for the retention job — deletes
 		every snapshot removed before ``older_than`` and returns the count."""
 		...

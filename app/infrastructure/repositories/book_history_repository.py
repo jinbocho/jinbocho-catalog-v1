@@ -51,11 +51,11 @@ class SQLAlchemyBookHistoryRepository(BookHistoryRepository):
 		await self._session.refresh(model)
 		return self._to_entity(model)
 
-	async def find_all_by_family(self, family_id: UUID) -> list[BookHistory]:
+	async def find_all_by_library(self, library_id: UUID) -> list[BookHistory]:
 		result = await self._session.execute(
 			select(BookHistoryModel)
 			.join(OwnedBookModel, BookHistoryModel.owned_book_id == OwnedBookModel.id)
-			.where(OwnedBookModel.family_id == family_id)
+			.where(OwnedBookModel.library_id == library_id)
 			.order_by(BookHistoryModel.created_at.desc())
 		)
 		return [self._to_entity(model) for model in result.scalars().all()]
