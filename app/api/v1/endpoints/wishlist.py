@@ -14,6 +14,7 @@ from app.api.v1.schemas.record_schemas import BibliographicRecordResponse
 from app.api.v1.schemas.wishlist_schemas import WishlistItemCreate, WishlistItemResponse
 from app.application.use_cases import (
     AddToWishlistUseCase,
+    GetWishlistItemUseCase,
     ListLibraryWishlistUseCase,
     RemoveFromWishlistUseCase,
 )
@@ -56,6 +57,21 @@ async def list_wishlist(
         for item in items
         if (record := record_map.get(item.bibliographic_record_id)) is not None
     ]
+
+
+@router.get("/{item_id}", response_model=WishlistItemResponse, summary="Get a single wishlist item")
+async def get_wishlist_item(
+    item_id: UUID,
+    payload: dict[str, Any] = Depends(get_current_user_payload),
+    wishlist_repo: WishlistRepository = Depends(get_wishlist_repository),
+    record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
+) -> WishlistItemResponse:
+    library_id = UUID(payload["library_id"])
+    item = await GetWishlistItemUseCase(wishlist_repo).execute(item_id, library_id)
+    record = await record_repo.find_by_id(item.bibliographic_record_id)
+    if record is None:
+        raise LookupError(f"Bibliographic record {item.bibliographic_record_id} not found")
+    return _build_response(item, record)
 
 
 @router.post(

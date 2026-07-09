@@ -97,3 +97,14 @@ class ListLibraryWishlistUseCase:
 
     async def execute(self, library_id: UUID) -> list[WishlistItem]:
         return await self._wishlist_repo.list_by_library(library_id)
+
+
+class GetWishlistItemUseCase:
+    def __init__(self, wishlist_repo: WishlistRepository) -> None:
+        self._wishlist_repo = wishlist_repo
+
+    async def execute(self, item_id: UUID, library_id: UUID) -> WishlistItem:
+        item = await self._wishlist_repo.get(item_id, library_id)
+        if not item:
+            raise LookupError("Wishlist item not found")
+        return item

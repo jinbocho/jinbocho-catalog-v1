@@ -46,6 +46,7 @@ from app.application.use_cases.catalog import (
 	GetIncipitUseCase,
 	GetOwnedBookOutput,
 	GetOwnedBookUseCase,
+	GetWishlistItemUseCase,
 	IncipitOutput,
 	LendBookUseCase,
 	ListActiveLibraryLoansUseCase,
@@ -283,6 +284,7 @@ __all__ = [
 	"AddToWishlistUseCase",
 	"RemoveFromWishlistUseCase",
 	"ListLibraryWishlistUseCase",
+	"GetWishlistItemUseCase",
 	# Map
 	"GetBookcaseMapUseCase",
 	"MapSectionData",
