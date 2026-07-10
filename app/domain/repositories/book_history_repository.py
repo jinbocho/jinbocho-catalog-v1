@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from app.domain.entities import BookHistory
+from app.domain.entities import BookEventType, BookHistory
 
 
 class BookHistoryRepository(ABC):
@@ -17,6 +17,17 @@ class BookHistoryRepository(ABC):
 		library export. There's no FK on owned_book_id (audit rows survive book
 		deletion), so this can only join against books that still exist — history
 		for an already-deleted book is not attributable to a library this way."""
+		...
+
+	@abstractmethod
+	async def find_recent_by_library(
+		self, library_id: UUID, event_types: list[BookEventType], limit: int = 20
+	) -> list[BookHistory]:
+		"""Most recent history rows for the library's activity feed, filtered to
+		`event_types` (the feed deliberately omits noisy/sensitive events like
+		metadata_updated and deleted — see dashboard planning discussion) and
+		bounded by `limit` at the DB level, unlike find_all_by_library which is
+		unbounded and only meant for full export."""
 		...
 
 	@abstractmethod

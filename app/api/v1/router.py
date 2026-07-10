@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
 	account,
+	activity,
 	bookcases,
 	books,
 	export,
@@ -38,4 +39,5 @@ router.include_router(map.router, prefix="/map")
 router.include_router(members.router, prefix="/members")
 router.include_router(account.router, prefix="/account")
 router.include_router(wishlist.router, prefix="/wishlist")
+router.include_router(activity.router, prefix="/activity")
 

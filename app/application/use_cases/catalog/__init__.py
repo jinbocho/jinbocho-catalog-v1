@@ -26,6 +26,7 @@ from .delete_book import DeleteBookInput, DeleteBookUseCase
 from .generate_ai_incipit import GenerateAiIncipitOutput, GenerateAiIncipitUseCase
 from .get_bibliographic_record import GetBibliographicRecordUseCase
 from .get_book_history import GetBookHistoryUseCase
+from .get_library_activity import GetLibraryActivityUseCase
 from .get_or_fetch_incipit import DeriveIncipitUseCase, GetIncipitUseCase, IncipitOutput
 from .get_owned_book import GetOwnedBookOutput, GetOwnedBookUseCase
 from .list_bibliographic_records import ListBibliographicRecordsUseCase
@@ -101,6 +102,7 @@ __all__ = [
 	"UpdateBibliographicRecordUseCase",
 	# Owned Books
 	"GetBookHistoryUseCase",
+	"GetLibraryActivityUseCase",
 	"GetOwnedBookUseCase",
 	"GetOwnedBookOutput",
 	"ListOwnedBooksUseCase",

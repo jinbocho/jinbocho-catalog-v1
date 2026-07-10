@@ -60,6 +60,18 @@ class SQLAlchemyBookHistoryRepository(BookHistoryRepository):
 		)
 		return [self._to_entity(model) for model in result.scalars().all()]
 
+	async def find_recent_by_library(
+		self, library_id: UUID, event_types: list[BookEventType], limit: int = 20
+	) -> list[BookHistory]:
+		result = await self._session.execute(
+			select(BookHistoryModel)
+			.join(OwnedBookModel, BookHistoryModel.owned_book_id == OwnedBookModel.id)
+			.where(OwnedBookModel.library_id == library_id, BookHistoryModel.event_type.in_(event_types))
+			.order_by(BookHistoryModel.created_at.desc())
+			.limit(limit)
+		)
+		return [self._to_entity(model) for model in result.scalars().all()]
+
 	async def restore(self, history: BookHistory) -> BookHistory:
 		model = await self._session.get(BookHistoryModel, history.id)
 		if model is None:

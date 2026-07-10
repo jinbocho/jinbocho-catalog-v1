@@ -291,6 +291,13 @@ class MockBookHistoryRepository(BookHistoryRepository):
 		# real library-boundary behavior should filter the input fixtures instead.
 		return list(self.history.values())
 
+	async def find_recent_by_library(self, library_id: UUID, event_types: list, limit: int = 20) -> list:
+		# Same simplification as find_all_by_library above: no owned_book ->
+		# library join modeled here.
+		items = [e for e in self.history.values() if e.event_type in event_types]
+		items.sort(key=lambda e: e.created_at, reverse=True)
+		return items[:limit]
+
 	async def restore(self, history):
 		existing = next(
 			(

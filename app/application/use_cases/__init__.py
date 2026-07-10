@@ -44,6 +44,7 @@ from app.application.use_cases.catalog import (
 	GetBookHistoryUseCase,
 	GetBookRatingStatsUseCase,
 	GetIncipitUseCase,
+	GetLibraryActivityUseCase,
 	GetOwnedBookOutput,
 	GetOwnedBookUseCase,
 	GetWishlistItemUseCase,
@@ -181,6 +182,7 @@ __all__ = [
 	"UpdateBookMetadataInput",
 	"UpdateBookMetadataUseCase",
 	"GetBookHistoryUseCase",
+	"GetLibraryActivityUseCase",
 	# Catalog - Records
 	"GenerateAiIncipitOutput",
 	"GenerateAiIncipitUseCase",
