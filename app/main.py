@@ -16,6 +16,7 @@ from app.config import settings
 from app.core import (
 	OPENAPI_CONFIG,
 	SECURITY_SCHEME,
+	configure_error_tracking,
 	configure_exception_handlers,
 	configure_logging,
 	configure_telemetry,
@@ -43,6 +44,9 @@ def create_app() -> FastAPI:
 
 	# Register exception handlers
 	configure_exception_handlers(app)
+
+	# Error tracking (ADR-012) — no-op unless SENTRY_DSN is set
+	configure_error_tracking(service_name="catalog-service")
 
 	# Observability (ADR-012) — no-op unless OTEL_ENABLED=true
 	configure_telemetry(app, service_name="catalog-service", engine=engine)

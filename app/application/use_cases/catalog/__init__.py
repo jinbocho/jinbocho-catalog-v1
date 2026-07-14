@@ -20,6 +20,7 @@ from .book_ratings import (
 )
 from .book_reads import ListBookReadsUseCase, ListLibraryReadsUseCase, MarkBookReadUseCase, UnmarkBookReadUseCase
 from .bulk_delete_books import BulkDeleteBooksInput, BulkDeleteBooksUseCase
+from .bulk_move_books import BulkMoveBooksInput, BulkMoveBooksUseCase
 from .create_bibliographic_record import CreateBibliographicRecordInput, CreateBibliographicRecordUseCase
 from .delete_bibliographic_record import DeleteBibliographicRecordUseCase
 from .delete_book import DeleteBookInput, DeleteBookUseCase
@@ -78,6 +79,8 @@ __all__ = [
 	"DeleteBookUseCase",
 	"BulkDeleteBooksInput",
 	"BulkDeleteBooksUseCase",
+	"BulkMoveBooksInput",
+	"BulkMoveBooksUseCase",
 	"UpdateBookPositionInput",
 	"UpdateBookPositionUseCase",
 	"UpdateReadingStatusInput",

@@ -151,6 +151,25 @@ class BulkDeleteBooksResponse(BaseModel):
 	deleted: int = Field(..., description="Number of books deleted")
 
 
+class BulkMoveBooksRequest(BaseModel):
+	book_ids: list[UUID] = Field(
+		...,
+		min_length=1,
+		max_length=200,
+		description="Book IDs to move. All-or-nothing: if any ID is missing or belongs to another library, "
+		"none are moved.",
+	)
+	room_id: UUID | None = Field(None, description="Target room, or null to clear placement")
+	bookcase_id: UUID | None = Field(None, description="Target bookcase")
+	section_id: UUID | None = Field(None, description="Target section")
+	shelf_id: UUID | None = Field(None, description="Target shelf")
+	shelf_position: int | None = Field(None, description="Target position on the shelf")
+
+
+class BulkMoveBooksResponse(BaseModel):
+	moved: int = Field(..., description="Number of books moved")
+
+
 class BookLoanCreate(BaseModel):
 	borrower_name: str = Field(..., min_length=1, max_length=255, description="Name of the person borrowing the book")
 	borrower_user_id: UUID | None = Field(

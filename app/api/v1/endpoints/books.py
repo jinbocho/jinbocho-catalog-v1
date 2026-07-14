@@ -22,6 +22,8 @@ from app.api.v1.schemas.book_schemas import (
 	BookReadResponse,
 	BulkDeleteBooksRequest,
 	BulkDeleteBooksResponse,
+	BulkMoveBooksRequest,
+	BulkMoveBooksResponse,
 	DuplicateBookConflictResponse,
 	OwnedBookCreate,
 	OwnedBookResponse,
@@ -32,6 +34,8 @@ from app.application.use_cases import (
 	AddBookUseCase,
 	BulkDeleteBooksInput,
 	BulkDeleteBooksUseCase,
+	BulkMoveBooksInput,
+	BulkMoveBooksUseCase,
 	DeleteBookInput,
 	DeleteBookUseCase,
 	FuzzyDedupConfig,
@@ -168,6 +172,38 @@ async def bulk_delete_books(
 	)
 	await db.commit()
 	return BulkDeleteBooksResponse(deleted=deleted)
+
+
+@router.post(
+	"/bulk-move",
+	response_model=BulkMoveBooksResponse,
+	summary="Bulk-move books to a new position",
+	responses={
+		404: {"description": "One or more book IDs were not found — nothing was moved."},
+		403: {"description": "One or more book IDs belong to another library — nothing was moved."},
+	},
+)
+async def bulk_move_books(
+	request: BulkMoveBooksRequest,
+	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
+	db: AsyncSession = Depends(get_db),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+) -> BulkMoveBooksResponse:
+	moved = await BulkMoveBooksUseCase(book_repo, history_repo).execute(
+		BulkMoveBooksInput(
+			book_ids=request.book_ids,
+			library_id=UUID(payload["library_id"]),
+			changed_by=UUID(payload["sub"]),
+			room_id=request.room_id,
+			bookcase_id=request.bookcase_id,
+			section_id=request.section_id,
+			shelf_id=request.shelf_id,
+			shelf_position=request.shelf_position,
+		)
+	)
+	await db.commit()
+	return BulkMoveBooksResponse(moved=moved)
 
 
 @router.get("/{book_id}", response_model=OwnedBookResponse, summary="Get book")
