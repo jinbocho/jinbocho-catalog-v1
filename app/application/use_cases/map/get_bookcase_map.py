@@ -65,7 +65,7 @@ class GetBookcaseMapUseCase:
 		books = await self._book_repo.find_all_by_shelf_ids(shelf_ids)
 		read_ids = await self._read_repo.list_read_book_ids([book.id for book in books], viewer_id)
 		for book in books:
-			book.reading_status = book.reading_status_for(viewer_id, book.id in read_ids)
+			book.reading_status = book.reading_status_for(book.id in read_ids)
 		records = await self._record_repo.find_all_by_ids([book.bibliographic_record_id for book in books])
 		record_map = {record.id: record for record in records}
 		books_by_shelf: dict[UUID, list[ExportBookItem]] = {}

@@ -8,6 +8,9 @@ from .genre import Genre, map_to_genre
 from .isbn_lookup_cache import IsbnLookupCache
 from .library_rating_stats import LibraryRatingStats
 from .owned_book import BookCondition, BookSource, OwnedBook, ReadingStatus
+from .quiz_attempt import QuizAttempt
+from .quiz_question import QuizQuestion, QuizSource
+from .reading_session import ReadingSession
 from .removed_member import LibraryRole, RemovedMember
 from .room import Room
 from .section import Section
@@ -32,6 +35,10 @@ __all__ = [
 	"BookRating",
 	"BookRead",
 	"LibraryRatingStats",
+	"ReadingSession",
+	"QuizQuestion",
+	"QuizSource",
+	"QuizAttempt",
 	"IsbnLookupCache",
 	"RemovedMember",
 	"LibraryRole",

@@ -138,9 +138,7 @@ class AddBookUseCase:
 		)
 		if inp.reading_status == ReadingStatus.READ:
 			await self._read_repo.add(book.id, inp.changed_by)
-		book.reading_status = book.reading_status_for(
-			inp.changed_by, inp.reading_status == ReadingStatus.READ
-		)
+		book.reading_status = book.reading_status_for(inp.reading_status == ReadingStatus.READ)
 		await self._history_repo.save(
 			BookHistory(
 				owned_book_id=book.id,

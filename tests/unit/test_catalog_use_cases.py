@@ -392,6 +392,40 @@ async def test_update_reading_status_sets_and_clears_current_reader(
 
 
 @pytest.mark.asyncio
+async def test_reading_status_for_shows_reading_to_every_member(
+	book_repo, book_read_repo, history_repo, test_library_id, test_user_id
+):
+	"""Regression: unlike "read", "reading" reflects who's physically holding
+	the single copy — every other library member must see it too, not just
+	the holder (the bug: reading_status_for used to gate READING on
+	viewer_id == current_reader_id, so a parent's dashboard "currently
+	reading" list silently excluded every book a child was reading)."""
+	from app.domain.entities import OwnedBook
+	from app.utils import utcnow
+
+	other_user_id = uuid4()
+	book = await book_repo.save(
+		OwnedBook(
+			library_id=test_library_id,
+			bibliographic_record_id=uuid4(),
+			reading_status=ReadingStatus.TO_READ,
+			created_at=utcnow(),
+			updated_at=utcnow(),
+		)
+	)
+
+	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo)
+	updated = await use_case.execute(
+		UpdateReadingStatusInput(
+			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.READING
+		)
+	)
+
+	other_has_read = await book_read_repo.is_read(book.id, other_user_id)
+	assert updated.reading_status_for(other_has_read) == ReadingStatus.READING
+
+
+@pytest.mark.asyncio
 async def test_update_reading_status_read_is_per_member(
 	book_repo, book_read_repo, history_repo, test_library_id, test_user_id
 ):
@@ -420,10 +454,10 @@ async def test_update_reading_status_read_is_per_member(
 
 	# The caller sees "read"...
 	caller_has_read = await book_read_repo.is_read(book.id, test_user_id)
-	assert updated.reading_status_for(test_user_id, caller_has_read) == ReadingStatus.READ
+	assert updated.reading_status_for(caller_has_read) == ReadingStatus.READ
 	# ...but another library member who hasn't read it still sees "to_read".
 	other_has_read = await book_read_repo.is_read(book.id, other_user_id)
-	assert updated.reading_status_for(other_user_id, other_has_read) == ReadingStatus.TO_READ
+	assert updated.reading_status_for(other_has_read) == ReadingStatus.TO_READ
 
 
 @pytest.mark.asyncio

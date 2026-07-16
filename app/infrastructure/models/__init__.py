@@ -12,6 +12,9 @@ from app.infrastructure.models.enums import (
 )
 from app.infrastructure.models.isbn_lookup_cache_model import IsbnLookupCacheModel
 from app.infrastructure.models.owned_book_model import OwnedBookModel
+from app.infrastructure.models.quiz_attempt_model import QuizAttemptModel
+from app.infrastructure.models.quiz_question_model import QuizQuestionModel
+from app.infrastructure.models.reading_session_model import ReadingSessionModel
 from app.infrastructure.models.removed_member_model import RemovedMemberModel
 from app.infrastructure.models.room_model import RoomModel
 from app.infrastructure.models.section_model import SectionModel
@@ -32,6 +35,9 @@ __all__ = [
 	"IsbnLookupCacheModel",
 	"RemovedMemberModel",
 	"WishlistItemModel",
+	"ReadingSessionModel",
+	"QuizQuestionModel",
+	"QuizAttemptModel",
 	"reading_status_enum",
 	"book_condition_enum",
 	"book_source_enum",

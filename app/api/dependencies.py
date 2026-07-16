@@ -21,6 +21,10 @@ from app.domain.repositories import (
     IsbnLookupCacheRepository,
     IsbnMetadataFetcher,
     OwnedBookRepository,
+    QuizAttemptRepository,
+    QuizGenerator,
+    QuizQuestionRepository,
+    ReadingSessionRepository,
     RemovedMemberRepository,
     RoomRepository,
     SectionRepository,
@@ -31,6 +35,7 @@ from app.domain.repositories import (
 from app.infrastructure.database.session import get_db
 from app.infrastructure.external import (
     AiIncipitClient,
+    AiQuizClient,
     AiServiceConfig,
     AiShelfScanClient,
     AiTagsClient,
@@ -50,6 +55,9 @@ from app.infrastructure.repositories import (
     SQLAlchemyBookReadRepository,
     SQLAlchemyIsbnLookupCacheRepository,
     SQLAlchemyOwnedBookRepository,
+    SQLAlchemyQuizAttemptRepository,
+    SQLAlchemyQuizQuestionRepository,
+    SQLAlchemyReadingSessionRepository,
     SQLAlchemyRemovedMemberRepository,
     SQLAlchemyRoomRepository,
     SQLAlchemySectionRepository,
@@ -108,6 +116,13 @@ def get_duplicate_judge(
     config: AiServiceConfig = Depends(get_ai_service_config),
 ) -> DuplicateJudge:
     return HttpDuplicateJudge(http_client, config)
+
+
+def get_quiz_generator(
+    http_client: httpx.AsyncClient = Depends(get_http_client),
+    config: AiServiceConfig = Depends(get_ai_service_config),
+) -> QuizGenerator:
+    return AiQuizClient(http_client, config)
 
 
 def get_ai_incipit_client(http_client: httpx.AsyncClient = Depends(get_http_client)) -> AiIncipitClient:
@@ -170,6 +185,19 @@ def require_role(*roles: str) -> Callable[[dict[str, Any]], Awaitable[dict[str, 
     return dependency
 
 
+# Kids-mode role gates (own copy — auth-service's require_child/require_parent
+# are a separate process/DB, not importable here). "child" never appears in
+# any other require_role(...) allowlist in this service, so every existing
+# catalog endpoint already default-denies a child token.
+require_child = require_role("child")
+require_parent = require_role("admin", "editor")
+# Quiz generation is the one kids-mode action either side can trigger: a
+# child self-serves it, a parent may prefer to prepare/review it before
+# handing the book over. Scoring/logging stay strictly require_child — those
+# are personal actions, not delegable.
+require_child_or_parent = require_role("child", "admin", "editor")
+
+
 async def get_room_repository(db: AsyncSession = Depends(get_db)) -> RoomRepository:
     return SQLAlchemyRoomRepository(db)
 
@@ -198,6 +226,18 @@ async def get_owned_book_repository(db: AsyncSession = Depends(get_db)) -> Owned
 
 async def get_book_history_repository(db: AsyncSession = Depends(get_db)) -> BookHistoryRepository:
     return SQLAlchemyBookHistoryRepository(db)
+
+
+async def get_reading_session_repository(db: AsyncSession = Depends(get_db)) -> ReadingSessionRepository:
+    return SQLAlchemyReadingSessionRepository(db)
+
+
+async def get_quiz_question_repository(db: AsyncSession = Depends(get_db)) -> QuizQuestionRepository:
+    return SQLAlchemyQuizQuestionRepository(db)
+
+
+async def get_quiz_attempt_repository(db: AsyncSession = Depends(get_db)) -> QuizAttemptRepository:
+    return SQLAlchemyQuizAttemptRepository(db)
 
 
 async def get_isbn_lookup_cache_repository(

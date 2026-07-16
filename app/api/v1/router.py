@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
 	export,
 	goodreads_import,
 	ingestion,
+	kids,
 	library_import,
 	map,
 	members,
@@ -40,4 +41,5 @@ router.include_router(members.router, prefix="/members")
 router.include_router(account.router, prefix="/account")
 router.include_router(wishlist.router, prefix="/wishlist")
 router.include_router(activity.router, prefix="/activity")
+router.include_router(kids.router, prefix="/kids")
 

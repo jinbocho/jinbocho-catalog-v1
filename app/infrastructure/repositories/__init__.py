@@ -6,6 +6,9 @@ from app.infrastructure.repositories.book_read_repository import SQLAlchemyBookR
 from app.infrastructure.repositories.bookcase_repository import SQLAlchemyBookcaseRepository
 from app.infrastructure.repositories.isbn_lookup_cache_repository import SQLAlchemyIsbnLookupCacheRepository
 from app.infrastructure.repositories.owned_book_repository import SQLAlchemyOwnedBookRepository
+from app.infrastructure.repositories.quiz_attempt_repository import SQLAlchemyQuizAttemptRepository
+from app.infrastructure.repositories.quiz_question_repository import SQLAlchemyQuizQuestionRepository
+from app.infrastructure.repositories.reading_session_repository import SQLAlchemyReadingSessionRepository
 from app.infrastructure.repositories.removed_member_repository import SQLAlchemyRemovedMemberRepository
 from app.infrastructure.repositories.room_repository import SQLAlchemyRoomRepository
 from app.infrastructure.repositories.section_repository import SQLAlchemySectionRepository
@@ -26,4 +29,7 @@ __all__ = [
 	"SQLAlchemyIsbnLookupCacheRepository",
 	"SQLAlchemyRemovedMemberRepository",
 	"SQLAlchemyWishlistRepository",
+	"SQLAlchemyReadingSessionRepository",
+	"SQLAlchemyQuizQuestionRepository",
+	"SQLAlchemyQuizAttemptRepository",
 ]

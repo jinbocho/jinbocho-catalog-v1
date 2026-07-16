@@ -276,7 +276,10 @@ async def update_book_position(
 async def update_reading_status(
 	book_id: UUID,
 	reading_status: ReadingStatus,
-	payload: dict[str, Any] = Depends(require_role("admin", "editor")),
+	# "child" included: the use case only ever lets a caller claim/release
+	# *themselves* as current_reader or mark *their own* read/to_read state —
+	# never another user's, so this is safe self-service for a kids-mode account.
+	payload: dict[str, Any] = Depends(require_role("admin", "editor", "child")),
 	db: AsyncSession = Depends(get_db),
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	history_repo: BookHistoryRepository = Depends(get_book_history_repository),

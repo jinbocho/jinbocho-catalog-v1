@@ -34,5 +34,5 @@ class GetOwnedBookUseCase:
 			# the referential integrity invariant was violated, not a normal 404.
 			raise LookupError("BibliographicRecord not found")
 		has_read = await self._read_repo.is_read(book.id, viewer_id)
-		book.reading_status = book.reading_status_for(viewer_id, has_read)
+		book.reading_status = book.reading_status_for(has_read)
 		return GetOwnedBookOutput(book=book, record=record)

@@ -2,10 +2,13 @@ from app.application.services.goodreads_parser import GoodreadsRow, parse_goodre
 from app.application.services.isbn_service import normalize_isbn
 from app.application.services.pagination import fetch_all_pages
 from app.application.services.position_service import PositionValidationService, ResolvedPosition
+from app.application.services.quiz_scoring_service import QuizScoreResult, QuizScoringService
 
 __all__ = [
 	"PositionValidationService",
 	"ResolvedPosition",
+	"QuizScoringService",
+	"QuizScoreResult",
 	"normalize_isbn",
 	"fetch_all_pages",
 	"GoodreadsRow",

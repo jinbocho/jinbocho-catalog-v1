@@ -35,7 +35,7 @@ class UpdateReadingStatusUseCase:
 		if book.library_id != inp.library_id:
 			raise PermissionError("Access denied")
 
-		old_status = book.reading_status_for(inp.changed_by, await self._read_repo.is_read(book.id, inp.changed_by))
+		old_status = book.reading_status_for(await self._read_repo.is_read(book.id, inp.changed_by))
 
 		if inp.reading_status == ReadingStatus.READING:
 			# Claiming the single physical copy — shared across the library by nature.
@@ -54,7 +54,7 @@ class UpdateReadingStatusUseCase:
 		book.reading_status = ReadingStatus.READING if book.current_reader_id is not None else ReadingStatus.TO_READ
 		book.updated_at = utcnow()
 		saved = await self._book_repo.save(book)
-		new_status = saved.reading_status_for(inp.changed_by, await self._read_repo.is_read(saved.id, inp.changed_by))
+		new_status = saved.reading_status_for(await self._read_repo.is_read(saved.id, inp.changed_by))
 		saved.reading_status = new_status
 		await self._history_repo.save(
 			BookHistory(

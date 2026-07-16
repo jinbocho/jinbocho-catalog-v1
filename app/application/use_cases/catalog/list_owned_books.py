@@ -24,5 +24,5 @@ class ListOwnedBooksUseCase:
 		)
 		read_ids = await self._read_repo.list_read_book_ids([b.id for b in books], viewer_id)
 		for book in books:
-			book.reading_status = book.reading_status_for(viewer_id, book.id in read_ids)
+			book.reading_status = book.reading_status_for(book.id in read_ids)
 		return books

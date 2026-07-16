@@ -82,7 +82,7 @@ class UpdateBookMetadataUseCase:
 		updated = await self._book_repo.save(book)
 		if inp.reading_status is not None:
 			has_read = await self._read_repo.is_read(updated.id, inp.changed_by)
-			updated.reading_status = updated.reading_status_for(inp.changed_by, has_read)
+			updated.reading_status = updated.reading_status_for(has_read)
 		await self._history_repo.save(
 			BookHistory(
 				owned_book_id=book.id,
