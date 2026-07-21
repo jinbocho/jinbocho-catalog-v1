@@ -34,6 +34,8 @@ class AiQuizClient(QuizGenerator):
 					"language": ctx.language,
 					"num_questions": ctx.num_questions,
 					"extra_context": ctx.extra_context,
+					"reader_age_band": ctx.reader_age_band,
+					"reader_language": ctx.reader_language,
 				},
 				# The shared http_client defaults to a 10s timeout, but LLM quiz
 				# generation (same provider/model as shelf-scan, see

@@ -2,7 +2,12 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from app.domain.entities import BibliographicRecord, OwnedBook
-from app.domain.repositories import BibliographicRecordRepository, BookReadRepository, OwnedBookRepository
+from app.domain.repositories import (
+	BibliographicRecordRepository,
+	BookAbandonmentRepository,
+	BookReadRepository,
+	OwnedBookRepository,
+)
 
 
 @dataclass
@@ -17,10 +22,12 @@ class GetOwnedBookUseCase:
 		book_repo: OwnedBookRepository,
 		record_repo: BibliographicRecordRepository,
 		read_repo: BookReadRepository,
+		abandonment_repo: BookAbandonmentRepository,
 	) -> None:
 		self._book_repo = book_repo
 		self._record_repo = record_repo
 		self._read_repo = read_repo
+		self._abandonment_repo = abandonment_repo
 
 	async def execute(self, book_id: UUID, library_id: UUID, viewer_id: UUID) -> GetOwnedBookOutput:
 		book = await self._book_repo.find_by_id(book_id)
@@ -34,5 +41,6 @@ class GetOwnedBookUseCase:
 			# the referential integrity invariant was violated, not a normal 404.
 			raise LookupError("BibliographicRecord not found")
 		has_read = await self._read_repo.is_read(book.id, viewer_id)
-		book.reading_status = book.reading_status_for(has_read)
+		has_abandoned = await self._abandonment_repo.is_abandoned(book.id, viewer_id)
+		book.reading_status = book.reading_status_for(has_read, has_abandoned)
 		return GetOwnedBookOutput(book=book, record=record)

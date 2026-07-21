@@ -1,4 +1,5 @@
 from .ai_dedup_client import AiServiceConfig, HttpDuplicateJudge
+from .ai_discussion_client import AiDiscussionClient
 from .ai_incipit_client import AiIncipitClient
 from .ai_quiz_client import AiQuizClient
 from .ai_shelf_scan_client import AiShelfScanClient
@@ -12,6 +13,7 @@ __all__ = [
     "HttpLoanReminderNotifier",
     "AiServiceConfig",
     "HttpDuplicateJudge",
+    "AiDiscussionClient",
     "AiIncipitClient",
     "AiQuizClient",
     "AiShelfScanClient",

@@ -5,7 +5,15 @@ import pytest
 
 from app.domain.entities import (
 	BibliographicRecord,
+	BookAbandonment,
 	Bookcase,
+	BookClubCycle,
+	BookClubMeeting,
+	BookClubParticipant,
+	BookClubPost,
+	BookClubProposal,
+	BookClubQuestionSet,
+	BookClubVote,
 	BookLoan,
 	BookRating,
 	BookRead,
@@ -18,7 +26,15 @@ from app.domain.entities import (
 )
 from app.domain.repositories import (
 	BibliographicRecordRepository,
+	BookAbandonmentRepository,
 	BookcaseRepository,
+	BookClubCycleRepository,
+	BookClubMeetingRepository,
+	BookClubParticipantRepository,
+	BookClubPostRepository,
+	BookClubProposalRepository,
+	BookClubQuestionSetRepository,
+	BookClubVoteRepository,
 	BookHistoryRepository,
 	BookLoanRepository,
 	BookRatingRepository,
@@ -372,6 +388,37 @@ class MockBookReadRepository(BookReadRepository):
 		return book_read
 
 
+class MockBookAbandonmentRepository(BookAbandonmentRepository):
+	def __init__(self):
+		self.abandonments = {}
+
+	async def add(self, owned_book_id: UUID, user_id: UUID, abandoned_at: datetime | None = None) -> BookAbandonment:
+		for a in self.abandonments.values():
+			if a.owned_book_id == owned_book_id and a.user_id == user_id:
+				if abandoned_at is not None:
+					a.abandoned_at = abandoned_at
+				return a
+		kwargs = {"abandoned_at": abandoned_at} if abandoned_at is not None else {}
+		abandonment = BookAbandonment(owned_book_id=owned_book_id, user_id=user_id, **kwargs)
+		self.abandonments[abandonment.id] = abandonment
+		return abandonment
+
+	async def remove(self, owned_book_id: UUID, user_id: UUID) -> None:
+		match = next(
+			(a for a in self.abandonments.values() if a.owned_book_id == owned_book_id and a.user_id == user_id),
+			None,
+		)
+		if match:
+			self.abandonments.pop(match.id, None)
+
+	async def is_abandoned(self, owned_book_id: UUID, user_id: UUID) -> bool:
+		return any(a.owned_book_id == owned_book_id and a.user_id == user_id for a in self.abandonments.values())
+
+	async def list_abandoned_book_ids(self, owned_book_ids: list[UUID], user_id: UUID) -> set[UUID]:
+		ids = set(owned_book_ids)
+		return {a.owned_book_id for a in self.abandonments.values() if a.user_id == user_id and a.owned_book_id in ids}
+
+
 class MockBookLoanRepository(BookLoanRepository):
 	def __init__(self):
 		self.loans = {}
@@ -548,6 +595,156 @@ class MockRemovedMemberRepository(RemovedMemberRepository):
 		return len(expired)
 
 
+class MockBookClubCycleRepository(BookClubCycleRepository):
+	def __init__(self) -> None:
+		self.cycles: dict[UUID, BookClubCycle] = {}
+
+	async def add(self, cycle: BookClubCycle) -> BookClubCycle:
+		self.cycles[cycle.id] = cycle
+		return cycle
+
+	async def save(self, cycle: BookClubCycle) -> BookClubCycle:
+		if cycle.id not in self.cycles:
+			raise LookupError(f"BookClubCycle {cycle.id} not found")
+		self.cycles[cycle.id] = cycle
+		return cycle
+
+	async def find_by_id(self, cycle_id: UUID) -> BookClubCycle | None:
+		return self.cycles.get(cycle_id)
+
+	async def list_by_library(self, library_id: UUID) -> list[BookClubCycle]:
+		items = [c for c in self.cycles.values() if c.library_id == library_id]
+		return sorted(items, key=lambda c: c.created_at, reverse=True)
+
+
+class MockBookClubPostRepository(BookClubPostRepository):
+	def __init__(self) -> None:
+		self.posts: dict[UUID, BookClubPost] = {}
+
+	async def add(self, post: BookClubPost) -> BookClubPost:
+		self.posts[post.id] = post
+		return post
+
+	async def find_by_id(self, post_id: UUID) -> BookClubPost | None:
+		return self.posts.get(post_id)
+
+	async def list_by_cycle(self, cycle_id: UUID) -> list[BookClubPost]:
+		items = [p for p in self.posts.values() if p.cycle_id == cycle_id]
+		return sorted(items, key=lambda p: p.created_at)
+
+	async def delete(self, post: BookClubPost) -> None:
+		self.posts.pop(post.id, None)
+
+
+class MockBookClubProposalRepository(BookClubProposalRepository):
+	def __init__(self) -> None:
+		self.proposals: dict[UUID, BookClubProposal] = {}
+
+	async def add(self, proposal: BookClubProposal) -> BookClubProposal:
+		self.proposals[proposal.id] = proposal
+		return proposal
+
+	async def find_by_id(self, proposal_id: UUID) -> BookClubProposal | None:
+		return self.proposals.get(proposal_id)
+
+	async def list_by_library(self, library_id: UUID) -> list[BookClubProposal]:
+		items = [p for p in self.proposals.values() if p.library_id == library_id]
+		return sorted(items, key=lambda p: p.created_at)
+
+	async def delete(self, proposal: BookClubProposal) -> None:
+		self.proposals.pop(proposal.id, None)
+
+	async def delete_all_by_library(self, library_id: UUID) -> None:
+		self.proposals = {k: v for k, v in self.proposals.items() if v.library_id != library_id}
+
+
+class MockBookClubVoteRepository(BookClubVoteRepository):
+	def __init__(self) -> None:
+		self.votes: dict[UUID, BookClubVote] = {}
+
+	async def add(self, vote: BookClubVote) -> BookClubVote:
+		self.votes[vote.id] = vote
+		return vote
+
+	async def find_by_proposal_and_user(self, proposal_id: UUID, user_id: UUID) -> BookClubVote | None:
+		return next(
+			(v for v in self.votes.values() if v.proposal_id == proposal_id and v.user_id == user_id),
+			None,
+		)
+
+	async def delete(self, vote: BookClubVote) -> None:
+		self.votes.pop(vote.id, None)
+
+	async def list_by_proposals(self, proposal_ids: list[UUID]) -> list[BookClubVote]:
+		ids = set(proposal_ids)
+		return [v for v in self.votes.values() if v.proposal_id in ids]
+
+
+class MockBookClubParticipantRepository(BookClubParticipantRepository):
+	def __init__(self) -> None:
+		self.participants: dict[UUID, BookClubParticipant] = {}
+
+	async def add(self, participant: BookClubParticipant) -> BookClubParticipant:
+		self.participants[participant.id] = participant
+		return participant
+
+	async def save(self, participant: BookClubParticipant) -> BookClubParticipant:
+		if participant.id not in self.participants:
+			raise LookupError(f"BookClubParticipant {participant.id} not found")
+		self.participants[participant.id] = participant
+		return participant
+
+	async def find_by_cycle_and_user(self, cycle_id: UUID, user_id: UUID) -> BookClubParticipant | None:
+		return next(
+			(p for p in self.participants.values() if p.cycle_id == cycle_id and p.user_id == user_id),
+			None,
+		)
+
+	async def list_by_cycle(self, cycle_id: UUID) -> list[BookClubParticipant]:
+		items = [p for p in self.participants.values() if p.cycle_id == cycle_id]
+		return sorted(items, key=lambda p: p.joined_at)
+
+
+class MockBookClubMeetingRepository(BookClubMeetingRepository):
+	def __init__(self) -> None:
+		self.meetings: dict[UUID, BookClubMeeting] = {}
+
+	async def add(self, meeting: BookClubMeeting) -> BookClubMeeting:
+		self.meetings[meeting.id] = meeting
+		return meeting
+
+	async def find_by_id(self, meeting_id: UUID) -> BookClubMeeting | None:
+		return self.meetings.get(meeting_id)
+
+	async def list_by_cycle(self, cycle_id: UUID) -> list[BookClubMeeting]:
+		items = [m for m in self.meetings.values() if m.cycle_id == cycle_id]
+		return sorted(items, key=lambda m: m.scheduled_at)
+
+	async def delete(self, meeting: BookClubMeeting) -> None:
+		self.meetings.pop(meeting.id, None)
+
+
+class MockBookClubQuestionSetRepository(BookClubQuestionSetRepository):
+	def __init__(self) -> None:
+		self.sets: dict[UUID, BookClubQuestionSet] = {}
+
+	async def find_by_cycle_and_language(
+		self, cycle_id: UUID, language: str
+	) -> BookClubQuestionSet | None:
+		return next(
+			(s for s in self.sets.values() if s.cycle_id == cycle_id and s.language == language),
+			None,
+		)
+
+	async def save(self, question_set: BookClubQuestionSet) -> BookClubQuestionSet:
+		existing = await self.find_by_cycle_and_language(question_set.cycle_id, question_set.language)
+		if existing is not None:
+			existing.questions = question_set.questions
+			return existing
+		self.sets[question_set.id] = question_set
+		return question_set
+
+
 @pytest.fixture
 def test_library_id() -> UUID:
 	return uuid4()
@@ -599,6 +796,11 @@ def book_read_repo() -> BookReadRepository:
 
 
 @pytest.fixture
+def book_abandonment_repo() -> BookAbandonmentRepository:
+	return MockBookAbandonmentRepository()
+
+
+@pytest.fixture
 def book_loan_repo() -> BookLoanRepository:
 	return MockBookLoanRepository()
 
@@ -621,3 +823,38 @@ def wishlist_repo() -> WishlistRepository:
 @pytest.fixture
 def book_rating_repo() -> BookRatingRepository:
 	return MockBookRatingRepository()
+
+
+@pytest.fixture
+def cycle_repo() -> BookClubCycleRepository:
+	return MockBookClubCycleRepository()
+
+
+@pytest.fixture
+def post_repo() -> BookClubPostRepository:
+	return MockBookClubPostRepository()
+
+
+@pytest.fixture
+def proposal_repo() -> BookClubProposalRepository:
+	return MockBookClubProposalRepository()
+
+
+@pytest.fixture
+def vote_repo() -> BookClubVoteRepository:
+	return MockBookClubVoteRepository()
+
+
+@pytest.fixture
+def participant_repo() -> BookClubParticipantRepository:
+	return MockBookClubParticipantRepository()
+
+
+@pytest.fixture
+def meeting_repo() -> BookClubMeetingRepository:
+	return MockBookClubMeetingRepository()
+
+
+@pytest.fixture
+def question_set_repo() -> BookClubQuestionSetRepository:
+	return MockBookClubQuestionSetRepository()

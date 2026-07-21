@@ -5,6 +5,7 @@ from app.application.use_cases.export import ExportBookItem
 from app.domain.entities import Bookcase, Section, Shelf
 from app.domain.repositories import (
 	BibliographicRecordRepository,
+	BookAbandonmentRepository,
 	BookcaseRepository,
 	BookReadRepository,
 	OwnedBookRepository,
@@ -34,6 +35,7 @@ class GetBookcaseMapUseCase:
 		book_repo: OwnedBookRepository,
 		record_repo: BibliographicRecordRepository,
 		read_repo: BookReadRepository,
+		abandonment_repo: BookAbandonmentRepository,
 	) -> None:
 		self._bookcase_repo = bookcase_repo
 		self._section_repo = section_repo
@@ -41,6 +43,7 @@ class GetBookcaseMapUseCase:
 		self._book_repo = book_repo
 		self._record_repo = record_repo
 		self._read_repo = read_repo
+		self._abandonment_repo = abandonment_repo
 
 	async def execute(
 		self, library_id: UUID, bookcase_id: UUID, viewer_id: UUID
@@ -64,8 +67,9 @@ class GetBookcaseMapUseCase:
 
 		books = await self._book_repo.find_all_by_shelf_ids(shelf_ids)
 		read_ids = await self._read_repo.list_read_book_ids([book.id for book in books], viewer_id)
+		abandoned_ids = await self._abandonment_repo.list_abandoned_book_ids([book.id for book in books], viewer_id)
 		for book in books:
-			book.reading_status = book.reading_status_for(book.id in read_ids)
+			book.reading_status = book.reading_status_for(book.id in read_ids, book.id in abandoned_ids)
 		records = await self._record_repo.find_all_by_ids([book.bibliographic_record_id for book in books])
 		record_map = {record.id: record for record in records}
 		books_by_shelf: dict[UUID, list[ExportBookItem]] = {}

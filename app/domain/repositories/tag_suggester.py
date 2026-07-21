@@ -14,4 +14,5 @@ class TagSuggester(ABC):
         title: str,
         main_author: str | None,
         genre: str | None,
+        reader_language: str | None = None,
     ) -> TagSuggestion: ...

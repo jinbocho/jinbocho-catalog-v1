@@ -28,6 +28,12 @@ class GenerateQuizQuestionsInput:
     # circuit below — an explicit "generate with context" is a deliberate
     # action, not the passive "open the quiz" call this endpoint also serves.
     extra_context: str | None = None
+    # See QuizBookContext.reader_age_band — does not affect the
+    # get-or-generate short circuit below, only fresh generations.
+    reader_age_band: str | None = None
+    # See QuizBookContext.reader_language — same non-effect on the cache
+    # short circuit as reader_age_band.
+    reader_language: str | None = None
 
 
 class GenerateQuizQuestionsUseCase:
@@ -75,6 +81,8 @@ class GenerateQuizQuestionsUseCase:
                 language=record.language,
                 num_questions=input.num_questions,
                 extra_context=input.extra_context,
+                reader_age_band=input.reader_age_band,
+                reader_language=input.reader_language,
             )
         )
         saved: list[QuizQuestion] = []

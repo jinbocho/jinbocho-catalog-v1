@@ -7,8 +7,10 @@ from app.application.use_cases import (
 	GetIncipitUseCase,
 	SetIncipitUseCase,
 )
+from app.application.use_cases.catalog.generate_ai_incipit import GenerateAiIncipitUseCase
 from app.domain.entities import IsbnLookupCache
-from app.domain.repositories import IsbnLookupCacheRepository
+from app.domain.repositories import EditorialDescriptionProvider, IsbnLookupCacheRepository
+from app.infrastructure.external.ai_incipit_client import AiIncipitClient, AiIncipitResult
 from app.utils import utcnow
 
 
@@ -27,6 +29,30 @@ class FakeIsbnCacheRepository(IsbnLookupCacheRepository):
 @pytest.fixture
 def cache_repo():
 	return FakeIsbnCacheRepository()
+
+
+class FakeEditorialDescriptionProvider(EditorialDescriptionProvider):
+	async def fetch(self, isbn: str) -> str | None:
+		return None
+
+
+class FakeAiIncipitClient(AiIncipitClient):
+	def __init__(self) -> None:
+		self.last_reader_language: str | None = None
+
+	async def generate(
+		self,
+		title: str,
+		main_author: str | None,
+		genre: str | None,
+		language: str | None,
+		publisher: str | None,
+		publication_year: int | None,
+		editorial_description: str | None,
+		reader_language: str | None = None,
+	) -> AiIncipitResult:
+		self.last_reader_language = reader_language
+		return AiIncipitResult(text="A gripping tale.", model="fake-model")
 
 
 @pytest.mark.asyncio
@@ -75,3 +101,18 @@ async def test_set_incipit_rejects_bad_source(record_repo, test_library_id):
 	)
 	with pytest.raises(ValueError):
 		await SetIncipitUseCase(record_repo).execute(record.id, test_library_id, "txt", "bogus")
+
+
+@pytest.mark.asyncio
+async def test_generate_ai_incipit_passes_reader_language(record_repo, test_library_id):
+	"""The requester's own UI language, not the book's bibliographic
+	language, must reach the AI client — see GenerateAiIncipitUseCase.execute."""
+	record = await CreateBibliographicRecordUseCase(record_repo).execute(
+		CreateBibliographicRecordInput(library_id=test_library_id, title="X")
+	)
+	ai_client = FakeAiIncipitClient()
+	result = await GenerateAiIncipitUseCase(record_repo, ai_client, FakeEditorialDescriptionProvider()).execute(
+		record.id, test_library_id, "es"
+	)
+	assert result.text == "A gripping tale."
+	assert ai_client.last_reader_language == "es"

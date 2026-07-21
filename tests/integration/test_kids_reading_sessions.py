@@ -141,3 +141,61 @@ async def test_viewer_still_cannot_change_reading_status(client: AsyncClient, li
 
 	response = await client.post(f"/v1/books/{book_id}/reading-status", params={"reading_status": "reading"})
 	assert response.status_code == 403
+
+
+async def test_parent_can_log_a_together_session_for_a_child(client: AsyncClient, library_id: UUID) -> None:
+	book_id = await _create_book(client)
+	parent_id = uuid4()
+	child_id = uuid4()
+	_override_as(library_id, parent_id, "admin", kids_mode_enabled=True)
+
+	response = await client.post(
+		"/v1/kids/sessions",
+		json={"owned_book_id": book_id, "minutes": 10, "mode": "together", "target_user_id": str(child_id)},
+	)
+	assert response.status_code == 201
+	body = response.json()
+	assert body["user_id"] == str(child_id)
+	assert body["mode"] == "together"
+	assert body["logged_by_user_id"] == str(parent_id)
+
+
+async def test_child_cannot_log_a_together_session(client: AsyncClient, library_id: UUID) -> None:
+	book_id = await _create_book(client)
+	child_id = uuid4()
+	other_child_id = uuid4()
+	_override_as(library_id, child_id, "child", kids_mode_enabled=True)
+
+	response = await client.post(
+		"/v1/kids/sessions",
+		json={"owned_book_id": book_id, "minutes": 10, "mode": "together", "target_user_id": str(other_child_id)},
+	)
+	assert response.status_code == 403
+
+
+async def test_parent_cannot_log_an_independent_session_for_a_child(client: AsyncClient, library_id: UUID) -> None:
+	"""A parent may only claim an "together" session on a child's behalf —
+	never "independent", which would misrepresent the child as having read
+	alone. See KID-02."""
+	book_id = await _create_book(client)
+	parent_id = uuid4()
+	child_id = uuid4()
+	_override_as(library_id, parent_id, "admin", kids_mode_enabled=True)
+
+	response = await client.post(
+		"/v1/kids/sessions",
+		json={"owned_book_id": book_id, "minutes": 10, "target_user_id": str(child_id)},
+	)
+	assert response.status_code == 403
+
+
+async def test_independent_session_has_no_logged_by_user(client: AsyncClient, library_id: UUID) -> None:
+	book_id = await _create_book(client)
+	child_id = uuid4()
+	_override_as(library_id, child_id, "child", kids_mode_enabled=True)
+
+	response = await client.post("/v1/kids/sessions", json={"owned_book_id": book_id, "minutes": 10})
+	assert response.status_code == 201
+	body = response.json()
+	assert body["mode"] == "independent"
+	assert body["logged_by_user_id"] is None

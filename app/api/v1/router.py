@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
 	account,
 	activity,
+	book_club,
 	bookcases,
 	books,
 	export,
@@ -42,4 +43,5 @@ router.include_router(account.router, prefix="/account")
 router.include_router(wishlist.router, prefix="/wishlist")
 router.include_router(activity.router, prefix="/activity")
 router.include_router(kids.router, prefix="/kids")
+router.include_router(book_club.router, prefix="/book-club")
 

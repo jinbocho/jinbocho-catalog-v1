@@ -29,9 +29,12 @@ class Settings(BaseSettings):
     fuzzy_dedup_low_threshold: float = 0.60
 
     # Comma-separated list of modules enabled for this installation — must match
-    # api-gateway's JINBOCHO_FEATURES. The gateway enforces this for public AI
-    # routes; catalog-service checks it itself before its own server-to-server
-    # call to ai-service's /dedup, since that call never passes through the gateway.
+    # api-gateway's JINBOCHO_FEATURES. Available values: catalog, auth, ai, kids.
+    # The gateway enforces "ai" for public AI routes; catalog-service checks it
+    # itself before its own server-to-server calls to ai-service (/dedup, quiz
+    # generation, discussion generation), since those never pass through the
+    # gateway. "kids_mode_enabled" on each use case comes from the Library
+    # record/JWT claim, not from this flag — "kids" isn't consulted here at all.
     jinbocho_features: str = "catalog,auth"
 
     # Observability (ADR-012) — off by default so a service run without the

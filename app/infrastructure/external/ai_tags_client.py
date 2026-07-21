@@ -17,11 +17,17 @@ class AiTagsClient(TagSuggester):
         title: str,
         main_author: str | None,
         genre: str | None,
+        reader_language: str | None = None,
     ) -> TagSuggestion:
         try:
             response = await self._http_client.post(
                 f"{self._ai_service_url}/v1/suggestions/tags",
-                json={"title": title, "main_author": main_author, "genre": genre},
+                json={
+                    "title": title,
+                    "main_author": main_author,
+                    "genre": genre,
+                    "reader_language": reader_language,
+                },
             )
             response.raise_for_status()
             data = response.json()

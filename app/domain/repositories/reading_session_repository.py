@@ -15,3 +15,9 @@ class ReadingSessionRepository(ABC):
         is what stops a caller from listing another library's session data
         for a guessed user_id."""
         ...
+
+    @abstractmethod
+    async def list_by_library(self, library_id: UUID) -> list[ReadingSession]:
+        """Every member's sessions, not scoped to one user — KID-08 family
+        challenge progress is a cooperative sum across the whole library."""
+        ...

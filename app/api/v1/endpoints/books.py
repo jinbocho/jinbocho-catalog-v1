@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import (
 	get_bibliographic_record_repository,
+	get_book_abandonment_repository,
 	get_book_history_repository,
 	get_book_loan_repository,
 	get_book_read_repository,
@@ -61,6 +62,7 @@ from app.application.use_cases import (
 from app.domain.entities import BookHistory, BookLoan, BookRead, OwnedBook, ReadingStatus
 from app.domain.repositories import (
 	BibliographicRecordRepository,
+	BookAbandonmentRepository,
 	BookHistoryRepository,
 	BookLoanRepository,
 	BookReadRepository,
@@ -79,8 +81,9 @@ async def list_books(
 	payload: dict[str, Any] = Depends(get_current_user_payload),
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	read_repo: BookReadRepository = Depends(get_book_read_repository),
+	abandonment_repo: BookAbandonmentRepository = Depends(get_book_abandonment_repository),
 ) -> list[OwnedBook]:
-	return await ListOwnedBooksUseCase(book_repo, read_repo).execute(
+	return await ListOwnedBooksUseCase(book_repo, read_repo, abandonment_repo).execute(
 		UUID(payload["library_id"]), viewer_id=UUID(payload["sub"]), limit=limit, offset=offset
 	)
 
@@ -213,8 +216,9 @@ async def get_book(
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 	read_repo: BookReadRepository = Depends(get_book_read_repository),
+	abandonment_repo: BookAbandonmentRepository = Depends(get_book_abandonment_repository),
 ) -> OwnedBook:
-	result = await GetOwnedBookUseCase(book_repo, record_repo, read_repo).execute(
+	result = await GetOwnedBookUseCase(book_repo, record_repo, read_repo, abandonment_repo).execute(
 		book_id, UUID(payload["library_id"]), viewer_id=UUID(payload["sub"])
 	)
 	return result.book
@@ -229,8 +233,9 @@ async def update_book(
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
 	read_repo: BookReadRepository = Depends(get_book_read_repository),
+	abandonment_repo: BookAbandonmentRepository = Depends(get_book_abandonment_repository),
 ) -> OwnedBook:
-	updated = await UpdateBookMetadataUseCase(book_repo, read_repo, history_repo).execute(
+	updated = await UpdateBookMetadataUseCase(book_repo, read_repo, history_repo, abandonment_repo).execute(
 		UpdateBookMetadataInput(
 			book_id=book_id,
 			library_id=UUID(payload["library_id"]),
@@ -284,8 +289,9 @@ async def update_reading_status(
 	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
 	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
 	read_repo: BookReadRepository = Depends(get_book_read_repository),
+	abandonment_repo: BookAbandonmentRepository = Depends(get_book_abandonment_repository),
 ) -> OwnedBook:
-	updated = await UpdateReadingStatusUseCase(book_repo, read_repo, history_repo).execute(
+	updated = await UpdateReadingStatusUseCase(book_repo, read_repo, history_repo, abandonment_repo).execute(
 		UpdateReadingStatusInput(
 			book_id=book_id,
 			library_id=UUID(payload["library_id"]),

@@ -1,13 +1,19 @@
 from uuid import UUID
 
 from app.domain.entities import OwnedBook, ReadingStatus
-from app.domain.repositories import BookReadRepository, OwnedBookRepository
+from app.domain.repositories import BookAbandonmentRepository, BookReadRepository, OwnedBookRepository
 
 
 class ListOwnedBooksUseCase:
-	def __init__(self, book_repo: OwnedBookRepository, read_repo: BookReadRepository) -> None:
+	def __init__(
+		self,
+		book_repo: OwnedBookRepository,
+		read_repo: BookReadRepository,
+		abandonment_repo: BookAbandonmentRepository,
+	) -> None:
 		self._book_repo = book_repo
 		self._read_repo = read_repo
+		self._abandonment_repo = abandonment_repo
 
 	async def execute(
 		self,
@@ -23,6 +29,7 @@ class ListOwnedBooksUseCase:
 			library_id, shelf_id=shelf_id, reading_status=reading_status, tag=tag, limit=limit, offset=offset
 		)
 		read_ids = await self._read_repo.list_read_book_ids([b.id for b in books], viewer_id)
+		abandoned_ids = await self._abandonment_repo.list_abandoned_book_ids([b.id for b in books], viewer_id)
 		for book in books:
-			book.reading_status = book.reading_status_for(book.id in read_ids)
+			book.reading_status = book.reading_status_for(book.id in read_ids, book.id in abandoned_ids)
 		return books

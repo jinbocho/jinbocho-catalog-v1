@@ -359,7 +359,7 @@ async def test_add_book_intentional_duplicate_bypasses_the_check(
 
 @pytest.mark.asyncio
 async def test_update_reading_status_sets_and_clears_current_reader(
-	book_repo, book_read_repo, history_repo, test_library_id, test_user_id
+	book_repo, book_read_repo, book_abandonment_repo, history_repo, test_library_id, test_user_id
 ):
 	"""Switching to 'reading' assigns the current reader; switching away clears it."""
 	from app.domain.entities import OwnedBook
@@ -375,7 +375,7 @@ async def test_update_reading_status_sets_and_clears_current_reader(
 		)
 	)
 
-	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo)
+	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo, book_abandonment_repo)
 	updated = await use_case.execute(
 		UpdateReadingStatusInput(
 			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.READING
@@ -393,7 +393,7 @@ async def test_update_reading_status_sets_and_clears_current_reader(
 
 @pytest.mark.asyncio
 async def test_reading_status_for_shows_reading_to_every_member(
-	book_repo, book_read_repo, history_repo, test_library_id, test_user_id
+	book_repo, book_read_repo, book_abandonment_repo, history_repo, test_library_id, test_user_id
 ):
 	"""Regression: unlike "read", "reading" reflects who's physically holding
 	the single copy — every other library member must see it too, not just
@@ -414,7 +414,7 @@ async def test_reading_status_for_shows_reading_to_every_member(
 		)
 	)
 
-	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo)
+	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo, book_abandonment_repo)
 	updated = await use_case.execute(
 		UpdateReadingStatusInput(
 			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.READING
@@ -427,7 +427,7 @@ async def test_reading_status_for_shows_reading_to_every_member(
 
 @pytest.mark.asyncio
 async def test_update_reading_status_read_is_per_member(
-	book_repo, book_read_repo, history_repo, test_library_id, test_user_id
+	book_repo, book_read_repo, book_abandonment_repo, history_repo, test_library_id, test_user_id
 ):
 	"""Regression: one member marking a book read must not flip it to "read"
 	for every other library member — only their own BookRead row changes."""
@@ -445,7 +445,7 @@ async def test_update_reading_status_read_is_per_member(
 		)
 	)
 
-	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo)
+	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo, book_abandonment_repo)
 	updated = await use_case.execute(
 		UpdateReadingStatusInput(
 			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.READ
@@ -462,7 +462,7 @@ async def test_update_reading_status_read_is_per_member(
 
 @pytest.mark.asyncio
 async def test_update_book_metadata_reading_status_sets_current_reader(
-	book_repo, book_read_repo, history_repo, test_library_id, test_user_id
+	book_repo, book_read_repo, book_abandonment_repo, history_repo, test_library_id, test_user_id
 ):
 	"""The generic metadata-update path must mirror the same current_reader_id rule
 	as the dedicated reading-status endpoint (regression: it didn't)."""
@@ -479,7 +479,7 @@ async def test_update_book_metadata_reading_status_sets_current_reader(
 		)
 	)
 
-	use_case = UpdateBookMetadataUseCase(book_repo, book_read_repo, history_repo)
+	use_case = UpdateBookMetadataUseCase(book_repo, book_read_repo, history_repo, book_abandonment_repo)
 	updated = await use_case.execute(
 		UpdateBookMetadataInput(
 			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.READING
@@ -487,3 +487,114 @@ async def test_update_book_metadata_reading_status_sets_current_reader(
 	)
 
 	assert updated.current_reader_id == test_user_id
+
+
+@pytest.mark.asyncio
+async def test_update_reading_status_abandon_is_per_member(
+	book_repo, book_read_repo, book_abandonment_repo, history_repo, test_library_id, test_user_id
+):
+	"""KID-05: abandoning a book is a per-member fact, like 'read' — it must
+	never change what another library member sees for the same copy."""
+	from app.domain.entities import OwnedBook
+	from app.utils import utcnow
+
+	other_user_id = uuid4()
+	book = await book_repo.save(
+		OwnedBook(
+			library_id=test_library_id,
+			bibliographic_record_id=uuid4(),
+			reading_status=ReadingStatus.TO_READ,
+			created_at=utcnow(),
+			updated_at=utcnow(),
+		)
+	)
+
+	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo, book_abandonment_repo)
+	updated = await use_case.execute(
+		UpdateReadingStatusInput(
+			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.ABANDONED
+		)
+	)
+
+	caller_has_abandoned = await book_abandonment_repo.is_abandoned(book.id, test_user_id)
+	assert updated.reading_status_for(False, caller_has_abandoned) == ReadingStatus.ABANDONED
+	other_has_abandoned = await book_abandonment_repo.is_abandoned(book.id, other_user_id)
+	assert updated.reading_status_for(False, other_has_abandoned) == ReadingStatus.TO_READ
+
+
+@pytest.mark.asyncio
+async def test_update_reading_status_abandoned_and_read_are_mutually_exclusive(
+	book_repo, book_read_repo, book_abandonment_repo, history_repo, test_library_id, test_user_id
+):
+	"""Marking a previously-abandoned book as read clears the abandoned mark,
+	and vice versa — a book is never both for the same reader."""
+	from app.domain.entities import OwnedBook
+	from app.utils import utcnow
+
+	book = await book_repo.save(
+		OwnedBook(
+			library_id=test_library_id,
+			bibliographic_record_id=uuid4(),
+			reading_status=ReadingStatus.TO_READ,
+			created_at=utcnow(),
+			updated_at=utcnow(),
+		)
+	)
+	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo, book_abandonment_repo)
+
+	await use_case.execute(
+		UpdateReadingStatusInput(
+			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.ABANDONED
+		)
+	)
+	assert await book_abandonment_repo.is_abandoned(book.id, test_user_id) is True
+
+	await use_case.execute(
+		UpdateReadingStatusInput(
+			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.READ
+		)
+	)
+	assert await book_abandonment_repo.is_abandoned(book.id, test_user_id) is False
+	assert await book_read_repo.is_read(book.id, test_user_id) is True
+
+	await use_case.execute(
+		UpdateReadingStatusInput(
+			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.ABANDONED
+		)
+	)
+	assert await book_read_repo.is_read(book.id, test_user_id) is False
+	assert await book_abandonment_repo.is_abandoned(book.id, test_user_id) is True
+
+
+@pytest.mark.asyncio
+async def test_picking_up_an_abandoned_book_again_clears_the_abandoned_mark(
+	book_repo, book_read_repo, book_abandonment_repo, history_repo, test_library_id, test_user_id
+):
+	"""Re-reading a previously abandoned book (KID-05's 'rileggere conta')
+	starting it again is a fresh attempt, not a lingering abandoned mark."""
+	from app.domain.entities import OwnedBook
+	from app.utils import utcnow
+
+	book = await book_repo.save(
+		OwnedBook(
+			library_id=test_library_id,
+			bibliographic_record_id=uuid4(),
+			reading_status=ReadingStatus.TO_READ,
+			created_at=utcnow(),
+			updated_at=utcnow(),
+		)
+	)
+	use_case = UpdateReadingStatusUseCase(book_repo, book_read_repo, history_repo, book_abandonment_repo)
+
+	await use_case.execute(
+		UpdateReadingStatusInput(
+			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.ABANDONED
+		)
+	)
+	await use_case.execute(
+		UpdateReadingStatusInput(
+			book_id=book.id, library_id=test_library_id, changed_by=test_user_id, reading_status=ReadingStatus.READING
+		)
+	)
+
+	assert await book_abandonment_repo.is_abandoned(book.id, test_user_id) is False

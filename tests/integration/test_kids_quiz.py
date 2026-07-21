@@ -20,14 +20,19 @@ class FakeQuizGenerator(QuizGenerator):
 		return self._questions
 
 
-def _override_as(library_id: UUID, user_id: UUID, role: str, kids_mode_enabled: bool) -> None:
+def _override_as(
+	library_id: UUID, user_id: UUID, role: str, kids_mode_enabled: bool, language: str | None = None
+) -> None:
 	async def _override() -> dict[str, Any]:
-		return {
+		payload: dict[str, Any] = {
 			"library_id": str(library_id),
 			"sub": str(user_id),
 			"role": role,
 			"kids_mode_enabled": kids_mode_enabled,
 		}
+		if language is not None:
+			payload["language"] = language
+		return payload
 
 	app.dependency_overrides[get_current_user_payload] = _override
 
@@ -89,6 +94,20 @@ async def test_generate_quiz_uses_ai_and_sanitizes_response(client: AsyncClient,
 	assert questions[0]["prompt"] == "What kind of animal is Wilbur?"
 	assert questions[0]["source"] == "ai"
 	assert "correct_index" not in questions[0]
+
+
+async def test_generate_quiz_passes_reader_language_from_jwt(client: AsyncClient, library_id: UUID) -> None:
+	"""The requester's own UI language (JWT claim), not the book's
+	bibliographic language, must reach the generator — see QuizBookContext.reader_language."""
+	book_id = await _create_book(client)
+	fake = FakeQuizGenerator(_SAMPLE_QUESTIONS)
+	app.dependency_overrides[get_quiz_generator] = lambda: fake
+	_override_as(library_id, uuid4(), "child", kids_mode_enabled=True, language="it")
+
+	response = await client.post(f"/v1/kids/books/{book_id}/quiz/generate", json={"num_questions": 5})
+	assert response.status_code == 200
+	assert fake.last_ctx is not None
+	assert fake.last_ctx.reader_language == "it"
 
 
 async def test_generate_quiz_does_not_regenerate_when_questions_exist(client: AsyncClient, library_id: UUID) -> None:

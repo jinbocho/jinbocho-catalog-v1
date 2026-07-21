@@ -18,7 +18,9 @@ class SuggestTagsUseCase:
         self._record_repo = record_repo
         self._tag_suggester = tag_suggester
 
-    async def execute(self, record_id: UUID, library_id: UUID) -> SuggestTagsOutput:
+    async def execute(
+        self, record_id: UUID, library_id: UUID, reader_language: str | None = None
+    ) -> SuggestTagsOutput:
         record = await self._record_repo.find_by_id(record_id)
         if not record:
             raise LookupError("Bibliographic record not found")
@@ -29,5 +31,6 @@ class SuggestTagsUseCase:
             title=record.title,
             main_author=record.main_author,
             genre=record.genre,
+            reader_language=reader_language,
         )
         return SuggestTagsOutput(tags=result.tags)

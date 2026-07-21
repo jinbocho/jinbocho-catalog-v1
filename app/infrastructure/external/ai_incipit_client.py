@@ -26,6 +26,7 @@ class AiIncipitClient:
         publisher: str | None,
         publication_year: int | None,
         editorial_description: str | None,
+        reader_language: str | None = None,
     ) -> AiIncipitResult:
         try:
             response = await self._http_client.post(
@@ -38,6 +39,7 @@ class AiIncipitClient:
                     "publisher": publisher,
                     "publication_year": publication_year,
                     "editorial_description": editorial_description,
+                    "reader_language": reader_language,
                 },
             )
             response.raise_for_status()

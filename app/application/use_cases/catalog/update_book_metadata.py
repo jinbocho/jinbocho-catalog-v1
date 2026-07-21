@@ -12,7 +12,12 @@ from app.domain.entities import (
 	OwnedBook,
 	ReadingStatus,
 )
-from app.domain.repositories import BookHistoryRepository, BookReadRepository, OwnedBookRepository
+from app.domain.repositories import (
+	BookAbandonmentRepository,
+	BookHistoryRepository,
+	BookReadRepository,
+	OwnedBookRepository,
+)
 from app.utils import utcnow
 
 logger = logging.getLogger(__name__)
@@ -39,10 +44,12 @@ class UpdateBookMetadataUseCase:
 		book_repo: OwnedBookRepository,
 		read_repo: BookReadRepository,
 		history_repo: BookHistoryRepository,
+		abandonment_repo: BookAbandonmentRepository,
 	) -> None:
 		self._book_repo = book_repo
 		self._read_repo = read_repo
 		self._history_repo = history_repo
+		self._abandonment_repo = abandonment_repo
 
 	async def execute(self, inp: UpdateBookMetadataInput) -> OwnedBook:
 		book = await self._book_repo.find_by_id(inp.book_id)
@@ -64,13 +71,19 @@ class UpdateBookMetadataUseCase:
 			# affect this caller's own BookRead row.
 			if inp.reading_status == ReadingStatus.READING:
 				book.current_reader_id = inp.changed_by
+				await self._abandonment_repo.remove(book.id, inp.changed_by)
 			else:
 				if book.current_reader_id == inp.changed_by:
 					book.current_reader_id = None
 				if inp.reading_status == ReadingStatus.READ:
 					await self._read_repo.add(book.id, inp.changed_by)
+					await self._abandonment_repo.remove(book.id, inp.changed_by)
+				elif inp.reading_status == ReadingStatus.ABANDONED:
+					await self._abandonment_repo.add(book.id, inp.changed_by)
+					await self._read_repo.remove(book.id, inp.changed_by)
 				else:
 					await self._read_repo.remove(book.id, inp.changed_by)
+					await self._abandonment_repo.remove(book.id, inp.changed_by)
 			book.reading_status = ReadingStatus.READING if book.current_reader_id is not None else ReadingStatus.TO_READ
 		if inp.owner_id is not None:
 			book.owner_id = inp.owner_id
@@ -82,7 +95,8 @@ class UpdateBookMetadataUseCase:
 		updated = await self._book_repo.save(book)
 		if inp.reading_status is not None:
 			has_read = await self._read_repo.is_read(updated.id, inp.changed_by)
-			updated.reading_status = updated.reading_status_for(has_read)
+			has_abandoned = await self._abandonment_repo.is_abandoned(updated.id, inp.changed_by)
+			updated.reading_status = updated.reading_status_for(has_read, has_abandoned)
 		await self._history_repo.save(
 			BookHistory(
 				owned_book_id=book.id,

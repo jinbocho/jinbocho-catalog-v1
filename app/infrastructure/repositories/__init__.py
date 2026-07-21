@@ -1,13 +1,32 @@
 from app.infrastructure.repositories.bibliographic_record_repository import SQLAlchemyBibliographicRecordRepository
+from app.infrastructure.repositories.book_abandonment_repository import SQLAlchemyBookAbandonmentRepository
+from app.infrastructure.repositories.book_club_cycle_repository import SQLAlchemyBookClubCycleRepository
+from app.infrastructure.repositories.book_club_meeting_repository import SQLAlchemyBookClubMeetingRepository
+from app.infrastructure.repositories.book_club_participant_repository import (
+	SQLAlchemyBookClubParticipantRepository,
+)
+from app.infrastructure.repositories.book_club_post_repository import SQLAlchemyBookClubPostRepository
+from app.infrastructure.repositories.book_club_proposal_repository import SQLAlchemyBookClubProposalRepository
+from app.infrastructure.repositories.book_club_question_set_repository import (
+	SQLAlchemyBookClubQuestionSetRepository,
+)
+from app.infrastructure.repositories.book_club_vote_repository import SQLAlchemyBookClubVoteRepository
 from app.infrastructure.repositories.book_history_repository import SQLAlchemyBookHistoryRepository
 from app.infrastructure.repositories.book_loan_repository import SQLAlchemyBookLoanRepository
 from app.infrastructure.repositories.book_rating_repository import SQLAlchemyBookRatingRepository
 from app.infrastructure.repositories.book_read_repository import SQLAlchemyBookReadRepository
 from app.infrastructure.repositories.bookcase_repository import SQLAlchemyBookcaseRepository
+from app.infrastructure.repositories.discussion_question_set_repository import (
+	SQLAlchemyDiscussionQuestionSetRepository,
+)
+from app.infrastructure.repositories.family_challenge_repository import SQLAlchemyFamilyChallengeRepository
 from app.infrastructure.repositories.isbn_lookup_cache_repository import SQLAlchemyIsbnLookupCacheRepository
+from app.infrastructure.repositories.journal_entry_repository import SQLAlchemyJournalEntryRepository
+from app.infrastructure.repositories.mystery_pick_repository import SQLAlchemyMysteryPickRepository
 from app.infrastructure.repositories.owned_book_repository import SQLAlchemyOwnedBookRepository
 from app.infrastructure.repositories.quiz_attempt_repository import SQLAlchemyQuizAttemptRepository
 from app.infrastructure.repositories.quiz_question_repository import SQLAlchemyQuizQuestionRepository
+from app.infrastructure.repositories.reading_path_repository import SQLAlchemyReadingPathRepository
 from app.infrastructure.repositories.reading_session_repository import SQLAlchemyReadingSessionRepository
 from app.infrastructure.repositories.removed_member_repository import SQLAlchemyRemovedMemberRepository
 from app.infrastructure.repositories.room_repository import SQLAlchemyRoomRepository
@@ -26,10 +45,23 @@ __all__ = [
 	"SQLAlchemyBookLoanRepository",
 	"SQLAlchemyBookRatingRepository",
 	"SQLAlchemyBookReadRepository",
+	"SQLAlchemyBookAbandonmentRepository",
 	"SQLAlchemyIsbnLookupCacheRepository",
 	"SQLAlchemyRemovedMemberRepository",
 	"SQLAlchemyWishlistRepository",
 	"SQLAlchemyReadingSessionRepository",
 	"SQLAlchemyQuizQuestionRepository",
 	"SQLAlchemyQuizAttemptRepository",
+	"SQLAlchemyDiscussionQuestionSetRepository",
+	"SQLAlchemyJournalEntryRepository",
+	"SQLAlchemyReadingPathRepository",
+	"SQLAlchemyMysteryPickRepository",
+	"SQLAlchemyFamilyChallengeRepository",
+	"SQLAlchemyBookClubCycleRepository",
+	"SQLAlchemyBookClubPostRepository",
+	"SQLAlchemyBookClubProposalRepository",
+	"SQLAlchemyBookClubVoteRepository",
+	"SQLAlchemyBookClubParticipantRepository",
+	"SQLAlchemyBookClubMeetingRepository",
+	"SQLAlchemyBookClubQuestionSetRepository",
 ]

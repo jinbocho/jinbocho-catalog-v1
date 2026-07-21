@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, func
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,6 +14,7 @@ class ReadingSessionModel(Base):
     __tablename__ = "reading_sessions"
     __table_args__ = (
         CheckConstraint("minutes IS NOT NULL OR pages IS NOT NULL", name="ck_reading_sessions_minutes_or_pages"),
+        CheckConstraint("mode IN ('independent','together')", name="ck_reading_sessions_mode"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -26,4 +27,8 @@ class ReadingSessionModel(Base):
     minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     pages: Mapped[int | None] = mapped_column(Integer, nullable=True)
     session_date: Mapped[date] = mapped_column(Date, nullable=False)
+    mode: Mapped[str] = mapped_column(String(11), nullable=False, server_default="independent")
+    # No ForeignKey: users live in the auth service's database. None for
+    # independent (self-logged) sessions.
+    logged_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

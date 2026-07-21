@@ -9,6 +9,9 @@ class ReadingStatus(StrEnum):
 	TO_READ = "to_read"
 	READING = "reading"
 	READ = "read"
+	# A reader chose to stop, recorded as a neutral fact — see KID-05 reader's
+	# rights in jinbocho-docs/backlog/BACKLOG_KIDS_READING_EDUCATION.md.
+	ABANDONED = "abandoned"
 
 
 class BookCondition(StrEnum):
@@ -54,14 +57,17 @@ class OwnedBook:
 	created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 	updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
-	def reading_status_for(self, has_read: bool) -> ReadingStatus:
+	def reading_status_for(self, has_read: bool, has_abandoned: bool = False) -> ReadingStatus:
 		"""Reading status as seen by a specific library member. "Reading" is
 		inherently shared (only one person can hold the single physical copy
 		at a time) — visible to every member regardless of who's holding it,
-		not just the holder; "read" is per-member, derived from BookRead rows,
-		so one member finishing the book doesn't mark it read for everyone else."""
+		not just the holder; "read" and "abandoned" are per-member, derived
+		from BookRead/BookAbandonment rows, so one member's state never
+		overrides what another member sees for the same copy."""
 		if self.current_reader_id is not None:
 			return ReadingStatus.READING
 		if has_read:
 			return ReadingStatus.READ
+		if has_abandoned:
+			return ReadingStatus.ABANDONED
 		return ReadingStatus.TO_READ

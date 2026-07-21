@@ -15,6 +15,16 @@ class QuizBookContext:
 	# the model may treat facts stated here as real (that's the intended way
 	# to get plot-aware questions despite no full book text being stored).
 	extra_context: str | None = None
+	# One of "shared", "emerging", "fluent", "teen" (see KID-01) — calibrates
+	# question wording/difficulty. Kept separate from extra_context so
+	# supplying it never triggers GenerateQuizQuestionsUseCase's "always
+	# regenerate" bypass, which extra_context alone still does.
+	reader_age_band: str | None = None
+	# The reader's own UI language (from the JWT's language claim), distinct
+	# from `language` above (the book's bibliographic language) — the output
+	# must follow the reader, not the book. See jinbocho-docs backlog on AI
+	# content language.
+	reader_language: str | None = None
 
 
 @dataclass

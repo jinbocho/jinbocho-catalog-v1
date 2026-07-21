@@ -152,7 +152,7 @@ async def generate_incipit_ai(
 ) -> IncipitResponse:
 	try:
 		result = await GenerateAiIncipitUseCase(record_repo, ai_client, description_provider).execute(
-			record_id, UUID(payload["library_id"])
+			record_id, UUID(payload["library_id"]), payload.get("language")
 		)
 	except LookupError:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found") from None
@@ -178,7 +178,7 @@ async def suggest_tags(
 ) -> TagSuggestionResponse:
 	try:
 		result = await SuggestTagsUseCase(record_repo, tag_suggester).execute(
-			record_id, UUID(payload["library_id"])
+			record_id, UUID(payload["library_id"]), payload.get("language")
 		)
 	except LookupError:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found") from None

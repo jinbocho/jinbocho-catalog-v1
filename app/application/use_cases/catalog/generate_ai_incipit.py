@@ -28,7 +28,9 @@ class GenerateAiIncipitUseCase:
         self._ai_client = ai_client
         self._description_provider = description_provider
 
-    async def execute(self, record_id: UUID, library_id: UUID) -> GenerateAiIncipitOutput:
+    async def execute(
+        self, record_id: UUID, library_id: UUID, reader_language: str | None = None
+    ) -> GenerateAiIncipitOutput:
         record = await self._record_repo.find_by_id(record_id)
         if not record:
             raise LookupError("Bibliographic record not found")
@@ -47,6 +49,7 @@ class GenerateAiIncipitUseCase:
             publisher=record.publisher,
             publication_year=record.publication_year,
             editorial_description=editorial_description,
+            reader_language=reader_language,
         )
 
         if not result.text:

@@ -11,19 +11,33 @@ from app.application.use_cases import FuzzyDedupConfig
 from app.config import settings
 from app.domain.repositories import (
     BibliographicRecordRepository,
+    BookAbandonmentRepository,
     BookcaseRepository,
+    BookClubCycleRepository,
+    BookClubMeetingRepository,
+    BookClubParticipantRepository,
+    BookClubPostRepository,
+    BookClubProposalRepository,
+    BookClubQuestionSetRepository,
+    BookClubVoteRepository,
     BookHistoryRepository,
     BookLoanRepository,
     BookRatingRepository,
     BookReadRepository,
     BookSearchProvider,
+    DiscussionQuestionGenerator,
+    DiscussionQuestionSetRepository,
     DuplicateJudge,
+    FamilyChallengeRepository,
     IsbnLookupCacheRepository,
     IsbnMetadataFetcher,
+    JournalEntryRepository,
+    MysteryPickRepository,
     OwnedBookRepository,
     QuizAttemptRepository,
     QuizGenerator,
     QuizQuestionRepository,
+    ReadingPathRepository,
     ReadingSessionRepository,
     RemovedMemberRepository,
     RoomRepository,
@@ -34,6 +48,7 @@ from app.domain.repositories import (
 )
 from app.infrastructure.database.session import get_db
 from app.infrastructure.external import (
+    AiDiscussionClient,
     AiIncipitClient,
     AiQuizClient,
     AiServiceConfig,
@@ -48,15 +63,28 @@ from app.infrastructure.external import (
 )
 from app.infrastructure.repositories import (
     SQLAlchemyBibliographicRecordRepository,
+    SQLAlchemyBookAbandonmentRepository,
     SQLAlchemyBookcaseRepository,
+    SQLAlchemyBookClubCycleRepository,
+    SQLAlchemyBookClubMeetingRepository,
+    SQLAlchemyBookClubParticipantRepository,
+    SQLAlchemyBookClubPostRepository,
+    SQLAlchemyBookClubProposalRepository,
+    SQLAlchemyBookClubQuestionSetRepository,
+    SQLAlchemyBookClubVoteRepository,
     SQLAlchemyBookHistoryRepository,
     SQLAlchemyBookLoanRepository,
     SQLAlchemyBookRatingRepository,
     SQLAlchemyBookReadRepository,
+    SQLAlchemyDiscussionQuestionSetRepository,
+    SQLAlchemyFamilyChallengeRepository,
     SQLAlchemyIsbnLookupCacheRepository,
+    SQLAlchemyJournalEntryRepository,
+    SQLAlchemyMysteryPickRepository,
     SQLAlchemyOwnedBookRepository,
     SQLAlchemyQuizAttemptRepository,
     SQLAlchemyQuizQuestionRepository,
+    SQLAlchemyReadingPathRepository,
     SQLAlchemyReadingSessionRepository,
     SQLAlchemyRemovedMemberRepository,
     SQLAlchemyRoomRepository,
@@ -123,6 +151,19 @@ def get_quiz_generator(
     config: AiServiceConfig = Depends(get_ai_service_config),
 ) -> QuizGenerator:
     return AiQuizClient(http_client, config)
+
+
+def get_discussion_generator(
+    http_client: httpx.AsyncClient = Depends(get_http_client),
+    config: AiServiceConfig = Depends(get_ai_service_config),
+) -> DiscussionQuestionGenerator:
+    return AiDiscussionClient(http_client, config)
+
+
+async def get_discussion_question_set_repository(
+    db: AsyncSession = Depends(get_db),
+) -> DiscussionQuestionSetRepository:
+    return SQLAlchemyDiscussionQuestionSetRepository(db)
 
 
 def get_ai_incipit_client(http_client: httpx.AsyncClient = Depends(get_http_client)) -> AiIncipitClient:
@@ -232,6 +273,22 @@ async def get_reading_session_repository(db: AsyncSession = Depends(get_db)) -> 
     return SQLAlchemyReadingSessionRepository(db)
 
 
+async def get_journal_entry_repository(db: AsyncSession = Depends(get_db)) -> JournalEntryRepository:
+    return SQLAlchemyJournalEntryRepository(db)
+
+
+async def get_reading_path_repository(db: AsyncSession = Depends(get_db)) -> ReadingPathRepository:
+    return SQLAlchemyReadingPathRepository(db)
+
+
+async def get_mystery_pick_repository(db: AsyncSession = Depends(get_db)) -> MysteryPickRepository:
+    return SQLAlchemyMysteryPickRepository(db)
+
+
+async def get_family_challenge_repository(db: AsyncSession = Depends(get_db)) -> FamilyChallengeRepository:
+    return SQLAlchemyFamilyChallengeRepository(db)
+
+
 async def get_quiz_question_repository(db: AsyncSession = Depends(get_db)) -> QuizQuestionRepository:
     return SQLAlchemyQuizQuestionRepository(db)
 
@@ -254,6 +311,10 @@ async def get_book_read_repository(db: AsyncSession = Depends(get_db)) -> BookRe
     return SQLAlchemyBookReadRepository(db)
 
 
+async def get_book_abandonment_repository(db: AsyncSession = Depends(get_db)) -> BookAbandonmentRepository:
+    return SQLAlchemyBookAbandonmentRepository(db)
+
+
 async def get_book_loan_repository(db: AsyncSession = Depends(get_db)) -> BookLoanRepository:
     return SQLAlchemyBookLoanRepository(db)
 
@@ -264,3 +325,45 @@ async def get_wishlist_repository(db: AsyncSession = Depends(get_db)) -> Wishlis
 
 async def get_book_rating_repository(db: AsyncSession = Depends(get_db)) -> BookRatingRepository:
     return SQLAlchemyBookRatingRepository(db)
+
+
+async def get_book_club_cycle_repository(
+    db: AsyncSession = Depends(get_db),
+) -> BookClubCycleRepository:
+    return SQLAlchemyBookClubCycleRepository(db)
+
+
+async def get_book_club_post_repository(
+    db: AsyncSession = Depends(get_db),
+) -> BookClubPostRepository:
+    return SQLAlchemyBookClubPostRepository(db)
+
+
+async def get_book_club_proposal_repository(
+    db: AsyncSession = Depends(get_db),
+) -> BookClubProposalRepository:
+    return SQLAlchemyBookClubProposalRepository(db)
+
+
+async def get_book_club_vote_repository(
+    db: AsyncSession = Depends(get_db),
+) -> BookClubVoteRepository:
+    return SQLAlchemyBookClubVoteRepository(db)
+
+
+async def get_book_club_participant_repository(
+    db: AsyncSession = Depends(get_db),
+) -> BookClubParticipantRepository:
+    return SQLAlchemyBookClubParticipantRepository(db)
+
+
+async def get_book_club_meeting_repository(
+    db: AsyncSession = Depends(get_db),
+) -> BookClubMeetingRepository:
+    return SQLAlchemyBookClubMeetingRepository(db)
+
+
+async def get_book_club_question_set_repository(
+    db: AsyncSession = Depends(get_db),
+) -> BookClubQuestionSetRepository:
+    return SQLAlchemyBookClubQuestionSetRepository(db)
