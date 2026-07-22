@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import (
 	get_bibliographic_record_repository,
+	get_book_abandonment_repository,
+	get_book_history_repository,
 	get_book_read_repository,
 	get_current_user_payload,
 	get_discussion_generator,
@@ -23,11 +25,13 @@ from app.api.dependencies import (
 	require_child_or_parent,
 	require_parent,
 )
+from app.api.v1.schemas.book_schemas import OwnedBookResponse
 from app.api.v1.schemas.kids_schemas import (
 	DiscussionQuestionsResponse,
 	FamilyChallengeCreate,
 	FamilyChallengeProgressResponse,
 	FamilyChallengeResponse,
+	FinishSharedReadingRequest,
 	JournalEntryCreate,
 	JournalEntryResponse,
 	MysteryPickCreate,
@@ -63,6 +67,8 @@ from app.application.use_cases import (
 	DeleteFamilyChallengeUseCase,
 	DeleteReadingPathInput,
 	DeleteReadingPathUseCase,
+	FinishSharedReadingInput,
+	FinishSharedReadingUseCase,
 	GenerateQuizQuestionsInput,
 	GenerateQuizQuestionsUseCase,
 	GetDiscussionQuestionsInput,
@@ -89,10 +95,13 @@ from app.application.use_cases import (
 	LogReadingSessionUseCase,
 	SubmitQuizAttemptInput,
 	SubmitQuizAttemptUseCase,
+	UpdateReadingStatusUseCase,
 )
 from app.domain.entities import ChallengeMetric, JournalPromptKind, MysteryPick, ReadingSessionMode
 from app.domain.repositories import (
 	BibliographicRecordRepository,
+	BookAbandonmentRepository,
+	BookHistoryRepository,
 	BookReadRepository,
 	DiscussionQuestionGenerator,
 	DiscussionQuestionSetRepository,
@@ -175,6 +184,45 @@ async def list_reading_sessions(
 		)
 	)
 	return [ReadingSessionResponse.model_validate(s) for s in sessions]
+
+
+@router.post(
+	"/books/{owned_book_id}/finish",
+	response_model=OwnedBookResponse,
+	summary="Mark a shared (0-5) reading as finished (kids mode only)",
+	description="KID-02 companion to logging a 'together' session: a 0-5 child has no account of "
+	"their own to run the self-service reading-status control on BookDetailPage, so a parent marks "
+	"it finished on the child's behalf. The 'read' credit lands on the child, not the parent. "
+	"Requires kids mode enabled and admin/editor role.",
+	responses={
+		403: {"description": "Kids mode disabled, book belongs to another library, or requester is not a parent"},
+		404: {"description": "Book not found"},
+	},
+)
+async def finish_shared_reading(
+	owned_book_id: UUID,
+	body: FinishSharedReadingRequest,
+	payload: dict[str, Any] = Depends(require_parent),
+	db: AsyncSession = Depends(get_db),
+	book_repo: OwnedBookRepository = Depends(get_owned_book_repository),
+	read_repo: BookReadRepository = Depends(get_book_read_repository),
+	history_repo: BookHistoryRepository = Depends(get_book_history_repository),
+	abandonment_repo: BookAbandonmentRepository = Depends(get_book_abandonment_repository),
+) -> OwnedBookResponse:
+	library_id = UUID(payload["library_id"])
+	book = await FinishSharedReadingUseCase(
+		UpdateReadingStatusUseCase(book_repo, read_repo, history_repo, abandonment_repo)
+	).execute(
+		FinishSharedReadingInput(
+			owned_book_id=owned_book_id,
+			library_id=library_id,
+			target_user_id=body.target_user_id,
+			requester_role=str(payload.get("role")),
+			kids_mode_enabled=bool(payload.get("kids_mode_enabled", False)),
+		)
+	)
+	await db.commit()
+	return OwnedBookResponse.model_validate(book)
 
 
 @router.post(

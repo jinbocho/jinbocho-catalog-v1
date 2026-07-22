@@ -49,6 +49,8 @@ from .reading_paths import (
 	ListReadingPathsUseCase,
 )
 from .reading_sessions import (
+	FinishSharedReadingInput,
+	FinishSharedReadingUseCase,
 	ListReadingSessionsInput,
 	ListReadingSessionsUseCase,
 	LogReadingSessionInput,
@@ -60,6 +62,8 @@ __all__ = [
 	"LogReadingSessionUseCase",
 	"ListReadingSessionsInput",
 	"ListReadingSessionsUseCase",
+	"FinishSharedReadingInput",
+	"FinishSharedReadingUseCase",
 	"GenerateQuizQuestionsInput",
 	"GenerateQuizQuestionsUseCase",
 	"CreateManualQuizQuestionInput",

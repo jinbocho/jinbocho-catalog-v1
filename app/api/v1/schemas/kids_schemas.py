@@ -39,6 +39,10 @@ class ReadingSessionResponse(BaseModel):
 	model_config = ConfigDict(from_attributes=True)
 
 
+class FinishSharedReadingRequest(BaseModel):
+	target_user_id: UUID = Field(..., description="The 0-5 child whose shared book is being marked finished")
+
+
 class QuizGenerateRequest(BaseModel):
 	num_questions: int = Field(5, ge=1, le=10, description="How many AI questions to generate, if none exist yet")
 	extra_context: str | None = Field(
