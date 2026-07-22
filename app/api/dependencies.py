@@ -93,12 +93,20 @@ from app.infrastructure.repositories import (
     SQLAlchemyWishlistRepository,
 )
 
-security = HTTPBearer()
+# auto_error=False: fastapi>=0.116/starlette>=1.0 changed HTTPBearer's own
+# missing-credentials response from 403 to 401 — the app's established
+# contract, relied on by the FE's 401-triggers-refresh logic, is 403 for "no
+# credentials at all" vs 401 for "credentials present but invalid/expired".
+# Handling it explicitly here keeps that contract stable regardless of what
+# the library defaults to.
+security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user_payload(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
 ) -> dict[str, Any]:
+    if credentials is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authenticated")
     try:
         payload = jwt.decode(
             credentials.credentials,

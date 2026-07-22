@@ -49,5 +49,9 @@ async def test_get_wishlist_item_raises_for_wrong_library(wishlist_repo, record_
 		)
 	)
 
-	with pytest.raises(LookupError):
+	# Item exists but belongs to a different library — PermissionError (403),
+	# not LookupError (404): the two must never collapse into one status code
+	# (see CLAUDE.md rule 9), otherwise a real authorization failure reads as
+	# a plain "not found" to the caller.
+	with pytest.raises(PermissionError):
 		await GetWishlistItemUseCase(wishlist_repo).execute(added.id, uuid4())

@@ -34,6 +34,10 @@ class SQLAlchemyWishlistRepository(WishlistRepository):
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
+    async def find_by_id(self, item_id: UUID) -> WishlistItem | None:
+        model = await self._session.get(WishlistItemModel, item_id)
+        return self._to_entity(model) if model else None
+
     async def list_by_library(self, library_id: UUID) -> list[WishlistItem]:
         result = await self._session.execute(
             select(WishlistItemModel)

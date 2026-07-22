@@ -9,6 +9,15 @@ class WishlistRepository(ABC):
     async def get(self, item_id: UUID, library_id: UUID) -> "WishlistItem | None": ...
 
     @abstractmethod
+    async def find_by_id(self, item_id: UUID) -> "WishlistItem | None":
+        """Unscoped fetch — callers must check library_id themselves and raise
+        PermissionError on mismatch, so cross-tenant access reports 403 (not a
+        404 that would collapse the distinction between "doesn't exist" and
+        "exists but belongs to someone else"), consistent with how
+        BibliographicRecordRepository.find_by_id is used elsewhere."""
+        ...
+
+    @abstractmethod
     async def list_by_library(self, library_id: UUID) -> list["WishlistItem"]: ...
 
     @abstractmethod

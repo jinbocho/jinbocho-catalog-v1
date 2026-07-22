@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -150,12 +150,9 @@ async def generate_incipit_ai(
 	ai_client: AiIncipitClient = Depends(get_ai_incipit_client),
 	description_provider: EditorialDescriptionProvider = Depends(get_editorial_description_provider),
 ) -> IncipitResponse:
-	try:
-		result = await GenerateAiIncipitUseCase(record_repo, ai_client, description_provider).execute(
-			record_id, UUID(payload["library_id"]), payload.get("language")
-		)
-	except LookupError:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found") from None
+	result = await GenerateAiIncipitUseCase(record_repo, ai_client, description_provider).execute(
+		record_id, UUID(payload["library_id"]), payload.get("language")
+	)
 	if result.text is not None:
 		await db.commit()
 	return IncipitResponse(text=result.text, source=result.source, generated_at=result.generated_at)
@@ -176,12 +173,9 @@ async def suggest_tags(
 	record_repo: BibliographicRecordRepository = Depends(get_bibliographic_record_repository),
 	tag_suggester: TagSuggester = Depends(get_tag_suggester),
 ) -> TagSuggestionResponse:
-	try:
-		result = await SuggestTagsUseCase(record_repo, tag_suggester).execute(
-			record_id, UUID(payload["library_id"]), payload.get("language")
-		)
-	except LookupError:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bibliographic record not found") from None
+	result = await SuggestTagsUseCase(record_repo, tag_suggester).execute(
+		record_id, UUID(payload["library_id"]), payload.get("language")
+	)
 	return TagSuggestionResponse(tags=result.tags)
 
 

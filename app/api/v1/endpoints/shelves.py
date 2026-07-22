@@ -52,7 +52,7 @@ async def create_shelf(
 	section_repo: SectionRepository = Depends(get_section_repository),
 	bookcase_repo: BookcaseRepository = Depends(get_bookcase_repository),
 ) -> Shelf:
-	created = await CreateShelfUseCase(shelf_repo, section_repo).execute(
+	created = await CreateShelfUseCase(shelf_repo, section_repo, bookcase_repo).execute(
 		CreateShelfInput(library_id=UUID(payload["library_id"]), **request.model_dump())
 	)
 	await db.commit()

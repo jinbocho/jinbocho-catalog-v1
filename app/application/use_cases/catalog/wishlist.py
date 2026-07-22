@@ -82,9 +82,11 @@ class RemoveFromWishlistUseCase:
         self._wishlist_repo = wishlist_repo
 
     async def execute(self, item_id: UUID, library_id: UUID, user_id: UUID, role: str) -> None:
-        item = await self._wishlist_repo.get(item_id, library_id)
+        item = await self._wishlist_repo.find_by_id(item_id)
         if not item:
             raise LookupError("Wishlist item not found")
+        if item.library_id != library_id:
+            raise PermissionError("Wishlist item does not belong to this library")
         if item.user_id != user_id and role != "admin":
             raise PermissionError("Cannot remove another user's wishlist item")
         await self._wishlist_repo.delete(item_id, library_id)
@@ -104,7 +106,9 @@ class GetWishlistItemUseCase:
         self._wishlist_repo = wishlist_repo
 
     async def execute(self, item_id: UUID, library_id: UUID) -> WishlistItem:
-        item = await self._wishlist_repo.get(item_id, library_id)
+        item = await self._wishlist_repo.find_by_id(item_id)
         if not item:
             raise LookupError("Wishlist item not found")
+        if item.library_id != library_id:
+            raise PermissionError("Wishlist item does not belong to this library")
         return item

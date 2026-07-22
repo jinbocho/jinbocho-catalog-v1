@@ -496,6 +496,9 @@ class MockWishlistRepository(WishlistRepository):
 		item = self.items.get(item_id)
 		return item if item and item.library_id == library_id else None
 
+	async def find_by_id(self, item_id: UUID) -> WishlistItem | None:
+		return self.items.get(item_id)
+
 	async def list_by_library(self, library_id: UUID) -> list[WishlistItem]:
 		return [i for i in self.items.values() if i.library_id == library_id]
 

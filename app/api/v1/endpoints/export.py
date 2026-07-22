@@ -54,6 +54,21 @@ from app.domain.repositories import (
 
 router = APIRouter(tags=["export"])
 
+# Formula-injection prefixes (OWASP CSV Injection / CWE-1236): any of these
+# leading characters makes Excel/LibreOffice/Sheets interpret the cell as a
+# formula instead of literal text when the export is later opened — a
+# malicious book title like `=cmd|'/C calc'!A1` executes on whoever opens the
+# CSV. Prefixing with a single quote forces spreadsheet apps to render it as
+# plain text without changing the value a non-spreadsheet CSV consumer sees.
+_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _sanitize_csv_value(value: Any) -> Any:
+    if isinstance(value, str) and value.startswith(_FORMULA_PREFIXES):
+        return "'" + value
+    return value
+
+
 _CSV_FIELDS = [
 	# Book identity
 	"book_id", "library_id", "owner_id", "current_reader_id",
@@ -240,7 +255,7 @@ async def export_books_csv(
 	writer = csv.DictWriter(output, fieldnames=_CSV_FIELDS)
 	writer.writeheader()
 	for item in items:
-		writer.writerow(_csv_row(item))
+		writer.writerow({k: _sanitize_csv_value(v) for k, v in _csv_row(item).items()})
 
 	return StreamingResponse(
 		iter([output.getvalue()]),

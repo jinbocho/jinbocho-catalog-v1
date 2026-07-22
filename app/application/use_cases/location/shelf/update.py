@@ -6,6 +6,7 @@ from app.domain.entities import Shelf
 from app.domain.repositories import BookcaseRepository, SectionRepository, ShelfRepository
 from app.utils import utcnow
 
+from ..section.read import _get_section_for_library
 from .read import _get_shelf_for_library
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ class UpdateShelfUseCase:
 			self._shelf_repo, self._section_repo, self._bookcase_repo, inp.shelf_id, inp.library_id
 		)
 		if inp.section_id is not None:
+			await _get_section_for_library(self._section_repo, self._bookcase_repo, inp.section_id, inp.library_id)
 			shelf.section_id = inp.section_id
 		if inp.shelf_index is not None:
 			shelf.shelf_index = inp.shelf_index
