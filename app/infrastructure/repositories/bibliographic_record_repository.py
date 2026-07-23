@@ -81,17 +81,25 @@ class SQLAlchemyBibliographicRecordRepository(BibliographicRecordRepository):
 		if genre:
 			query = query.where(BibliographicRecordModel.genre == genre)
 		if q:
+			# immutable_unaccent (migration 0024) folds accents on both sides so
+			# "cesaire" matches "Césaire" and vice versa. Must mirror the indexed
+			# expression exactly (same functions, same arg order) or Postgres can't
+			# use ix_bib_records_search_vector and falls back to a full table scan.
 			ts_vector = func.to_tsvector(
 				"simple",
-				func.concat(
-					func.coalesce(BibliographicRecordModel.title, ""),
-					" ",
-					func.coalesce(BibliographicRecordModel.main_author, ""),
-					" ",
-					func.coalesce(BibliographicRecordModel.isbn, ""),
+				func.immutable_unaccent(
+					func.concat(
+						func.coalesce(BibliographicRecordModel.title, ""),
+						" ",
+						func.coalesce(BibliographicRecordModel.main_author, ""),
+						" ",
+						func.coalesce(BibliographicRecordModel.isbn, ""),
+					)
 				),
 			)
-			query = query.where(ts_vector.op("@@")(func.plainto_tsquery("simple", q)))
+			query = query.where(
+				ts_vector.op("@@")(func.plainto_tsquery("simple", func.immutable_unaccent(q)))
+			)
 		result = await self._session.execute(
 			query.order_by(BibliographicRecordModel.created_at.desc()).limit(limit).offset(offset)
 		)

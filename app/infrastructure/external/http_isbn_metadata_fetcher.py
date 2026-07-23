@@ -4,6 +4,7 @@ from typing import Any
 
 import httpx
 
+from app.application.services.isbn_service import expected_language_for_isbn
 from app.domain.repositories.isbn_metadata_fetcher import IsbnFetchResult, IsbnMetadataFetcher
 from app.infrastructure.external.google_books_mapper import extract_year, volume_to_metadata
 
@@ -28,19 +29,27 @@ class HttpIsbnMetadataFetcher(IsbnMetadataFetcher):
         self._config = config or IsbnLookupConfig()
 
     async def fetch(self, isbn: str) -> IsbnFetchResult | None:
-        google = await self._fetch_google_books(isbn)
-        if google is not None:
-            return IsbnFetchResult(source="google_books", metadata=google)
+        # The registration group in the ISBN pins the edition's language (e.g.
+        # 978-88 is always an Italian printing). When it's known, a candidate whose
+        # reported language disagrees is a wrong-edition match, not just a lesser
+        # one — keep trying sources instead of settling for the first response.
+        expected_language = expected_language_for_isbn(isbn)
+        fallback: IsbnFetchResult | None = None
 
-        ol = await self._fetch_open_library(isbn)
-        if ol is not None:
-            return IsbnFetchResult(source="open_library", metadata=ol)
+        for fetch_source, source_name in (
+            (self._fetch_google_books, "google_books"),
+            (self._fetch_open_library, "open_library"),
+            (self._fetch_open_library_search, "open_library_search"),
+        ):
+            metadata = await fetch_source(isbn)
+            if metadata is None:
+                continue
+            candidate = IsbnFetchResult(source=source_name, metadata=metadata)
+            if expected_language is None or metadata.get("language") == expected_language:
+                return candidate
+            fallback = fallback or candidate
 
-        ol_search = await self._fetch_open_library_search(isbn)
-        if ol_search is not None:
-            return IsbnFetchResult(source="open_library_search", metadata=ol_search)
-
-        return None
+        return fallback
 
     async def _fetch_google_books(self, isbn: str) -> dict[str, Any] | None:
         try:
